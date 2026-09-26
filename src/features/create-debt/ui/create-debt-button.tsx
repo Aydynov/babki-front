@@ -114,7 +114,7 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
         )}
         aria-label={t('debts.create.title')}
       >
-        <LucidePlus className="size-7" />
+        <LucidePlus className="size-5" />
       </DialogPrimitive.Trigger>
 
       <Dialog.Content>

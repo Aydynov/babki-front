@@ -20,17 +20,20 @@ const YearSwitcherView: FC<YearSwitcherViewProps> = ({
   allowedYears = [],
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const hasAnotherYears = allowedYears.length > 1;
 
   return (
     <Card.Base ref={cardRef} className="flex w-full min-w-0 px-4 py-5 lg:w-2xs">
       <Menu.Root>
-        <Menu.Trigger className={classes.trigger}>
+        <Menu.Trigger className={classes.trigger} disabled={!hasAnotherYears}>
           <Typography.SpecialBody2>
             {value}
             {' '}
             год
           </Typography.SpecialBody2>
-          <LucideChevronUp className="transition-transform duration-100" size={20} />
+          {hasAnotherYears && (
+            <LucideChevronUp className="transition-transform duration-100" size={20} />
+          )}
         </Menu.Trigger>
         <Menu.Portal>
           <Menu.Positioner

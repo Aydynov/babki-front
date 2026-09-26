@@ -1,5 +1,4 @@
 .trigger {
-    cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -11,6 +10,10 @@
         .chevron {
             transform: rotate(180deg);
         }
+    }
+
+    &:not(:disabled) {
+        cursor: pointer;
     }
 }
 
