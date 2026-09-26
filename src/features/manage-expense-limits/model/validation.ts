@@ -2,6 +2,7 @@ import type {
   CategorySelectOption,
 } from '@/entities/expense-categories';
 import { z } from 'zod';
+import { currencyCodeSchema } from '@/shared/lib/currency';
 import {
   hasValidMoneyFormat,
   parseExpenseLimitTotal,
@@ -19,12 +20,16 @@ const expenseLimitTotalSchema = z
   .trim()
   .min(1, 'required')
   .refine((value) => parseExpenseLimitTotal(value) !== undefined, 'invalid')
-  .refine((value) => (parseExpenseLimitTotal(value) ?? 0) >= 0.01, 'min')
-  .refine(hasValidMoneyFormat, 'precision');
+  .refine((value) => (parseExpenseLimitTotal(value) ?? 0) >= 0.01, 'min');
 
 export const expenseLimitDraftValuesSchema = z.object({
   categoryId: z.string().trim().min(1, 'required'),
+  currency: currencyCodeSchema,
   total: expenseLimitTotalSchema,
+}).superRefine(({ currency, total }, context) => {
+  if (!hasValidMoneyFormat(total, currency)) {
+    context.addIssue({ code: 'custom', message: 'precision', path: ['total'] });
+  }
 });
 
 export const expenseLimitFormSchema = z.object({
@@ -42,6 +47,7 @@ export const expenseLimitFormSchema = z.object({
       const duplicate = drafts.some((other, otherIndex) => (
         otherIndex !== index
         && other.values.categoryId === draft.values.categoryId
+        && other.values.currency === draft.values.currency
       ));
 
       if (duplicate) {

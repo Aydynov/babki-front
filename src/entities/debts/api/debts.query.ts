@@ -5,6 +5,11 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { debtTransactionsQueryKeys } from '@/entities/debt-transactions/@x/debts';
+import { accountsQueryKeys } from '@/entities/accounts/@x/debts';
+import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/debts';
+import { incomesQueryKeys } from '@/entities/incomes/@x/debts';
+import { reportsQueryKeys } from '@/entities/reports/@x/debts';
+import { transactionsQueryKeys } from '@/entities/transactions/@x/debts';
 import { debtsApi } from './debts.api';
 import type {
   CreateDebtDto,
@@ -38,8 +43,8 @@ export const useCreateDebtMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: ({ payload }: { payload: CreateDebtDto }) => debtsApi.create(payload),
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: debtsQueryKeys.all });
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: debtsQueryKeys.all }).catch(() => undefined);
       },
     }),
   );
@@ -51,9 +56,9 @@ export const useUpdateDebtMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: ({ debtId, payload }: { debtId: string; payload: UpdateDebtDto }) => debtsApi.update(debtId, payload),
-      onSuccess: async (debt, { debtId }) => {
+      onSuccess: (debt, { debtId }) => {
         queryClient.setQueryData(debtsQueryKeys.detail(debtId), debt);
-        await queryClient.invalidateQueries({ queryKey: debtsQueryKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: debtsQueryKeys.lists() }).catch(() => undefined);
       },
     }),
   );
@@ -65,10 +70,19 @@ export const useRepayDebtMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: ({ debtId, payload }: { debtId: string; payload: RepayDebtDto }) => debtsApi.repay(debtId, payload),
-      onSuccess: async (debt, { debtId }) => {
+      onSuccess: (debt, { debtId, payload }) => {
         queryClient.setQueryData(debtsQueryKeys.detail(debtId), debt);
-        await queryClient.invalidateQueries({ queryKey: debtsQueryKeys.lists() });
-        await queryClient.invalidateQueries({ queryKey: debtTransactionsQueryKeys.lists(debtId) });
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: debtsQueryKeys.lists() }),
+          queryClient.invalidateQueries({ queryKey: debtTransactionsQueryKeys.lists(debtId) }),
+          ...(payload.isIncome && payload.accountId ? [
+            queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
+            queryClient.invalidateQueries({ queryKey: incomesQueryKeys.all }),
+            queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
+            queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
+            queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(payload.accountId) }),
+          ] : []),
+        ]).catch(() => undefined);
       },
     }),
   );
@@ -80,9 +94,9 @@ export const useDeleteDebtMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: ({ debtId }: { debtId: string }) => debtsApi.remove(debtId),
-      onSuccess: async (_, { debtId }) => {
+      onSuccess: (_, { debtId }) => {
         queryClient.removeQueries({ queryKey: debtsQueryKeys.detail(debtId) });
-        await queryClient.invalidateQueries({ queryKey: debtsQueryKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: debtsQueryKeys.lists() }).catch(() => undefined);
       },
     }),
   );

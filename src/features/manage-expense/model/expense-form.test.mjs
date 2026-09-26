@@ -18,6 +18,7 @@ test('creates fresh form values for the supplied local date', async () => {
   assert.deepEqual(
     model.getDefaultExpenseFormValues?.(new Date(2026, 7, 8)),
     {
+      accountId: '',
       categoryId: '',
       amount: '',
       transactionDate: '2026-08-08',
@@ -93,6 +94,7 @@ test('preserves a nonzero manual amount and resets it with zero or an empty valu
 test('requires a description or valid items and rejects every invalid present item', async () => {
   const model = await modelPromise;
   const base = {
+    accountId: '507f1f77bcf86cd799439013',
     categoryId: '507f1f77bcf86cd799439011',
     amount: '100',
     transactionDate: '2026-08-08',
@@ -234,6 +236,7 @@ test('maps trimmed form values to the existing expense contract', async () => {
   const model = await modelPromise;
 
   assert.deepEqual(model.mapCreateExpenseDto?.({
+    accountId: '507f1f77bcf86cd799439013',
     categoryId: '507f1f77bcf86cd799439011',
     amount: '179.80',
     transactionDate: '2026-08-08',
@@ -241,6 +244,7 @@ test('maps trimmed form values to the existing expense contract', async () => {
     description: '   ',
     items: [validItem],
   }), {
+    accountId: '507f1f77bcf86cd799439013',
     categoryId: '507f1f77bcf86cd799439011',
     amount: 179.8,
     transactionDate: '2026-08-08',
@@ -285,6 +289,7 @@ test('prefills editable values from an existing expense', async () => {
       ...item,
     })),
   }, {
+    accountId: '507f1f77bcf86cd799439013',
     categoryId: '507f1f77bcf86cd799439011',
     amount: '179.8',
     transactionDate: '2026-08-08',
@@ -328,6 +333,7 @@ test('derives automatic amount mode with minor-unit price comparison', async () 
 test('maps complete edit values and explicitly clears optional content', async () => {
   const model = await modelPromise;
   const values = {
+    accountId: '507f1f77bcf86cd799439013',
     categoryId: ' 507f1f77bcf86cd799439011 ',
     amount: '179.80',
     transactionDate: '2026-08-08',
@@ -346,12 +352,14 @@ test('maps complete edit values and explicitly clears optional content', async (
     items: [],
   });
   assert.equal(Object.hasOwn(payload ?? {}, 'transactionDate'), false);
+  assert.equal(Object.hasOwn(payload ?? {}, 'accountId'), false);
 });
 
 test('maps edited item numbers and trimmed text', async () => {
   const model = await modelPromise;
 
   assert.deepEqual(model.mapUpdateExpenseDto?.({
+    accountId: '507f1f77bcf86cd799439013',
     categoryId: '507f1f77bcf86cd799439011',
     amount: '100',
     transactionDate: '2026-08-08',
@@ -397,4 +405,83 @@ test('offers active categories plus only the current archived category', async (
     model.getExpenseCategoryOptions?.([active], active),
     [active],
   );
+});
+
+const accountFixture = {
+  _id: '507f1f77bcf86cd799439013',
+  name: 'Основной счёт',
+  type: 'balance',
+  currency: 'RUB',
+  archivedAt: null,
+};
+
+test('initializes only an active loaded default account and preserves explicit selection', async () => {
+  const model = await modelPromise;
+  const otherAccount = {
+    ...accountFixture,
+    _id: '507f1f77bcf86cd799439099',
+    name: 'Доллары',
+    currency: 'USD',
+  };
+
+  assert.equal(typeof model.getExpenseInitialAccountId, 'function');
+  assert.equal(
+    model.getExpenseInitialAccountId?.([accountFixture, otherAccount], accountFixture._id),
+    accountFixture._id,
+  );
+  assert.equal(
+    model.getExpenseInitialAccountId?.([accountFixture, otherAccount], otherAccount._id),
+    otherAccount._id,
+  );
+});
+
+test('leaves account empty when the default is missing or archived', async () => {
+  const model = await modelPromise;
+
+  assert.equal(model.getExpenseInitialAccountId?.([accountFixture], null), '');
+  assert.equal(model.getExpenseInitialAccountId?.([accountFixture], '507f1f77bcf86cd799439099'), '');
+  assert.equal(model.getExpenseInitialAccountId?.([
+    { ...accountFixture, archivedAt: '2026-08-09T00:00:00.000Z' },
+  ], accountFixture._id), '');
+});
+
+test('keeps archived account available as immutable editing context', async () => {
+  const model = await modelPromise;
+  const archivedAccount = {
+    ...accountFixture,
+    archivedAt: '2026-08-09T00:00:00.000Z',
+  };
+
+  assert.equal(typeof model.getExpenseAccountContext, 'function');
+  assert.deepEqual(
+    model.getExpenseAccountContext?.([archivedAccount], archivedAccount._id),
+    archivedAccount,
+  );
+});
+
+test('validates amount and every item price using the account currency precision', async () => {
+  const model = await modelPromise;
+  const values = {
+    accountId: accountFixture._id,
+    categoryId: '507f1f77bcf86cd799439011',
+    amount: '100.25',
+    transactionDate: '2026-08-08',
+    merchant: '',
+    description: 'Покупки',
+    items: [{ ...validItem, price: '10.50' }],
+  };
+
+  assert.equal(typeof model.hasValidExpenseMoneyPrecision, 'function');
+  assert.equal(model.hasValidExpenseMoneyPrecision?.(values, 'RUB'), true);
+  assert.equal(model.hasValidExpenseMoneyPrecision?.({ ...values, amount: '100.251' }, 'RUB'), false);
+  assert.equal(model.hasValidExpenseMoneyPrecision?.({
+    ...values,
+    items: [{ ...validItem, price: '10.501' }],
+  }, 'RUB'), false);
+  assert.equal(model.hasValidExpenseMoneyPrecision?.({ ...values, amount: '100.25' }, 'JPY'), false);
+  assert.equal(model.hasValidExpenseMoneyPrecision?.({
+    ...values,
+    amount: '100',
+    items: [{ ...validItem, price: '10' }],
+  }, 'JPY'), true);
 });

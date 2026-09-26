@@ -2,46 +2,55 @@ import { z } from 'zod';
 import {
   dateStringSchema,
   entityMetaSchema,
+  objectIdSchema,
   paginatedResponseSchema,
   paginationQuerySchema,
 } from '@/shared/api';
+import { currencyCodeSchema } from '@/shared/lib/currency';
 
 export const debtStatusSchema = z.enum(['active', 'closed']);
 
-const amountWithCentsSchema = z
-  .number()
-  .refine((value) => /^\d+(\.\d{1,2})?$/.test(String(value)), 'maxDecimalPlaces');
+const moneyAmountSchema = z.number();
 
 export const debtSchema = z
   .object({
     debtor: z.string().max(150),
-    principalAmount: amountWithCentsSchema.min(0.01),
-    remainingAmount: amountWithCentsSchema.min(0),
+    principalAmount: moneyAmountSchema.min(0.01),
+    remainingAmount: moneyAmountSchema.min(0),
+    currency: currencyCodeSchema,
     description: z.string().max(150).optional(),
     dueDate: dateStringSchema.optional(),
     status: debtStatusSchema,
+    archivedAt: dateStringSchema.nullable(),
   })
   .extend(entityMetaSchema.shape);
 
 export const createDebtSchema = z.object({
   debtor: z.string().max(150),
-  principalAmount: amountWithCentsSchema.min(0.01),
-  remainingAmount: amountWithCentsSchema.min(0),
+  principalAmount: moneyAmountSchema.min(0.01),
+  remainingAmount: moneyAmountSchema.min(0),
+  currency: currencyCodeSchema,
   description: z.string().max(150).optional(),
   dueDate: dateStringSchema.optional(),
   status: debtStatusSchema.optional(),
 });
 
-export const updateDebtSchema = createDebtSchema.partial();
+export const updateDebtSchema = createDebtSchema.omit({ currency: true }).partial();
 
 export const repayDebtSchema = z.object({
+  accountId: objectIdSchema.optional(),
   repaymentDate: dateStringSchema,
-  amount: amountWithCentsSchema.min(0.01),
+  amount: moneyAmountSchema.min(0.01),
   description: z.string().max(1000).optional(),
   isIncome: z.boolean().optional(),
+}).superRefine(({ accountId, isIncome }, context) => {
+  if (isIncome && !accountId) {
+    context.addIssue({ code: 'custom', message: 'accountRequired', path: ['accountId'] });
+  }
 });
 
 export const listDebtsQuerySchema = paginationQuerySchema.extend({
+  currency: currencyCodeSchema.optional(),
   status: debtStatusSchema.optional(),
 });
 

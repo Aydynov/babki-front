@@ -4,6 +4,7 @@ export {
 } from './api/snapshots.query';
 export {
   SnapshotFindByQuerySchema,
+  snapshotResponseSchema,
   snapshotSchema,
 } from './model/schemas';
 export type {

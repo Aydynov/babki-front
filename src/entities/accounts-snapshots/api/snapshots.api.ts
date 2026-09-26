@@ -1,8 +1,8 @@
-import { apiClient, parseWithSchema } from '@/shared/api';
+import { apiClient, parseRequiredWithSchema } from '@/shared/api';
 import {
   type Snapshot,
   type SnapshotFindByQuery,
-  snapshotSchema,
+  snapshotResponseSchema,
 } from '../model/schemas';
 
 class SnapshotsApi {
@@ -14,7 +14,7 @@ class SnapshotsApi {
       params: { date },
     });
 
-    return parseWithSchema(snapshotSchema, data);
+    return parseRequiredWithSchema(snapshotResponseSchema, data);
   }
 }
 

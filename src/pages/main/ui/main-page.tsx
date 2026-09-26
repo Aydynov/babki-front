@@ -1,4 +1,5 @@
 import { Debts } from '@/widgets/debts';
+import { Accounts } from '@/widgets/accounts';
 import { ExpensesByCategories } from '@/widgets/expenses-by-categories';
 import { ExpenseLimits } from '@/widgets/expense-limits';
 import { Expenses } from '@/widgets/expenses';
@@ -8,11 +9,10 @@ import { ExpensesByAnnualCategories } from '@/widgets/expenses-by-categories-ann
 import { Incomes } from '@/widgets/incomes';
 import { LastYearRest } from '@/widgets/last-year-rest';
 import { Plans } from '@/widgets/plans';
-import { Savings } from '@/widgets/savings';
-import { Balance } from '@/widgets/balance';
 import { YearExpenses } from '@/widgets/year-expenses';
 import { YearIncomes } from '@/widgets/year-incomes';
 import { YearSavings } from '@/widgets/year-savings';
+import { Transfers } from '@/widgets/transfers';
 import { MonthSwitcher, YearSwitcher } from '@/features/select-period';
 import {
   LogoutButton,
@@ -35,9 +35,8 @@ export function MainPage() {
         [&>*:last-child]:sm:col-span-2 [&>*:last-child]:md:col-span-1
       "
     >
-      <Balance />
+      <Accounts />
       <Incomes />
-      <Savings />
     </div>
   );
   const monthlyReports = (
@@ -55,7 +54,8 @@ export function MainPage() {
     </HorizontalScroller>
   );
   const monthlyExpenses = (
-    <div key="monthly-expenses" className="min-w-0">
+    <div key="monthly-expenses" className="flex min-w-0 flex-col gap-5">
+      <Transfers />
       <Expenses />
     </div>
   );

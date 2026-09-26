@@ -27,8 +27,8 @@ export const useUpdateCurrentUserMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: (payload: UpdateUserDto) => usersApi.updateMe(payload),
-      onSuccess: async (user) => {
-        await queryClient.invalidateQueries({ queryKey: usersQueryKeys.all });
+      onSuccess: (user) => {
+        queryClient.invalidateQueries({ queryKey: usersQueryKeys.all }).catch(() => undefined);
         queryClient.setQueryData(usersQueryKeys.me(), user);
       },
     }),

@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/expenses';
-import { balancesQueryKeys } from '@/entities/balances/@x/expenses';
+import { accountsQueryKeys } from '@/entities/accounts/@x/expenses';
 import { expenseLimitsQueryKeys } from '@/entities/expense-limits/@x/expenses';
 import { reportsQueryKeys } from '@/entities/reports/@x/expenses';
 import { transactionsQueryKeys } from '@/entities/transactions/@x/expenses';
@@ -48,7 +48,7 @@ export const useCreateExpenseMutation = () => {
           queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
           queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
           queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: balancesQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
           ...(expense
             ? [queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(expense.accountId) })]
             : []),
@@ -86,7 +86,7 @@ export const useUpdateExpenseMutation = () => {
           queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
           queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
           queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: balancesQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
           ...(expense
             ? [queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(expense.accountId) })]
             : []),

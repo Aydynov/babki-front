@@ -5,6 +5,9 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/incomes';
+import { accountsQueryKeys } from '@/entities/accounts/@x/incomes';
+import { reportsQueryKeys } from '@/entities/reports/@x/incomes';
+import { transactionsQueryKeys } from '@/entities/transactions/@x/incomes';
 import { incomesApi } from './incomes.api';
 import type {
   ListIncomesQuery,
@@ -43,11 +46,14 @@ export const useCreateIncomeMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: incomesApi.create,
-      onSuccess: async (data) => {
-        if (data) {
-          await queryClient.invalidateQueries({ queryKey: incomesQueryKeys.all });
-          await queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(data.accountId) });
-        }
+      onSuccess: (data) => {
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: incomesQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(data.accountId) }),
+        ]).catch(() => undefined);
       },
     }),
   );
@@ -65,9 +71,15 @@ export const useUpdateIncomeMutation = () => {
         incomeId: string;
         payload: UpdateIncomeDto;
       }) => incomesApi.update(incomeId, payload),
-      onSuccess: async (income, { incomeId }) => {
+      onSuccess: (income, { incomeId }) => {
         queryClient.setQueryData(incomesQueryKeys.detail(incomeId), income);
-        await queryClient.invalidateQueries({ queryKey: incomesQueryKeys.listAll() });
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: incomesQueryKeys.listAll() }),
+          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(income.accountId) }),
+        ]).catch(() => undefined);
       },
     }),
   );

@@ -1,17 +1,22 @@
 import { type Debt, type useRepayDebtMutation } from '@/entities/debts';
+import { AccountSelect, accountsQueryOptions, getPreferredAccountId } from '@/entities/accounts';
+import { usersQueryOptions } from '@/entities/users';
+import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { Typography } from '@/shared/ui/typography';
 import { useForm } from '@tanstack/react-form';
+import { useQuery } from '@tanstack/react-query';
 import { LucideCheck } from 'lucide-react';
-import type { FC } from 'react';
+import { type FC, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFirstFieldError, getMutationErrorMessage, mapErrorMessage } from '../model/errors';
 import {
   getRepayDebtFormSchema,
   getRepayDebtFormValues,
+  getEligibleDebtRepaymentAccounts,
 } from '../model/repay-debt-form';
 
 interface DebtRepayFormProps {
@@ -29,6 +34,9 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const mutationError = getMutationErrorMessage(mutation.error);
+  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const userQuery = useQuery(usersQueryOptions.me());
+  const eligibleAccounts = getEligibleDebtRepaymentAccounts(accountsQuery.data ?? [], debt.currency);
 
   const form = useForm({
     defaultValues: getRepayDebtFormValues(debt),
@@ -38,6 +46,7 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
       const updated = await mutation.mutateAsync({
         debtId: debt._id,
         payload: {
+          ...(value.isIncome ? { accountId: value.accountId } : {}),
           repaymentDate: value.repaymentDate,
           amount: Number(value.amount),
           description: description || undefined,
@@ -49,6 +58,15 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
       onSuccess(updated);
     },
   });
+
+  useEffect(() => {
+    if (form.state.values.accountId || !accountsQuery.isSuccess || !userQuery.isSuccess) return;
+    const accountId = getPreferredAccountId(
+      eligibleAccounts,
+      userQuery.data?.defaultAccountId ?? null,
+    );
+    if (accountId) form.setFieldValue('accountId', accountId);
+  }, [accountsQuery.isSuccess, eligibleAccounts, form, userQuery.data, userQuery.isSuccess]);
 
   const clearMutationError = () => {
     if (mutation.isError) mutation.reset();
@@ -70,10 +88,17 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
       <Dialog.Header>
         <Dialog.Title>{t('debts.repay.title')}</Dialog.Title>
         <div className="flex gap-2.5">
-          <Button.Base type="submit" disabled={mutation.isPending}>
-            <LucideCheck />
-            {mutation.isPending ? t('debts.repay.repaying') : t('debts.repay.confirm')}
-          </Button.Base>
+          <form.Subscribe selector={(state) => state.values.isIncome}>
+            {(isIncome) => (
+              <Button.Base
+                type="submit"
+                disabled={mutation.isPending || (isIncome && eligibleAccounts.length === 0)}
+              >
+                <LucideCheck />
+                {mutation.isPending ? t('debts.repay.repaying') : t('debts.repay.confirm')}
+              </Button.Base>
+            )}
+          </form.Subscribe>
           <Button.Base
             type="button"
             variant="outline"
@@ -116,6 +141,11 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
         <form.Field name="amount">
           {(field) => {
             const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
+            const precisionError = field.state.value
+              && !hasValidMoneyPrecision(Number(field.state.value), debt.currency)
+              ? `Сумма не соответствует точности валюты ${debt.currency}`
+              : undefined;
+            const error = fieldError ?? precisionError;
 
             return (
               <div>
@@ -124,9 +154,9 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
                   name={field.name}
                   type="number"
                   inputMode="decimal"
-                  min="0.01"
+                  min={1 / (10 ** getCurrencyMinorUnits(debt.currency))}
                   max={debt.remainingAmount}
-                  step="0.01"
+                  step={1 / (10 ** getCurrencyMinorUnits(debt.currency))}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => {
@@ -134,10 +164,10 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
                     field.handleChange(event.target.value);
                   }}
                   placeholder={t('debts.repay.fields.amount')}
-                  hasError={Boolean(fieldError)}
+                  hasError={Boolean(error)}
                   disabled={mutation.isPending}
                 />
-                {fieldError && <Input.Error>{fieldError}</Input.Error>}
+                {error && <Input.Error>{error}</Input.Error>}
               </div>
             );
           }}
@@ -168,6 +198,30 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
             </label>
           )}
         </form.Field>
+
+        <form.Subscribe selector={(state) => state.values.isIncome}>
+          {(isIncome) => isIncome && (
+            <form.Field name="accountId">
+              {(field) => (
+                <AccountSelect
+                  id="repay-debt-account"
+                  accounts={eligibleAccounts}
+                  value={field.state.value}
+                  onValueChange={field.handleChange}
+                  label={`Счёт зачисления в ${debt.currency}`}
+                  placeholder="Выберите счёт"
+                  emptyMessage={`Нет активного счёта в ${debt.currency}`}
+                  isLoading={accountsQuery.isLoading || userQuery.isLoading}
+                  error={accountsQuery.isError || userQuery.isError
+                    ? 'Не удалось загрузить счета'
+                    : undefined}
+                  disabled={mutation.isPending}
+                  offerAccountCreation
+                />
+              )}
+            </form.Field>
+          )}
+        </form.Subscribe>
 
         <form.Field name="description">
           {(field) => {

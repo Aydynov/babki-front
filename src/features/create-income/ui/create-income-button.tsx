@@ -1,7 +1,11 @@
+import { AccountSelect, accountsQueryOptions } from '@/entities/accounts';
 import { useCreateIncomeMutation } from '@/entities/incomes';
+import { usersQueryOptions } from '@/entities/users';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import { useForm } from '@tanstack/react-form';
+import { useQuery } from '@tanstack/react-query';
 import { getFirstFieldError, getMutationErrorMessage } from '@/shared/lib/form-errors';
+import { getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { cn } from '@/shared/lib/shadcn-utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
@@ -15,10 +19,18 @@ import {
 } from 'lucide-react';
 import {
   type FC,
+  useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { createIncomeFormSchema, defaultCreateIncomeFormValues } from '../model/create-income-form';
+import {
+  createIncomeFormSchema,
+  defaultCreateIncomeFormValues,
+  getIncomeInitialAccountId,
+  hasValidIncomeAmountPrecision,
+  mapCreateIncomeDto,
+} from '../model/create-income-form';
 
 interface CreateIncomeButtonProps {
   className?: string;
@@ -44,6 +56,8 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
 }) => {
   const { t } = useTranslation();
   const createIncomeMutation = useCreateIncomeMutation();
+  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const userQuery = useQuery(usersQueryOptions.me());
   const [open, setOpen] = useState(false);
 
   const mutationError = getMutationErrorMessage(createIncomeMutation.error);
@@ -54,17 +68,47 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
       onSubmit: createIncomeFormSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      await createIncomeMutation.mutateAsync({
-        source: value.source.trim(),
-        amount: Number(value.amount),
-        transactionDate: value.transactionDate,
-      });
+      await createIncomeMutation.mutateAsync(mapCreateIncomeDto(value));
 
       setOpen(false);
       formApi.reset();
       createIncomeMutation.reset();
     },
   });
+
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
+  const selectedAccount = accounts.find(({ _id }) => _id === form.state.values.accountId);
+  const amountPrecisionInvalid = selectedAccount !== undefined
+    && form.state.values.amount.trim() !== ''
+    && !hasValidIncomeAmountPrecision(form.state.values.amount, selectedAccount.currency);
+  const activeAccountsUnavailable = accountsQuery.isLoading
+    || userQuery.isLoading
+    || accounts.every(({ archivedAt }) => archivedAt !== null);
+  const moneyStep = selectedAccount
+    ? String(1 / (10 ** getCurrencyMinorUnits(selectedAccount.currency)))
+    : '0.01';
+
+  useEffect(() => {
+    if (
+      !open
+      || form.state.values.accountId
+      || !accountsQuery.isSuccess
+      || !userQuery.isSuccess
+    ) return;
+
+    const accountId = getIncomeInitialAccountId(
+      accounts,
+      userQuery.data?.defaultAccountId ?? null,
+    );
+    if (accountId) form.setFieldValue('accountId', accountId);
+  }, [
+    accounts,
+    accountsQuery.isSuccess,
+    form,
+    open,
+    userQuery.data,
+    userQuery.isSuccess,
+  ]);
 
   const resetForm = () => {
     form.reset();
@@ -116,7 +160,14 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
             <Dialog.Title>{t('incomes.create.title')}</Dialog.Title>
 
             <div className="flex gap-2.5">
-              <Button.Base type="submit" disabled={createIncomeMutation.isPending}>
+              <Button.Base
+                type="submit"
+                disabled={
+                  createIncomeMutation.isPending
+                  || activeAccountsUnavailable
+                  || amountPrecisionInvalid
+                }
+              >
                 <LucideCheck />
                 {createIncomeMutation.isPending ? t('incomes.create.saving') : t('incomes.create.save')}
               </Button.Base>
@@ -138,6 +189,36 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
           </Dialog.Header>
 
           <Dialog.Body>
+            <form.Field name="accountId">
+              {(field) => {
+                const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
+
+                return (
+                  <div>
+                    <AccountSelect
+                      id="create-income-account"
+                      accounts={accounts}
+                      value={field.state.value}
+                      onValueChange={(value) => {
+                        clearMutationError();
+                        field.handleChange(value);
+                      }}
+                      label={t('incomes.create.fields.account')}
+                      placeholder={t('incomes.create.accounts.placeholder')}
+                      emptyMessage={t('incomes.create.accounts.empty')}
+                      isLoading={accountsQuery.isLoading || userQuery.isLoading}
+                      error={accountsQuery.isError || userQuery.isError
+                        ? t('incomes.create.accounts.error')
+                        : undefined}
+                      disabled={createIncomeMutation.isPending}
+                      offerAccountCreation
+                    />
+                    {fieldError && <Input.Error>{fieldError}</Input.Error>}
+                  </div>
+                );
+              }}
+            </form.Field>
+
             <form.Field name="source">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
@@ -167,6 +248,12 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
             <form.Field name="amount">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
+                const precisionError = amountPrecisionInvalid
+                  ? t('incomes.create.validation.precision', {
+                    currency: selectedAccount?.currency,
+                  })
+                  : undefined;
+                const error = fieldError ?? precisionError;
 
                 return (
                   <div>
@@ -175,8 +262,8 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                       name={field.name}
                       type="number"
                       inputMode="decimal"
-                      min="0.01"
-                      step="0.01"
+                      min={moneyStep}
+                      step={moneyStep}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) => {
@@ -184,10 +271,10 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                         field.handleChange(event.target.value);
                       }}
                       placeholder={t('incomes.create.fields.amount')}
-                      hasError={Boolean(fieldError)}
+                      hasError={Boolean(error)}
                       disabled={createIncomeMutation.isPending}
                     />
-                    {fieldError && <Input.Error>{fieldError}</Input.Error>}
+                    {error && <Input.Error>{error}</Input.Error>}
                   </div>
                 );
               }}

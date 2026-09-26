@@ -1,11 +1,12 @@
 import { snapshotsQueryKeys } from '@/entities/accounts-snapshots';
-import { balancesQueryKeys } from '@/entities/balances';
+import { accountsQueryKeys } from '@/entities/accounts';
 import { expenseLimitsQueryKeys } from '@/entities/expense-limits';
 import {
   type ExpensesPaginatedResponse,
   expensesQueryKeys,
 } from '@/entities/expenses';
 import { reportsQueryKeys } from '@/entities/reports';
+import { transactionsQueryKeys } from '@/entities/transactions';
 import type { QueryClient } from '@tanstack/react-query';
 
 export const removeExpenseFromCachedLists = (
@@ -39,7 +40,8 @@ export const refreshExpenseDeletionQueries = (
     queryClient.invalidateQueries({ queryKey: expensesQueryKeys.all }),
     queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
     queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: balancesQueryKeys.all }),
+    queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
     queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(accountId) }),
+    queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
   ]).catch(() => undefined);
 };

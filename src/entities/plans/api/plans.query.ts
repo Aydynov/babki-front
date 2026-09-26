@@ -3,6 +3,9 @@ import {
 } from '@tanstack/react-query';
 import { expensesQueryKeys } from '@/entities/expenses/@x/plans';
 import { reportsQueryKeys } from '@/entities/reports/@x/plans';
+import { accountsQueryKeys } from '@/entities/accounts/@x/plans';
+import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/plans';
+import { transactionsQueryKeys } from '@/entities/transactions/@x/plans';
 import { plansApi } from './plans.api';
 import type { ClosePlanPayload, ListPlansQuery, UpdatePlanPayload } from '../model/schemas';
 
@@ -25,8 +28,8 @@ export const useCreatePlanMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: plansApi.create,
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() });
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }).catch(() => undefined);
       },
     }),
   );
@@ -40,8 +43,8 @@ export const useUpdatePlanMutation = () => {
       mutationFn: ({ planId, payload }: { planId: string; payload: UpdatePlanPayload }) => (
         plansApi.update(planId, payload)
       ),
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() });
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }).catch(() => undefined);
       },
     }),
   );
@@ -53,8 +56,8 @@ export const useRemovePlanMutation = () => {
   return useMutation(
     mutationOptions({
       mutationFn: plansApi.remove,
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() });
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }).catch(() => undefined);
       },
     }),
   );
@@ -68,12 +71,15 @@ export const useClosePlanMutation = () => {
       mutationFn: ({ planId, payload }: { planId: string; payload: ClosePlanPayload }) => (
         plansApi.close(planId, payload)
       ),
-      onSuccess: async () => {
-        await Promise.all([
+      onSuccess: (_, { payload }) => {
+        Promise.all([
           queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }),
           queryClient.invalidateQueries({ queryKey: expensesQueryKeys.all }),
           queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
-        ]);
+          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(payload.accountId) }),
+        ]).catch(() => undefined);
       },
     }),
   );

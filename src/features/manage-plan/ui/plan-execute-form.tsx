@@ -1,14 +1,18 @@
 import { type Plan, type useClosePlanMutation } from '@/entities/plans';
+import { AccountSelect, accountsQueryOptions } from '@/entities/accounts';
 import { useForm } from '@tanstack/react-form';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
+import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
 import { LucideCheck } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   executePlanFormSchema,
+  getEligiblePlanAccounts,
   getExecutePlanFormValues,
 } from '../model/execute-plan-form';
 import { getFirstFieldError, getMutationErrorMessage, mapErrorMessage } from '../model/errors';
@@ -28,6 +32,8 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const mutationError = getMutationErrorMessage(mutation.error);
+  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const eligibleAccounts = getEligiblePlanAccounts(accountsQuery.data ?? [], plan.currency);
 
   const form = useForm({
     defaultValues: getExecutePlanFormValues(plan),
@@ -36,6 +42,7 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
       await mutation.mutateAsync({
         planId: plan._id,
         payload: {
+          accountId: value.accountId,
           closingDate: value.closingDate,
           amount: Number(value.amount),
           description: value.description.trim(),
@@ -67,7 +74,10 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
       <Dialog.Header>
         <Dialog.Title>{t('plans.execute.title')}</Dialog.Title>
         <div className="flex gap-2.5">
-          <Button.Base type="submit" disabled={mutation.isPending}>
+          <Button.Base
+            type="submit"
+            disabled={mutation.isPending || eligibleAccounts.length === 0}
+          >
             <LucideCheck />
             {mutation.isPending ? t('plans.execute.executing') : t('plans.execute.confirm')}
           </Button.Base>
@@ -85,10 +95,27 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
       <Dialog.Body>
         <Dialog.Description>{t('plans.execute.description')}</Dialog.Description>
 
+        <form.Field name="accountId">
+          {(field) => (
+            <AccountSelect
+              id="execute-plan-account"
+              accounts={eligibleAccounts}
+              value={field.state.value}
+              onValueChange={field.handleChange}
+              label={`Счёт в ${plan.currency}`}
+              placeholder="Выберите счёт"
+              emptyMessage={`Нет активного счёта в ${plan.currency}`}
+              isLoading={accountsQuery.isLoading}
+              error={accountsQuery.isError ? 'Не удалось загрузить счета' : undefined}
+              disabled={mutation.isPending}
+              offerAccountCreation
+            />
+          )}
+        </form.Field>
+
         <form.Field name="description">
           {(field) => {
             const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
-
             return (
               <div>
                 <Input.Base
@@ -114,6 +141,11 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
         <form.Field name="amount">
           {(field) => {
             const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
+            const precisionError = field.state.value
+              && !hasValidMoneyPrecision(Number(field.state.value), plan.currency)
+              ? `Сумма не соответствует точности валюты ${plan.currency}`
+              : undefined;
+            const error = fieldError ?? precisionError;
 
             return (
               <div>
@@ -122,8 +154,8 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
                   name={field.name}
                   type="number"
                   inputMode="decimal"
-                  min="0.01"
-                  step="0.01"
+                  min={1 / (10 ** getCurrencyMinorUnits(plan.currency))}
+                  step={1 / (10 ** getCurrencyMinorUnits(plan.currency))}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => {
@@ -131,10 +163,10 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
                     field.handleChange(event.target.value);
                   }}
                   placeholder={t('plans.execute.fields.amount')}
-                  hasError={Boolean(fieldError)}
+                  hasError={Boolean(error)}
                   disabled={mutation.isPending}
                 />
-                {fieldError && <Input.Error>{fieldError}</Input.Error>}
+                {error && <Input.Error>{error}</Input.Error>}
               </div>
             );
           }}

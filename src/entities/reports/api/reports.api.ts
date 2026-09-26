@@ -1,6 +1,6 @@
 import {
   apiClient,
-  parseWithSchema,
+  parseRequiredWithSchema,
 } from '@/shared/api';
 import {
   type FindMonthlyReportsByQuery,
@@ -14,12 +14,12 @@ class ReportsApi {
 
   getMonthly = async (params?: FindMonthlyReportsByQuery) => {
     const response = await this.client.get<ReportPeriod[]>('/reports/months', { params });
-    return parseWithSchema(reportPeriodSchema.array(), response.data);
+    return parseRequiredWithSchema(reportPeriodSchema.array(), response.data);
   };
 
   getYearly = async (params?: FindYearlyReportsByQuery) => {
     const response = await this.client.get<ReportPeriod[]>('/reports/years', { params });
-    return parseWithSchema(reportPeriodSchema.array(), response.data);
+    return parseRequiredWithSchema(reportPeriodSchema.array(), response.data);
   };
 }
 

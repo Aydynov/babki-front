@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react';
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { getFirstFieldError, getMutationErrorMessage } from '@/shared/lib/form-errors';
+import { currencyCodes, getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { cn } from '@/shared/lib/shadcn-utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
@@ -20,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import {
   createPlanFormSchema,
   defaultCreatePlanFormValues,
+  hasValidPlanAmountPrecision,
 } from '../model/create-plan-form';
 
 interface CreatePlanButtonProps {
@@ -56,7 +58,9 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
     defaultValues: defaultCreatePlanFormValues,
     validators: { onSubmit: createPlanFormSchema },
     onSubmit: async ({ value, formApi }) => {
+      if (!hasValidPlanAmountPrecision(value.amount, value.currency)) return;
       await createPlanMutation.mutateAsync({
+        currency: value.currency,
         description: value.description.trim(),
         categoryId: value.categoryId,
         amount: Number(value.amount),
@@ -132,6 +136,23 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
           </Dialog.Header>
 
           <Dialog.Body>
+            <form.Field name="currency">
+              {(field) => (
+                <div>
+                  <Input.Label htmlFor="create-plan-currency">Валюта</Input.Label>
+                  <select
+                    id="create-plan-currency"
+                    className="h-11 w-full rounded-lg border bg-background px-3"
+                    value={field.state.value}
+                    disabled={createPlanMutation.isPending}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                  >
+                    {currencyCodes.map((currency) => <option key={currency}>{currency}</option>)}
+                  </select>
+                </div>
+              )}
+            </form.Field>
+
             <form.Field name="description">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
@@ -185,6 +206,12 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
             <form.Field name="amount">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
+                const currency = form.getFieldValue('currency');
+                const precisionError = field.state.value
+                  && !hasValidPlanAmountPrecision(field.state.value, currency)
+                  ? `Сумма не соответствует точности валюты ${currency}`
+                  : undefined;
+                const error = fieldError ?? precisionError;
 
                 return (
                   <div>
@@ -193,8 +220,8 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
                       name={field.name}
                       type="number"
                       inputMode="decimal"
-                      min="0.01"
-                      step="0.01"
+                      min={1 / (10 ** getCurrencyMinorUnits(currency))}
+                      step={1 / (10 ** getCurrencyMinorUnits(currency))}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) => {
@@ -202,10 +229,10 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
                         field.handleChange(event.target.value);
                       }}
                       placeholder={t('plans.create.fields.amount')}
-                      hasError={Boolean(fieldError)}
+                      hasError={Boolean(error)}
                       disabled={createPlanMutation.isPending}
                     />
-                    {fieldError && <Input.Error>{fieldError}</Input.Error>}
+                    {error && <Input.Error>{error}</Input.Error>}
                   </div>
                 );
               }}

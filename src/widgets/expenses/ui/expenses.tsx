@@ -8,8 +8,9 @@ import {
   useIsCurrentPeriod,
   useSelectedPeriod,
 } from '@/features/select-period';
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
+import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table } from '@/shared/ui/table';
 import {
@@ -20,17 +21,8 @@ import { Accordion } from '@base-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import i18next from 'i18next';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-
-const locale = i18next.language;
-const formatAmount = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'standard',
-  minimumFractionDigits: 0,
-});
 
 const mobileTableClassName = `
   overflow-visible
@@ -56,12 +48,12 @@ export const Expenses: FC = () => {
   const selectedPeriod = useSelectedPeriod();
   const isCurrentPeriod = useIsCurrentPeriod();
   const rowGridClassName = getRowGridClassName(isCurrentPeriod);
-  const { data: expensesData, isLoading } = useQuery(
+  const expensesQuery = useQuery(
     expensesQueryOptions.findAll(selectedPeriod),
   );
   const { t } = useTranslation();
 
-  if (isLoading) {
+  if (expensesQuery.isLoading) {
     return (
       <Card.Base aria-busy="true" className="h-fit min-h-64 min-w-0">
         <span className="sr-only">Загрузка...</span>
@@ -121,6 +113,17 @@ export const Expenses: FC = () => {
     );
   }
 
+  if (expensesQuery.isError && expensesQuery.data === undefined) {
+    return (
+      <Card.Base className="h-fit min-h-64 min-w-0">
+        <QueryError onRetry={() => {
+          expensesQuery.refetch().catch(() => undefined);
+        }}
+        />
+      </Card.Base>
+    );
+  }
+
   return (
     <Card.Base className="h-fit min-h-64 min-w-0">
       <Card.Header>
@@ -132,11 +135,19 @@ export const Expenses: FC = () => {
         )}
       </Card.Header>
       <Card.Content className="px-0">
+        {expensesQuery.isError && (
+        <QueryError
+          compact
+          onRetry={() => {
+            expensesQuery.refetch().catch(() => undefined);
+          }}
+        />
+        )}
         <Table.Base className={mobileTableClassName}>
           <Accordion.Root render={<Table.Body className={mobileBodyClassName} />}>
-            {expensesData?.items.map((expense) => {
+            {expensesQuery.data?.items.map((expense) => {
               const {
-                _id: expenseId, amount, transactionDate, merchant, category, description, items,
+                _id: expenseId, amount, currency, transactionDate, merchant, category, description, items,
               } = expense;
 
               return (
@@ -170,7 +181,7 @@ export const Expenses: FC = () => {
                       `}
                     >
                       <div className="flex flex-col gap-1">
-                        {formatAmount.format(amount)}
+                        {formatMoney(amount, currency)}
                         <Body2 className="text-muted-foreground">
                           {transactionDate && format(transactionDate, 'LLLL d, y', { locale: ru })}
                         </Body2>
@@ -206,7 +217,7 @@ export const Expenses: FC = () => {
                         <Table.Row key={name}>
                           <Table.Cell>{name}</Table.Cell>
                           <Table.Cell>{quantity}</Table.Cell>
-                          <Table.Cell>{formatAmount.format(price)}</Table.Cell>
+                          <Table.Cell>{formatMoney(price, currency)}</Table.Cell>
                         </Table.Row>
                       ))}
                     </Table.Body>
@@ -214,7 +225,7 @@ export const Expenses: FC = () => {
                 </Accordion.Item>
               );
             })}
-            {!expensesData?.items.length && (
+            {!expensesQuery.data?.items.length && (
             <div className="m-auto w-fit p-5">
               <Body1 className="text-muted-foreground">Данные отсутствуют</Body1>
             </div>

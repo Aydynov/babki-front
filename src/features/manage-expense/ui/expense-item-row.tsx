@@ -18,6 +18,7 @@ interface ExpenseItemRowProps {
     quantity?: string;
     price?: string;
   };
+  moneyStep: string;
   onNameChange: (value: string) => void;
   onNameBlur: () => void;
   onQuantityChange: (value: string) => void;
@@ -34,6 +35,7 @@ export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
   index,
   disabled,
   errors,
+  moneyStep,
   onNameChange,
   onNameBlur,
   onQuantityChange,
@@ -113,8 +115,8 @@ export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
           className="min-w-0"
           type="number"
           inputMode="decimal"
-          min="0.01"
-          step="0.01"
+          min={moneyStep}
+          step={moneyStep}
           value={item.price}
           onChange={(event) => onPriceChange(event.target.value)}
           onBlur={onPriceBlur}

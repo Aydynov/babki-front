@@ -8,11 +8,11 @@ import {
   type LoginDto,
   loginResponseSchema,
   loginSchema,
+  mapRegisterRequest,
   recoveryCodesAuthResponseSchema,
   regenerateRecoveryCodesSchema,
   type RegenerateRecoveryCodesDto,
   type RegisterDto,
-  registerSchema,
   twoFactorLoginSchema,
   type TwoFactorLoginDto,
   twoFactorSetupResponseSchema,
@@ -32,7 +32,7 @@ class AuthApiClient {
   }
 
   async register(payload: RegisterDto) {
-    const body = registerSchema.parse(payload);
+    const body = mapRegisterRequest(payload);
     const response = await this.client.post('/auth/register', body);
 
     return parseRequiredWithSchema(authResponseSchema, response.data);

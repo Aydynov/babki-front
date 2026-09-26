@@ -69,17 +69,19 @@ export const ExpenseLimitFormRow: FC<ExpenseLimitFormRowProps> = ({
               isSaving={isSaving}
               categoryAvailable={categoryAvailable}
               onChange={(field, value) => {
-                onMutationErrorClear(draft.key, field);
+                if (field !== 'currency') onMutationErrorClear(draft.key, field);
                 if (field === 'categoryId') {
                   categoryField.handleChange(value);
-                } else {
+                } else if (field === 'total') {
                   totalField.handleChange(value);
+                } else {
+                  form.setFieldValue(`drafts[${index}].values.currency`, value);
                 }
               }}
               onBlur={(field) => {
                 if (field === 'categoryId') {
                   categoryField.handleBlur();
-                } else {
+                } else if (field === 'total') {
                   totalField.handleBlur();
                 }
               }}

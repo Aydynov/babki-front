@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
+import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
 import { LucideCheck } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,10 +81,14 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
+        <Typography.Caption1 className="text-muted-foreground">
+          Валюта плана:
+          {' '}
+          {plan.currency}
+        </Typography.Caption1>
         <form.Field name="description">
           {(field) => {
             const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
-
             return (
               <div>
                 <Input.Base
@@ -133,6 +138,11 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
         <form.Field name="amount">
           {(field) => {
             const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
+            const precisionError = field.state.value
+              && !hasValidMoneyPrecision(Number(field.state.value), plan.currency)
+              ? `Сумма не соответствует точности валюты ${plan.currency}`
+              : undefined;
+            const error = fieldError ?? precisionError;
 
             return (
               <div>
@@ -141,8 +151,8 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
                   name={field.name}
                   type="number"
                   inputMode="decimal"
-                  min="0.01"
-                  step="0.01"
+                  min={1 / (10 ** getCurrencyMinorUnits(plan.currency))}
+                  step={1 / (10 ** getCurrencyMinorUnits(plan.currency))}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => {
@@ -150,10 +160,10 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
                     field.handleChange(event.target.value);
                   }}
                   placeholder={t('plans.edit.fields.amount')}
-                  hasError={Boolean(fieldError)}
+                  hasError={Boolean(error)}
                   disabled={mutation.isPending}
                 />
-                {fieldError && <Input.Error>{fieldError}</Input.Error>}
+                {error && <Input.Error>{error}</Input.Error>}
               </div>
             );
           }}

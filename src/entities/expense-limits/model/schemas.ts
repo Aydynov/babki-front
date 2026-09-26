@@ -5,10 +5,12 @@ import {
   entityMetaSchema,
   objectIdSchema,
 } from '@/shared/api';
+import { currencyCodeSchema } from '@/shared/lib/currency';
 
 export const expenseLimitSchema = z
   .object({
     category: expenseCategorySchema,
+    currency: currencyCodeSchema,
     startDate: dateStringSchema,
     endDate: dateStringSchema,
     total: z.number().positive(),
@@ -18,6 +20,7 @@ export const expenseLimitSchema = z
 
 export const createExpenseLimitSchema = z.object({
   categoryId: objectIdSchema,
+  currency: currencyCodeSchema,
   total: z.number().positive(),
 }).extend(expenseLimitSchema.pick({
   startDate: true,
@@ -30,9 +33,9 @@ export const updateExpenseLimitSchema = createExpenseLimitSchema.pick({
 
 export const findExpenseLimitQuerySchema = z.object({
   periodDate: dateStringSchema,
-}).extend(expenseLimitSchema.pick({
-  category: true,
-}).partial().shape);
+  categoryId: objectIdSchema.optional(),
+  currency: currencyCodeSchema.optional(),
+});
 
 export type ExpenseLimit = z.infer<typeof expenseLimitSchema>;
 export type CreateExpenseLimitDto = z.infer<typeof createExpenseLimitSchema>;

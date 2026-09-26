@@ -1,6 +1,10 @@
 import type { ExpenseCategory } from '@/entities/expense-categories';
+import type { Account } from '@/entities/accounts';
 import type { CreateExpenseDto, Expense, UpdateExpenseDto } from '@/entities/expenses';
 import { z } from 'zod';
+// Native node:test executes this module without Vite alias resolution and requires the explicit TypeScript entry point.
+// eslint-disable-next-line import-x/extensions, import-x/no-useless-path-segments
+import { hasValidMoneyPrecision, type CurrencyCode } from '../../../shared/lib/currency/index.ts';
 
 export interface ExpenseItemDraft {
   id: string;
@@ -10,6 +14,7 @@ export interface ExpenseItemDraft {
 }
 
 export interface ExpenseFormValues {
+  accountId: string;
   categoryId: string;
   amount: string;
   transactionDate: string;
@@ -38,6 +43,7 @@ const integerQuantityStringSchema = z
   .refine((value) => Number(value) >= 1, 'quantityMin');
 
 export const expenseFieldSchemas = {
+  accountId: z.string().trim().min(1, 'required'),
   categoryId: z.string().trim().min(1, 'required'),
   amount: positiveNumberStringSchema,
   transactionDate: z.string().trim().min(1, 'required').pipe(z.iso.date('dateInvalid')),
@@ -71,6 +77,7 @@ export const expenseItemDraftSchema = z.object({
 
 export const expenseFormSchema = z
   .object({
+    accountId: expenseFieldSchemas.accountId,
     categoryId: expenseFieldSchemas.categoryId,
     amount: expenseFieldSchemas.amount,
     transactionDate: expenseFieldSchemas.transactionDate,
@@ -105,7 +112,9 @@ export const formatLocalDate = (date: Date) => [
 
 export const getDefaultExpenseFormValues = (
   date = new Date(),
+  accountId = '',
 ): ExpenseFormValues => ({
+  accountId,
   categoryId: '',
   amount: '',
   transactionDate: formatLocalDate(date),
@@ -117,6 +126,7 @@ export const getDefaultExpenseFormValues = (
 export const getEditExpenseFormValues = (
   expense: Expense,
 ): ExpenseFormValues => ({
+  accountId: expense.accountId,
   categoryId: expense.category._id,
   amount: String(expense.amount),
   transactionDate: expense.transactionDate.slice(0, 10),
@@ -141,6 +151,28 @@ export const getExpenseCategoryOptions = (
     ? [currentCategory, ...activeCategories]
     : activeCategories;
 };
+
+type ExpenseAccount = Pick<Account, '_id' | 'name' | 'archivedAt' | 'currency'>;
+
+export const getExpenseInitialAccountId = (
+  accounts: ExpenseAccount[],
+  defaultAccountId: string | null,
+) => accounts.find(({ _id, archivedAt }) => (
+  _id === defaultAccountId && archivedAt === null
+))?._id ?? '';
+
+export const getExpenseAccountContext = (
+  accounts: ExpenseAccount[],
+  accountId: string,
+) => accounts.find(({ _id }) => _id === accountId) ?? null;
+
+export const hasValidExpenseMoneyPrecision = (
+  values: Pick<ExpenseFormValues, 'amount' | 'items'>,
+  currency: CurrencyCode,
+) => (
+  hasValidMoneyPrecision(Number(values.amount), currency)
+  && values.items.every(({ price }) => hasValidMoneyPrecision(Number(price), currency))
+);
 
 export const createExpenseItemDraft = (): ExpenseItemDraft => ({
   id: crypto.randomUUID(),
@@ -209,6 +241,7 @@ export const applyAmountInput = (
 export const mapCreateExpenseDto = (
   values: ExpenseFormValues,
 ): CreateExpenseDto => ({
+  accountId: values.accountId.trim(),
   categoryId: values.categoryId.trim(),
   amount: Number(values.amount),
   transactionDate: values.transactionDate,

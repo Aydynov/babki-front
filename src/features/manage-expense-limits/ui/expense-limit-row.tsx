@@ -4,6 +4,7 @@ import {
   ExpenseCategoryBadge,
 } from '@/entities/expense-categories';
 import { Button } from '@/shared/ui/button';
+import { currencyCodes, getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import {
@@ -38,8 +39,8 @@ interface ExpenseLimitRowProps {
   disabled: boolean;
   isSaving: boolean;
   categoryAvailable: boolean;
-  onChange: (field: 'categoryId' | 'total', value: string) => void;
-  onBlur: (field: 'categoryId' | 'total') => void;
+  onChange: (field: 'categoryId' | 'currency' | 'total', value: string) => void;
+  onBlur: (field: 'categoryId' | 'currency' | 'total') => void;
   onDelete: () => void;
   onSave: () => void;
 }
@@ -97,7 +98,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
     <form
       className="
         grid grid-cols-[minmax(0,1fr)_32px_32px] gap-x-1.5 gap-y-2
-        sm:grid-cols-[minmax(0,1.25fr)_minmax(5rem,0.75fr)_32px_32px] sm:gap-y-1
+        sm:grid-cols-[minmax(0,1.25fr)_5rem_minmax(5rem,0.75fr)_32px_32px] sm:gap-y-1
       "
       aria-describedby={genericMutationError ? mutationErrorId : undefined}
       onSubmit={handleSubmit}
@@ -125,11 +126,26 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
         )}
       </div>
 
+      {draft.limitId || draft.writeConfirmed ? (
+        <div className="flex h-11 items-center text-body-2">{draft.values.currency}</div>
+      ) : (
+        <select
+          className="h-11 rounded-lg border bg-background px-2"
+          value={draft.values.currency}
+          disabled={disabled}
+          aria-label="Валюта лимита"
+          onChange={(event) => onChange('currency', event.target.value)}
+          onBlur={() => onBlur('currency')}
+        >
+          {currencyCodes.map((currency) => <option key={currency}>{currency}</option>)}
+        </select>
+      )}
+
       <Input.Base
         type="number"
         inputMode="decimal"
-        min="0.01"
-        step="0.01"
+        min={1 / (10 ** getCurrencyMinorUnits(draft.values.currency))}
+        step={1 / (10 ** getCurrencyMinorUnits(draft.values.currency))}
         value={draft.values.total}
         onChange={(event) => onChange('total', event.target.value)}
         onBlur={() => onBlur('total')}
@@ -183,7 +199,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
       {categoryError && (
         <Typography.Caption1
           id={categoryErrorId}
-          className="col-span-3 text-destructive sm:col-span-4"
+          className="col-span-3 text-destructive sm:col-span-5"
           role="alert"
         >
           {categoryError}
@@ -193,7 +209,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
       {totalError && (
         <Typography.Caption1
           id={totalErrorId}
-          className="col-span-3 text-destructive sm:col-span-4"
+          className="col-span-3 text-destructive sm:col-span-5"
           role="alert"
         >
           {totalError}
@@ -203,7 +219,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
       {genericMutationError && (
         <Typography.Caption1
           id={mutationErrorId}
-          className="col-span-3 text-destructive sm:col-span-4"
+          className="col-span-3 text-destructive sm:col-span-5"
           role="alert"
         >
           {genericMutationError}

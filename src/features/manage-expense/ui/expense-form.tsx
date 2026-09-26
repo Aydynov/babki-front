@@ -1,9 +1,19 @@
 import {
+  AccountSelect,
+  accountsQueryOptions,
+} from '@/entities/accounts';
+import {
   CategorySelect,
   type ExpenseCategory,
   expenseCategoriesQueryOptions,
 } from '@/entities/expense-categories';
+import { usersQueryOptions } from '@/entities/users';
 import { getFirstFieldError } from '@/shared/lib/form-errors';
+import {
+  getCurrencyMinorUnits,
+  hasValidMoneyPrecision,
+  type CurrencyCode,
+} from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -20,7 +30,7 @@ import type {
   FC,
   RefObject,
 } from 'react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   applyAmountInput,
@@ -32,8 +42,11 @@ import {
   expenseFieldSchemas,
   expenseFormValidationOptions,
   getExpenseCategoryOptions,
+  getExpenseAccountContext,
   getExpenseDescriptionValidationError,
+  getExpenseInitialAccountId,
   getExpenseValidationKey,
+  hasValidExpenseMoneyPrecision,
   isExpenseItemValid,
 } from '../model/expense-form';
 import { ExpenseItemRow } from './expense-item-row';
@@ -43,6 +56,7 @@ interface ExpenseFormProps {
   initialAmountOverridden: boolean;
   currentCategory?: ExpenseCategory;
   dateDisabled?: boolean;
+  immutableCurrency?: CurrencyCode;
   pending: boolean;
   submitError?: string;
   title: string;
@@ -66,6 +80,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   initialAmountOverridden,
   currentCategory,
   dateDisabled = false,
+  immutableCurrency,
   pending,
   submitError,
   title,
@@ -80,6 +95,8 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
+  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const userQuery = useQuery(usersQueryOptions.me());
   const [amountOverridden, setAmountOverridden] = useState(initialAmountOverridden);
   const categories = getExpenseCategoryOptions(categoriesQuery.data ?? [], currentCategory);
   const currentCategoryUnavailable = categoriesQuery.isSuccess
@@ -88,6 +105,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   const categoriesUnavailable = categoriesQuery.isLoading
     || categories.length === 0
     || currentCategoryUnavailable;
+  const accountEditable = !dateDisabled;
 
   const form = useForm({
     defaultValues,
@@ -103,6 +121,45 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
       }
     },
   });
+
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
+  const selectedAccount = getExpenseAccountContext(
+    accounts,
+    form.state.values.accountId,
+  );
+  const selectedCurrency = immutableCurrency ?? selectedAccount?.currency;
+  const moneyStep = selectedCurrency
+    ? String(1 / (10 ** getCurrencyMinorUnits(selectedCurrency)))
+    : '0.01';
+  const moneyPrecisionInvalid = selectedCurrency !== undefined
+    && !hasValidExpenseMoneyPrecision(form.state.values, selectedCurrency);
+  const accountsUnavailable = accountEditable && (
+    accountsQuery.isLoading
+    || userQuery.isLoading
+    || accounts.every(({ archivedAt }) => archivedAt !== null)
+  );
+
+  useEffect(() => {
+    if (
+      !accountEditable
+      || form.state.values.accountId
+      || !accountsQuery.isSuccess
+      || !userQuery.isSuccess
+    ) return;
+
+    const accountId = getExpenseInitialAccountId(
+      accounts,
+      userQuery.data?.defaultAccountId ?? null,
+    );
+    if (accountId) form.setFieldValue('accountId', accountId);
+  }, [
+    accountEditable,
+    accounts,
+    accountsQuery.isSuccess,
+    form,
+    userQuery.data,
+    userQuery.isSuccess,
+  ]);
 
   const syncAutomaticAmount = (
     items: ReturnType<typeof form.getFieldValue<'items'>>,
@@ -155,7 +212,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
           <div className="flex gap-2.5">
             <Button.Base
               type="submit"
-              disabled={pending || categoriesUnavailable}
+              disabled={pending || categoriesUnavailable || accountsUnavailable || moneyPrecisionInvalid}
             >
               <LucideCheck />
               {pending
@@ -174,6 +231,51 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
         </Dialog.Header>
 
         <Dialog.Body className="min-h-0 overflow-y-auto pr-1">
+          {accountEditable ? (
+            <form.Field
+              name="accountId"
+              validators={{ onSubmit: expenseFieldSchemas.accountId }}
+            >
+              {(field) => {
+                const error = getValidationMessage(getFirstFieldError(field.state.meta.errors));
+
+                return (
+                  <div>
+                    <AccountSelect
+                      id={`${idPrefix}-account`}
+                      accounts={accounts}
+                      value={field.state.value}
+                      onValueChange={(value) => {
+                        onClearSubmitError();
+                        field.handleChange(value);
+                      }}
+                      label={t('expenses.create.fields.account')}
+                      placeholder={t('expenses.create.accounts.placeholder')}
+                      emptyMessage={t('expenses.create.accounts.empty')}
+                      isLoading={accountsQuery.isLoading || userQuery.isLoading}
+                      error={accountsQuery.isError || userQuery.isError
+                        ? t('expenses.create.accounts.error')
+                        : undefined}
+                      disabled={pending}
+                      offerAccountCreation
+                    />
+                    {error && <Input.Error>{error}</Input.Error>}
+                  </div>
+                );
+              }}
+            </form.Field>
+          ) : (
+            <div className="rounded-lg border bg-muted/40 p-3">
+              <Typography.Body2>{t('expenses.edit.accountContext')}</Typography.Body2>
+              <Typography.Caption1 className="text-muted-foreground">
+                {selectedAccount?.name ?? defaultValues.accountId}
+                {' · '}
+                {immutableCurrency}
+                {selectedAccount?.archivedAt ? ` · ${t('expenses.edit.accountArchived')}` : ''}
+              </Typography.Caption1>
+            </div>
+          )}
+
           <form.Field
             name="categoryId"
             validators={expenseCategoryFieldValidators}
@@ -236,7 +338,13 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
               validators={{ onBlur: expenseFieldSchemas.amount }}
             >
               {(field) => {
-                const error = getValidationMessage(getFirstFieldError(field.state.meta.errors));
+                const validationError = getValidationMessage(getFirstFieldError(field.state.meta.errors));
+                const precisionError = selectedCurrency
+                  && Number.isFinite(Number(field.state.value))
+                  && !hasValidMoneyPrecision(Number(field.state.value), selectedCurrency)
+                  ? t('expenses.create.validation.precision', { currency: selectedCurrency })
+                  : undefined;
+                const error = validationError ?? precisionError;
 
                 return (
                   <div>
@@ -248,7 +356,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
                       name={field.name}
                       type="number"
                       inputMode="decimal"
-                      step="0.01"
+                      step={moneyStep}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) => {
@@ -407,8 +515,18 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
                                     ),
                                     price: getValidationMessage(
                                       getFirstFieldError(priceField.state.meta.errors),
-                                    ),
+                                    ) ?? (selectedCurrency
+                                      && Number.isFinite(Number(priceField.state.value))
+                                      && !hasValidMoneyPrecision(
+                                        Number(priceField.state.value),
+                                        selectedCurrency,
+                                      )
+                                      ? t('expenses.create.validation.precision', {
+                                        currency: selectedCurrency,
+                                      })
+                                      : undefined),
                                   }}
+                                  moneyStep={moneyStep}
                                   onNameChange={(value) => updateItem(index, 'name', value)}
                                   onNameBlur={nameField.handleBlur}
                                   onQuantityChange={(value) => updateItem(index, 'quantity', value)}

@@ -2,24 +2,47 @@ import { z } from 'zod';
 import {
   dateStringSchema,
   entityMetaSchema,
+  objectIdSchema,
   paginatedResponseSchema,
   paginationQuerySchema,
   periodQuerySchema,
 } from '@/shared/api';
+import { currencyCodeSchema } from '@/shared/lib/currency';
+import { effectiveRateSchema, transferEffectSchema } from '@/entities/transfers/@x/transactions';
 
-export const transactionTypeEnum = z.enum(['income', 'expense', 'save']);
-export const transactionSchema = z
+export const transactionTypeEnum = z.enum(['income', 'expense', 'transfer']);
+export const transactionBaseSchema = z
   .object({
-    snapshotId: z.string(),
-    accountId: z.string(),
-    amount: z.number().min(0),
     transactionDate: dateStringSchema,
     description: z.string().max(1000).optional(),
-    type: transactionTypeEnum,
   })
   .extend(entityMetaSchema.shape);
 
+export const scalarTransactionSchema = transactionBaseSchema.extend({
+  snapshotId: objectIdSchema,
+  accountId: objectIdSchema,
+  currency: currencyCodeSchema,
+  amount: z.number().min(0),
+  type: z.enum(['income', 'expense']),
+});
+
+export const incomeTransactionSchema = scalarTransactionSchema.extend({ type: z.literal('income') });
+export const expenseTransactionSchema = scalarTransactionSchema.extend({ type: z.literal('expense') });
+export const transferTransactionSchema = transactionBaseSchema.extend({
+  type: z.literal('transfer'),
+  source: transferEffectSchema,
+  destination: transferEffectSchema,
+  effectiveRate: effectiveRateSchema,
+});
+
+export const transactionSchema = z.discriminatedUnion('type', [
+  incomeTransactionSchema,
+  expenseTransactionSchema,
+  transferTransactionSchema,
+]);
+
 export const createTransactionSchema = z.object({
+  accountId: objectIdSchema,
   amount: z.number().min(0.01),
   transactionDate: dateStringSchema,
   description: z.string().max(1000).optional(),
@@ -29,14 +52,21 @@ export const updateTransactionSchema = createTransactionSchema.omit({ transactio
 
 export const listTransactionsQuerySchema = paginationQuerySchema
   .extend(periodQuerySchema.shape)
-  .extend(transactionSchema.pick({
-    snapshotId: true,
-    accountId: true,
-    type: true,
-  }).partial().shape);
+  .extend({
+    snapshotId: objectIdSchema.optional(),
+    accountId: objectIdSchema.optional(),
+    currency: currencyCodeSchema.optional(),
+    transactionType: transactionTypeEnum.optional(),
+  });
 
 export const transactionsRevenueSchema = z
-  .object({ totalRevenue: z.number().min(0) })
+  .object({
+    totalRevenue: z.number().min(0).nullable(),
+    currencies: z.array(z.object({
+      currency: currencyCodeSchema,
+      totalRevenue: z.number().min(0),
+    })),
+  })
   .extend(periodQuerySchema.shape);
 
 export const transactionsPaginatedResponseSchema = paginatedResponseSchema(transactionSchema);

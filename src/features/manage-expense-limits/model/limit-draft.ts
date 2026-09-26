@@ -2,6 +2,7 @@ import type {
   CategorySelectOption,
 } from '@/entities/expense-categories';
 import type { ExpenseLimit } from '@/entities/expense-limits';
+import { hasValidMoneyPrecision, type CurrencyCode } from '@/shared/lib/currency';
 import {
   endOfMonth,
   format,
@@ -11,10 +12,10 @@ import {
 import { NEW_EXPENSE_LIMIT_ROW_KEY } from './constants';
 
 const DATE_FORMAT = 'yyyy-MM-dd';
-const MONEY_FORMAT = /^\d+(?:\.\d{1,2})?$/;
 
 export interface ExpenseLimitDraftValues {
   categoryId: string;
+  currency: CurrencyCode;
   total: string;
 }
 
@@ -53,7 +54,9 @@ export const parseExpenseLimitTotal = (value: string) => {
   return Number.isFinite(total) ? total : undefined;
 };
 
-export const hasValidMoneyFormat = (value: string) => MONEY_FORMAT.test(value.trim());
+export const hasValidMoneyFormat = (value: string, currency: CurrencyCode = 'RUB') => (
+  value.trim() !== '' && hasValidMoneyPrecision(Number(value), currency)
+);
 
 export const createExpenseLimitDraft = (
   limit: ExpenseLimit,
@@ -64,6 +67,7 @@ export const createExpenseLimitDraft = (
   baselineTotal: limit.total,
   values: {
     categoryId: limit.category._id,
+    currency: limit.currency,
     total: String(limit.total),
   },
 });
@@ -77,6 +81,7 @@ export const createEmptyExpenseLimitDraft = (): ExpenseLimitDraft => ({
   baselineTotal: null,
   values: {
     categoryId: '',
+    currency: 'RUB',
     total: '',
   },
 });
@@ -99,7 +104,7 @@ export const createConfirmedExpenseLimitDraft = (
   total: number,
 ): ExpenseLimitDraft => ({
   ...commitExpenseLimitDraftTotal(draft, total),
-  key: `confirmed-${category._id}`,
+  key: `confirmed-${category._id}-${draft.values.currency}`,
   writeConfirmed: true,
   category,
 });
@@ -109,7 +114,10 @@ export const isExpenseLimitDraftDirty = (draft: ExpenseLimitDraft) => {
   if (draft.baselineTotal === null) return true;
 
   const parsedTotal = parseExpenseLimitTotal(draft.values.total);
-  if (parsedTotal === undefined || !hasValidMoneyFormat(draft.values.total)) {
+  if (
+    parsedTotal === undefined
+    || !hasValidMoneyFormat(draft.values.total, draft.values.currency)
+  ) {
     return true;
   }
 

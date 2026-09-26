@@ -1,30 +1,22 @@
 import { expenseLimitsQueryOptions } from '@/entities/expense-limits';
 import { ManageExpenseLimitsButton } from '@/features/manage-expense-limits';
 import { useSelectedPeriod } from '@/features/select-period';
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
 import { Progress } from '@/shared/ui/progress';
+import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Body1 } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
-import i18next from 'i18next';
 import type { FC } from 'react';
-
-const locale = i18next.language;
-const formatAmount = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'standard',
-  minimumFractionDigits: 0,
-});
 
 export const ExpenseLimits: FC = () => {
   const selectedPeriod = useSelectedPeriod();
-  const { data: limitsData, isLoading: limitsLoading } = useQuery(
+  const limitsQuery = useQuery(
     expenseLimitsQueryOptions.findAll({ periodDate: selectedPeriod.toDate }),
   );
 
-  if (limitsLoading) {
+  if (limitsQuery.isLoading) {
     return (
       <Card.Base aria-busy="true" className="h-fit min-h-56 w-full min-w-0 md:w-auto md:min-w-93">
         <span className="sr-only">Загрузка...</span>
@@ -49,6 +41,17 @@ export const ExpenseLimits: FC = () => {
     );
   }
 
+  if (limitsQuery.isError && limitsQuery.data === undefined) {
+    return (
+      <Card.Base className="h-fit min-h-56 w-full min-w-0 md:w-auto md:min-w-93">
+        <QueryError onRetry={() => {
+          limitsQuery.refetch().catch(() => undefined);
+        }}
+        />
+      </Card.Base>
+    );
+  }
+
   return (
     <Card.Base className="h-fit min-h-56 w-full min-w-0 md:w-auto md:min-w-93">
       <Card.Header>
@@ -58,19 +61,27 @@ export const ExpenseLimits: FC = () => {
         </Card.Controls>
       </Card.Header>
       <Card.Content className="px-0">
-        {limitsData?.map(({
-          _id, category, total, rest,
+        {limitsQuery.isError && (
+        <QueryError
+          compact
+          onRetry={() => {
+            limitsQuery.refetch().catch(() => undefined);
+          }}
+        />
+        )}
+        {limitsQuery.data?.map(({
+          _id, category, currency, total, rest,
         }) => (
           <div key={_id} className="px-5 pb-5">
             <Progress.Root value={((total - rest) / total) * 100} variant={rest > 0 ? 'success' : 'danger'}>
-              <Progress.Label>{category.name}</Progress.Label>
+              <Progress.Label>{`${category.name} · ${currency}`}</Progress.Label>
               <Progress.Value>
-                {() => formatAmount.format(rest)}
+                {() => formatMoney(rest, currency)}
               </Progress.Value>
             </Progress.Root>
           </div>
         ))}
-        {!limitsData?.length && (
+        {!limitsQuery.data?.length && (
           <div className="flex min-h-36 items-center justify-center p-5">
             <Body1 className="text-muted-foreground">Данные отсутствуют</Body1>
           </div>

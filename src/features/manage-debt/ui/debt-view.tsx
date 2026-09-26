@@ -1,6 +1,6 @@
 import { debtTransactionsQueryOptions } from '@/entities/debt-transactions';
 import { type Debt } from '@/entities/debts';
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Typography } from '@/shared/ui/typography';
@@ -12,13 +12,6 @@ import { useTranslation } from 'react-i18next';
 import { ModalCloseButton } from './modal-close-button';
 
 const locale = i18next.language;
-
-const formatAmount = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'standard',
-  minimumFractionDigits: 0,
-});
 
 const formatDate = new Intl.DateTimeFormat(locale, {
   day: 'numeric',
@@ -76,13 +69,13 @@ export const DebtView: FC<DebtViewProps> = ({
             <Typography.Caption1 className="text-muted-foreground">
               {t('debts.details.fields.principalAmount')}
             </Typography.Caption1>
-            <Typography.Body2>{formatAmount.format(debt.principalAmount)}</Typography.Body2>
+            <Typography.Body2>{formatMoney(debt.principalAmount, debt.currency)}</Typography.Body2>
           </div>
           <div className="flex flex-col gap-1">
             <Typography.Caption1 className="text-muted-foreground">
               {t('debts.details.fields.remainingAmount')}
             </Typography.Caption1>
-            <Typography.Body2>{formatAmount.format(debt.remainingAmount)}</Typography.Body2>
+            <Typography.Body2>{formatMoney(debt.remainingAmount, debt.currency)}</Typography.Body2>
           </div>
         </div>
 
@@ -135,7 +128,7 @@ export const DebtView: FC<DebtViewProps> = ({
                     )}
                   </div>
                   <Typography.Body3 className="shrink-0">
-                    {formatAmount.format(transaction.amount)}
+                    {formatMoney(transaction.amount, debt.currency)}
                   </Typography.Body3>
                 </div>
               ))}

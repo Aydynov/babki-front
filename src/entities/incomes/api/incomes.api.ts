@@ -1,4 +1,4 @@
-import { apiClient, parseWithSchema } from '@/shared/api';
+import { apiClient, parseRequiredWithSchema } from '@/shared/api';
 import {
   type CreateIncomeDto,
   createIncomeSchema,
@@ -21,34 +21,34 @@ class IncomesApi {
     const body = createIncomeSchema.parse(payload);
     const response = await this.client.post<Income>('/incomes', body);
 
-    return parseWithSchema(incomeSchema, response.data);
+    return parseRequiredWithSchema(incomeSchema, response.data);
   };
 
   findAll = async (query: ListIncomesQuery = {}) => {
     const params = listIncomesQuerySchema.parse(query);
     const response = await this.client.get<IncomesPaginatedResponse>('/incomes', { params });
 
-    return parseWithSchema(incomesPaginatedResponseSchema, response.data);
+    return parseRequiredWithSchema(incomesPaginatedResponseSchema, response.data);
   };
 
   findTotalRevenue = async (query: ListIncomesQuery = {}) => {
     const params = listIncomesQuerySchema.parse(query);
     const response = await this.client.get<IncomeRevenue>('/incomes/revenue', { params });
 
-    return parseWithSchema(incomeRevenueSchema, response.data);
+    return parseRequiredWithSchema(incomeRevenueSchema, response.data);
   };
 
   findOne = async (incomeId: string) => {
     const response = await this.client.get<Income>(`/incomes/${incomeId}`);
 
-    return parseWithSchema(incomeSchema, response.data);
+    return parseRequiredWithSchema(incomeSchema, response.data);
   };
 
   update = async (incomeId: string, payload: UpdateIncomeDto) => {
     const body = updateIncomeSchema.parse(payload);
     const response = await this.client.patch<Income>(`/incomes/${incomeId}`, body);
 
-    return parseWithSchema(incomeSchema, response.data);
+    return parseRequiredWithSchema(incomeSchema, response.data);
   };
 }
 

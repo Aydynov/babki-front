@@ -1,28 +1,21 @@
 import { expenseCategoriesQueryOptions } from '@/entities/expense-categories';
-import { reportsQueryOptions } from '@/entities/reports';
+import { getReportCurrencySections, reportsQueryOptions } from '@/entities/reports';
+import { usersQueryOptions } from '@/entities/users';
 import { usePeriodStore } from '@/features/select-period';
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
 import { Chart } from '@/shared/ui/chart';
 import type { ChartConfig } from '@/shared/ui/chart';
+import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Body1 } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
-import i18next from 'i18next';
 import { useMemo, type FC } from 'react';
 import {
   Cell,
   Pie,
   PieChart,
 } from 'recharts';
-
-const locale = i18next.language;
-const formatAmount = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'standard',
-  minimumFractionDigits: 0,
-});
 
 const CHART_COLORS = [
   'var(--chart-1)',
@@ -35,17 +28,20 @@ const CHART_COLORS = [
 export const ExpensesByAnnualCategories: FC = () => {
   const selectedYear = usePeriodStore((s) => s.selectedYear);
 
-  const { data: yearlyReports, isLoading: reportsLoading } = useQuery(reportsQueryOptions.yearly());
-  const { data: categories, isLoading: categoriesLoading } = useQuery(expenseCategoriesQueryOptions.findAll());
+  const reportsQuery = useQuery(reportsQueryOptions.yearly());
+  const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
+  const categories = categoriesQuery.data;
+  const userQuery = useQuery(usersQueryOptions.me());
 
-  const chartData = useMemo(() => {
-    const yearEntry = yearlyReports?.find((r) => r.period === String(selectedYear));
-    if (!yearEntry || !categories) return [];
-
-    return yearEntry.expensesByCategory
+  const chartSections = useMemo(() => getReportCurrencySections(
+    reportsQuery.data,
+    selectedYear,
+    userQuery.data?.defaultCurrency ?? 'RUB',
+  ).map((bucket) => {
+    const data = bucket.expensesByCategory
       .filter((item) => item.total > 0)
       .map((item, index) => {
-        const category = categories.find((c) => c._id === item.categoryId);
+        const category = categories?.find((entry) => entry._id === item.categoryId);
         return {
           id: item.categoryId,
           name: category?.name ?? item.categoryId,
@@ -53,20 +49,18 @@ export const ExpensesByAnnualCategories: FC = () => {
           color: category?.color ?? CHART_COLORS[index % CHART_COLORS.length],
         };
       });
-  }, [yearlyReports, categories, selectedYear]);
-
-  const total = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData]);
-
-  const chartConfig = useMemo<ChartConfig>(() => (
-    Object.fromEntries(
-      chartData.map((item) => [
+    return {
+      currency: bucket.currency,
+      data,
+      total: data.reduce((sum, item) => sum + item.value, 0),
+      config: Object.fromEntries(data.map((item) => [
         item.id,
         { label: item.name, color: item.color },
-      ]),
-    )
-  ), [chartData]);
+      ])) as ChartConfig,
+    };
+  }), [categories, reportsQuery.data, selectedYear, userQuery.data?.defaultCurrency]);
 
-  if (reportsLoading || categoriesLoading) {
+  if (reportsQuery.isLoading || categoriesQuery.isLoading || userQuery.isLoading) {
     return (
       <Card.Base aria-busy="true" className="h-fit w-full min-w-0 md:w-auto md:min-w-min">
         <span className="sr-only">Загрузка...</span>
@@ -82,7 +76,22 @@ export const ExpensesByAnnualCategories: FC = () => {
     );
   }
 
-  if (!chartData.length) {
+  if ((reportsQuery.isError && reportsQuery.data === undefined)
+    || (categoriesQuery.isError && categoriesQuery.data === undefined)
+    || (userQuery.isError && userQuery.data === undefined)) {
+    return (
+      <Card.Base className="h-fit min-h-72 w-full min-w-0 md:w-auto md:min-w-min">
+        <QueryError onRetry={() => {
+          reportsQuery.refetch().catch(() => undefined);
+          categoriesQuery.refetch().catch(() => undefined);
+          userQuery.refetch().catch(() => undefined);
+        }}
+        />
+      </Card.Base>
+    );
+  }
+
+  if (!chartSections.some(({ data }) => data.length)) {
     return (
       <Card.Base className="h-fit w-full min-w-0 md:w-auto md:min-w-min">
         <Card.Header>
@@ -103,38 +112,55 @@ export const ExpensesByAnnualCategories: FC = () => {
         <Card.Title>Расходы по категориям за год</Card.Title>
       </Card.Header>
       <Card.Content>
-        <Chart.Root config={chartConfig} className="relative h-72 w-full md:w-75">
-          <PieChart>
-            <Chart.Tooltip
-              content={(
-                <Chart.TooltipContent
-                  hideLabel
-                  valueFormatter={(value) => {
-                    const n = Number(value);
-                    return Number.isNaN(n) ? value : formatAmount.format(n);
-                  }}
+        {(reportsQuery.isError || categoriesQuery.isError || userQuery.isError) && (
+          <QueryError
+            compact
+            onRetry={() => {
+              reportsQuery.refetch().catch(() => undefined);
+              categoriesQuery.refetch().catch(() => undefined);
+              userQuery.refetch().catch(() => undefined);
+            }}
+          />
+        )}
+        {chartSections.map(({
+          currency, data, total, config,
+        }) => (
+          <div key={currency}>
+            <Body1>{currency}</Body1>
+            <Chart.Root config={config} className="relative h-72 w-full md:w-75">
+              <PieChart>
+                <Chart.Tooltip
+                  content={(
+                    <Chart.TooltipContent
+                      hideLabel
+                      valueFormatter={(value) => {
+                        const n = Number(value);
+                        return Number.isNaN(n) ? value : formatMoney(n, currency);
+                      }}
+                    />
+                  )}
                 />
-              )}
-            />
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={70}
-              outerRadius={110}
-              strokeWidth={2}
-            >
-              {chartData.map((item) => (
-                <Cell key={item.id} fill={item.color} />
-              ))}
-            </Pie>
-            <Chart.Legend content={<Chart.LegendContent nameKey="name" />} />
-          </PieChart>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-            <span className="text-muted-foreground text-xs">Итого</span>
-            <span className="font-semibold text-sm">{formatAmount.format(total)}</span>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={70}
+                  outerRadius={110}
+                  strokeWidth={2}
+                >
+                  {data.map((item) => (
+                    <Cell key={item.id} fill={item.color} />
+                  ))}
+                </Pie>
+                <Chart.Legend content={<Chart.LegendContent nameKey="name" />} />
+              </PieChart>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+                <span className="text-muted-foreground text-xs">Итого</span>
+                <span className="font-semibold text-sm">{formatMoney(total, currency)}</span>
+              </div>
+            </Chart.Root>
           </div>
-        </Chart.Root>
+        ))}
       </Card.Content>
     </Card.Base>
   );

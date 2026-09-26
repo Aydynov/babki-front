@@ -1,8 +1,9 @@
 import { plansQueryOptions, type Plan } from '@/entities/plans';
 import { CreatePlanButton } from '@/features/create-plan';
 import { PlanDetailsDialog } from '@/features/manage-plan';
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
+import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table } from '@/shared/ui/table';
 import { useQuery } from '@tanstack/react-query';
@@ -10,13 +11,6 @@ import i18next from 'i18next';
 import { type FC, useState } from 'react';
 
 const locale = i18next.language;
-
-const formatAmount = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'standard',
-  minimumFractionDigits: 0,
-});
 
 const formatDate = new Intl.DateTimeFormat(locale, {
   day: 'numeric',
@@ -30,14 +24,14 @@ const rowClassName = `
 `;
 
 export const Plans: FC = () => {
-  const { data, isLoading } = useQuery(
+  const plansQuery = useQuery(
     plansQueryOptions.findAll({ status: 'active', limit: 100 }),
   );
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
   return (
-    <Card.Base aria-busy={isLoading} className="min-h-64">
-      {isLoading && <span className="sr-only">Загрузка...</span>}
+    <Card.Base aria-busy={plansQuery.isLoading} className="min-h-64">
+      {plansQuery.isLoading && <span className="sr-only">Загрузка...</span>}
       <Card.Header>
         <Card.Title>Планирование</Card.Title>
         <Card.Controls>
@@ -45,7 +39,7 @@ export const Plans: FC = () => {
         </Card.Controls>
       </Card.Header>
       <Card.Content className="px-0">
-        {isLoading && (
+        {plansQuery.isLoading && (
           <Table.Base>
             <Table.Body>
               {['first', 'second', 'third'].map((row) => (
@@ -74,15 +68,29 @@ export const Plans: FC = () => {
             </Table.Body>
           </Table.Base>
         )}
-        {!isLoading && !data?.items.length && (
+        {!plansQuery.isLoading && plansQuery.isError && plansQuery.data === undefined && (
+          <QueryError onRetry={() => {
+            plansQuery.refetch().catch(() => undefined);
+          }}
+          />
+        )}
+        {!plansQuery.isLoading && plansQuery.isError && plansQuery.data !== undefined && (
+          <QueryError
+            compact
+            onRetry={() => {
+              plansQuery.refetch().catch(() => undefined);
+            }}
+          />
+        )}
+        {!plansQuery.isLoading && plansQuery.data !== undefined && !plansQuery.data.items.length && (
           <div className="flex min-h-36 items-center justify-center px-5 py-3 text-muted-foreground">
             Нет активных планов
           </div>
         )}
-        {!isLoading && !!data?.items.length && (
+        {!plansQuery.isLoading && !!plansQuery.data?.items.length && (
           <Table.Base>
             <Table.Body>
-              {data.items.map((plan) => (
+              {plansQuery.data.items.map((plan) => (
                 <Table.Row
                   key={plan._id}
                   role="button"
@@ -112,7 +120,7 @@ export const Plans: FC = () => {
                         sm:col-auto sm:row-auto sm:row-span-1
                       `}
                     >
-                      {formatAmount.format(plan.amount)}
+                      {formatMoney(plan.amount, plan.currency)}
                     </Table.Cell>
                   </div>
                 </Table.Row>

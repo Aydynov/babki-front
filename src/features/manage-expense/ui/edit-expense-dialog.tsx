@@ -56,6 +56,7 @@ export const EditExpenseDialog: FC<EditExpenseDialogProps> = ({
           initialAmountOverridden={initialAmountOverridden}
           currentCategory={expense.category}
           dateDisabled
+          immutableCurrency={expense.currency}
           pending={updateExpenseMutation.isPending}
           submitError={updateExpenseMutation.isError
             ? t('expenses.edit.errors.submit')

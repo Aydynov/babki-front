@@ -1,8 +1,12 @@
 import { endOfMonth, format } from 'date-fns';
 import { z } from 'zod';
+// Native node:test executes this module without Vite alias resolution and requires the explicit TypeScript entry point.
+// eslint-disable-next-line import-x/extensions, import-x/no-useless-path-segments
+import { currencyCodeSchema, hasValidMoneyPrecision, type CurrencyCode } from '../../../shared/lib/currency/index.ts';
 
 export const createDebtFormSchema = z
   .object({
+    currency: currencyCodeSchema,
     debtor: z.string().trim().min(1, 'required').max(150, 'tooLong'),
     amount: z
       .string()
@@ -29,12 +33,17 @@ export const createDebtFormSchema = z
 export type CreateDebtFormValues = z.infer<typeof createDebtFormSchema>;
 
 export const defaultCreateDebtFormValues: CreateDebtFormValues = {
+  currency: 'RUB',
   debtor: '',
   amount: '',
   dateMode: 'day',
   dayDate: '',
   monthDate: '',
 };
+
+export const hasValidDebtAmountPrecision = (amount: string, currency: CurrencyCode) => (
+  hasValidMoneyPrecision(Number(amount), currency)
+);
 
 export const normalizeDueDate = (values: CreateDebtFormValues) => {
   if (values.dateMode === 'month') {

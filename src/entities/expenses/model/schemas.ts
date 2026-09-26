@@ -2,6 +2,7 @@ import {
   createTransactionSchema,
   listTransactionsQuerySchema,
   transactionSchema,
+  transactionsRevenueSchema,
 } from '@/entities/transactions/@x/expenses';
 import { z } from 'zod';
 import {
@@ -33,7 +34,7 @@ export const createExpenseSchema = z.object({
 }).extend(createTransactionSchema.shape);
 
 export const updateExpenseSchema = createExpenseSchema
-  .omit({ transactionDate: true })
+  .omit({ accountId: true, transactionDate: true })
   .partial();
 
 export const listExpensesQuerySchema = z.object({
@@ -41,6 +42,7 @@ export const listExpensesQuerySchema = z.object({
 }).extend(listTransactionsQuerySchema.shape);
 
 export const expensesPaginatedResponseSchema = paginatedResponseSchema(expenseSchema);
+export const expenseRevenueSchema = transactionsRevenueSchema;
 
 export type ExpenseItem = z.infer<typeof expenseItemSchema>;
 export type Expense = z.infer<typeof expenseSchema>;
@@ -48,3 +50,4 @@ export type CreateExpenseDto = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseDto = z.infer<typeof updateExpenseSchema>;
 export type ListExpensesQuery = z.infer<typeof listExpensesQuerySchema>;
 export type ExpensesPaginatedResponse = z.infer<typeof expensesPaginatedResponseSchema>;
+export type ExpenseRevenue = z.infer<typeof expenseRevenueSchema>;

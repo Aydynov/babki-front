@@ -1,25 +1,17 @@
 import { debtsQueryOptions, type Debt } from '@/entities/debts';
 import { CreateDebtButton } from '@/features/create-debt';
 import { DebtDetailsDialog } from '@/features/manage-debt';
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
+import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table } from '@/shared/ui/table';
 import { Body1 } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import i18next from 'i18next';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-const locale = i18next.language;
-const formatAmount = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'standard',
-  minimumFractionDigits: 0,
-});
 
 const rowClassName = `
   grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1
@@ -27,13 +19,13 @@ const rowClassName = `
 `;
 
 export const Debts: FC = () => {
-  const { data: debtsData, isLoading } = useQuery(
+  const debtsQuery = useQuery(
     debtsQueryOptions.findAll({ status: 'active', limit: 5 }),
   );
   const { t } = useTranslation();
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
 
-  if (isLoading) {
+  if (debtsQuery.isLoading) {
     return (
       <Card.Base aria-busy="true" className="min-h-64">
         <span className="sr-only">Загрузка...</span>
@@ -76,6 +68,17 @@ export const Debts: FC = () => {
     );
   }
 
+  if (debtsQuery.isError && debtsQuery.data === undefined) {
+    return (
+      <Card.Base className="min-h-64">
+        <QueryError onRetry={() => {
+          debtsQuery.refetch().catch(() => undefined);
+        }}
+        />
+      </Card.Base>
+    );
+  }
+
   return (
     <Card.Base className="min-h-64">
       <Card.Header>
@@ -85,9 +88,17 @@ export const Debts: FC = () => {
         </Card.Controls>
       </Card.Header>
       <Card.Content className="px-0">
+        {debtsQuery.isError && (
+        <QueryError
+          compact
+          onRetry={() => {
+            debtsQuery.refetch().catch(() => undefined);
+          }}
+        />
+        )}
         <Table.Base>
           <Table.Body>
-            {debtsData?.items.map((debt) => (
+            {debtsQuery.data?.items.map((debt) => (
               <Table.Row
                 key={debt._id}
                 role="button"
@@ -118,12 +129,12 @@ export const Debts: FC = () => {
                       sm:col-auto sm:row-auto sm:row-span-1
                     `}
                   >
-                    {formatAmount.format(debt.remainingAmount)}
+                    {formatMoney(debt.remainingAmount, debt.currency)}
                   </Table.Cell>
                 </div>
               </Table.Row>
             ))}
-            {!debtsData?.items.length && (
+            {!debtsQuery.data?.items.length && (
               <div className="w-fit m-auto p-5">
                 <Body1 className="text-muted-foreground">Данные отсутствуют</Body1>
               </div>

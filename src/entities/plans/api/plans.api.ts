@@ -1,4 +1,4 @@
-import { apiClient, parseWithSchema } from '@/shared/api';
+import { apiClient, parseRequiredWithSchema } from '@/shared/api';
 import {
   closePlanPayloadSchema,
   createPlanPayloadSchema,
@@ -21,21 +21,21 @@ class PlansApi {
     const params = listPlansQuerySchema.parse(query);
     const response = await this.client.get<PlansPaginatedResponse>('/plans', { params });
 
-    return parseWithSchema(plansPaginatedResponseSchema, response.data);
+    return parseRequiredWithSchema(plansPaginatedResponseSchema, response.data);
   };
 
   create = async (payload: CreatePlanPayload) => {
     const body = createPlanPayloadSchema.parse(payload);
     const response = await this.client.post<Plan>('/plans', body);
 
-    return parseWithSchema(planSchema, response.data);
+    return parseRequiredWithSchema(planSchema, response.data);
   };
 
   update = async (planId: string, payload: UpdatePlanPayload) => {
     const body = updatePlanPayloadSchema.parse(payload);
     const response = await this.client.patch<Plan>(`/plans/${planId}`, body);
 
-    return parseWithSchema(planSchema, response.data);
+    return parseRequiredWithSchema(planSchema, response.data);
   };
 
   remove = async (planId: string) => {
@@ -46,7 +46,7 @@ class PlansApi {
     const body = closePlanPayloadSchema.parse(payload);
     const response = await this.client.post<Plan>(`/plans/${planId}/close`, body);
 
-    return parseWithSchema(planSchema, response.data);
+    return parseRequiredWithSchema(planSchema, response.data);
   };
 }
 

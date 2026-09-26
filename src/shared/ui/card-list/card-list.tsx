@@ -1,4 +1,4 @@
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import type { CurrencyCode } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
 import { Typography } from '@/shared/ui/typography';
 import clsx from 'clsx';
@@ -11,19 +11,13 @@ import type {
 export interface ICardListItem {
   title: string;
   value: number;
+  currency: CurrencyCode;
 }
 
 interface ICardListProps extends ComponentProps<typeof Card.Base> {
   title: string;
   items: ICardListItem[];
 }
-
-const formatAmount = new Intl.NumberFormat(i18next.language, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'compact',
-  compactDisplay: 'short',
-});
 
 export const CardList: FC<ICardListProps> = ({
   title,
@@ -49,7 +43,14 @@ export const CardList: FC<ICardListProps> = ({
           key={index}
         >
           <Typography.Body2 className="text-accent-foreground">{listItem.title}</Typography.Body2>
-          <Typography.Body2>{formatAmount.format(listItem.value)}</Typography.Body2>
+          <Typography.Body2>
+            {new Intl.NumberFormat(i18next.language, {
+              style: 'currency',
+              currency: listItem.currency,
+              notation: 'compact',
+              compactDisplay: 'short',
+            }).format(listItem.value)}
+          </Typography.Body2>
         </div>
       ))}
     </div>

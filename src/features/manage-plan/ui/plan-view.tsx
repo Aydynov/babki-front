@@ -1,6 +1,6 @@
 import { type Plan } from '@/entities/plans';
 import { ExpenseCategoryBadge, expenseCategoriesQueryOptions } from '@/entities/expense-categories';
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Typography } from '@/shared/ui/typography';
@@ -12,13 +12,6 @@ import { useTranslation } from 'react-i18next';
 import { ModalCloseButton } from './modal-close-button';
 
 const locale = i18next.language;
-
-const formatAmount = new Intl.NumberFormat(locale, {
-  style: 'currency',
-  currency: getCurrentCurrencyCode(),
-  notation: 'standard',
-  minimumFractionDigits: 0,
-});
 
 const formatDate = new Intl.DateTimeFormat(locale, {
   day: 'numeric',
@@ -75,7 +68,7 @@ export const PlanView: FC<PlanViewProps> = ({
           <Typography.Caption1 className="text-muted-foreground">
             {t('plans.details.fields.amount')}
           </Typography.Caption1>
-          <Typography.Body2>{formatAmount.format(plan.amount)}</Typography.Body2>
+          <Typography.Body2>{formatMoney(plan.amount, plan.currency)}</Typography.Body2>
         </div>
 
         <div className="flex flex-col gap-1">

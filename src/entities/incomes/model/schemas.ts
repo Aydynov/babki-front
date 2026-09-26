@@ -19,7 +19,7 @@ export const createIncomeSchema = z.object({
 }).extend(createTransactionSchema.shape);
 
 export const updateIncomeSchema = createIncomeSchema
-  .omit({ transactionDate: true })
+  .omit({ accountId: true, transactionDate: true })
   .partial();
 
 export const listIncomesQuerySchema = listTransactionsQuerySchema;

@@ -57,6 +57,7 @@ interface ManageExpenseLimitsButtonProps {
 
 interface ConfirmedExpenseLimitCreate {
   category: CategorySelectOption;
+  currency: ExpenseLimitDraft['values']['currency'];
   total: number;
 }
 
@@ -73,9 +74,12 @@ const getAvailableCategories = (
   drafts: ExpenseLimitDraft[],
   currentDraftKey?: string,
 ) => {
+  const currentCurrency = drafts.find(({ key }) => key === currentDraftKey)
+    ?.values.currency ?? 'RUB';
   const usedCategoryIds = new Set(
     drafts
       .filter((draft) => draft.key !== currentDraftKey)
+      .filter((draft) => draft.values.currency === currentCurrency)
       .map((draft) => draft.values.categoryId)
       .filter(Boolean),
   );
@@ -89,12 +93,18 @@ const createOpeningDrafts = (
 ) => {
   const drafts = createExpenseLimitDrafts(limits);
   const persistedCategoryIds = new Set(
-    drafts.map((draft) => draft.values.categoryId),
+    drafts.map((draft) => `${draft.values.categoryId}:${draft.values.currency}`),
   );
   const confirmedDrafts = Object.entries(confirmedCreates)
-    .filter(([categoryId]) => !persistedCategoryIds.has(categoryId))
+    .filter(([key]) => !persistedCategoryIds.has(key))
     .map(([, confirmed]) => createConfirmedExpenseLimitDraft(
-      createEmptyExpenseLimitDraft(),
+      {
+        ...createEmptyExpenseLimitDraft(),
+        values: {
+          ...createEmptyExpenseLimitDraft().values,
+          currency: confirmed.currency,
+        },
+      },
       confirmed.category,
       confirmed.total,
     ));
@@ -147,7 +157,7 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
     if (limitsQuery.data == null || !Object.keys(confirmedCreates).length) return;
 
     const resolvedLimits = limitsQuery.data.filter(
-      (limit) => confirmedCreates[limit.category._id],
+      (limit) => confirmedCreates[`${limit.category._id}:${limit.currency}`],
     );
     if (!resolvedLimits.length) return;
 
@@ -157,6 +167,7 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
         const index = drafts.findIndex((draft) => (
           draft.writeConfirmed
           && draft.values.categoryId === limit.category._id
+          && draft.values.currency === limit.currency
         ));
         if (index >= 0) {
           form.replaceFieldValue(
@@ -172,7 +183,7 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
       const currentPeriod = current[periodKey] ?? EMPTY_CONFIRMED_CREATES;
       const nextPeriod = { ...currentPeriod };
       resolvedLimits.forEach((limit) => {
-        delete nextPeriod[limit.category._id];
+        delete nextPeriod[`${limit.category._id}:${limit.currency}`];
       });
       const next = { ...current };
       if (Object.keys(nextPeriod).length) {
@@ -333,6 +344,7 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
         : await createMutation.mutateAsync({
           payload: {
             categoryId: draft.values.categoryId,
+            currency: draft.values.currency,
             total,
             ...getExpenseLimitMonthRange(periodDate),
           },
@@ -349,8 +361,9 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
           ...current,
           [periodKey]: {
             ...current[periodKey],
-            [selectedCategory._id]: {
+            [`${selectedCategory._id}:${draft.values.currency}`]: {
               category: selectedCategory,
+              currency: draft.values.currency,
               total,
             },
           },

@@ -1,6 +1,7 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import { useForm } from '@tanstack/react-form';
 import { useCreateDebtMutation } from '@/entities/debts';
+import { currencyCodes, getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { getFirstFieldError, getMutationErrorMessage } from '@/shared/lib/form-errors';
 import { cn } from '@/shared/lib/shadcn-utils';
 import { Button } from '@/shared/ui/button';
@@ -21,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import {
   createDebtFormSchema,
   defaultCreateDebtFormValues,
+  hasValidDebtAmountPrecision,
   normalizeDueDate,
 } from '../model/create-debt-form';
 
@@ -58,11 +60,13 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
       onSubmit: createDebtFormSchema,
     },
     onSubmit: async ({ value, formApi }) => {
+      if (!hasValidDebtAmountPrecision(value.amount, value.currency)) return;
       const principalAmount = Number(value.amount);
 
       await createDebtMutation.mutateAsync({
         payload: {
           debtor: value.debtor.trim(),
+          currency: value.currency,
           principalAmount,
           remainingAmount: principalAmount,
           dueDate: normalizeDueDate(value),
@@ -147,6 +151,23 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
           </Dialog.Header>
 
           <Dialog.Body>
+            <form.Field name="currency">
+              {(field) => (
+                <div>
+                  <Input.Label htmlFor="create-debt-currency">Валюта</Input.Label>
+                  <select
+                    id="create-debt-currency"
+                    className="h-11 w-full rounded-lg border bg-background px-3"
+                    value={field.state.value}
+                    disabled={createDebtMutation.isPending}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                  >
+                    {currencyCodes.map((currency) => <option key={currency}>{currency}</option>)}
+                  </select>
+                </div>
+              )}
+            </form.Field>
+
             <form.Field name="debtor">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
@@ -176,6 +197,12 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
             <form.Field name="amount">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
+                const currency = form.getFieldValue('currency');
+                const precisionError = field.state.value
+                  && !hasValidDebtAmountPrecision(field.state.value, currency)
+                  ? `Сумма не соответствует точности валюты ${currency}`
+                  : undefined;
+                const error = fieldError ?? precisionError;
 
                 return (
                   <div>
@@ -184,8 +211,8 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
                       name={field.name}
                       type="number"
                       inputMode="decimal"
-                      min="0.01"
-                      step="0.01"
+                      min={1 / (10 ** getCurrencyMinorUnits(currency))}
+                      step={1 / (10 ** getCurrencyMinorUnits(currency))}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) => {
@@ -193,10 +220,10 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
                         field.handleChange(event.target.value);
                       }}
                       placeholder={t('debts.create.fields.amount')}
-                      hasError={Boolean(fieldError)}
+                      hasError={Boolean(error)}
                       disabled={createDebtMutation.isPending}
                     />
-                    {fieldError && <Input.Error>{fieldError}</Input.Error>}
+                    {error && <Input.Error>{error}</Input.Error>}
                   </div>
                 );
               }}

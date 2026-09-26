@@ -1,4 +1,4 @@
-import { getCurrentCurrencyCode } from '@/shared/lib/currency';
+import type { CurrencyCode } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
 import { ExpandIcon } from '@/shared/ui/expand-icon';
 import { Body1, Body2, Typography } from '@/shared/ui/typography';
@@ -10,7 +10,6 @@ import { type ComponentProps, type FC, type ReactNode } from 'react';
 import { Button } from '@/shared/ui/button';
 import { Skeleton } from '@/shared/ui/skeleton';
 
-type CurrencyType = string;
 type DiffStyleType = 'percent' | 'currency';
 
 type ClassNames<Keys extends string = string> = Partial<Record<Keys, string>>;
@@ -25,7 +24,7 @@ interface ICardAmountProps extends ComponentProps<typeof Card.Base> {
   title?: string;
   value: number;
   valueNotation?: Intl.NumberFormatOptions['notation'];
-  currency?: CurrencyType;
+  currency: CurrencyCode;
   diff?: number;
   diffStyle?: DiffStyleType;
   classes?: ClassNames<'value'>;
@@ -70,6 +69,7 @@ export const CardAmount: FC<ICardAmountProps> = ({
   children,
   title,
   value,
+  currency,
   valueNotation = 'compact',
   diff,
   diffStyle = 'percent',
@@ -79,7 +79,6 @@ export const CardAmount: FC<ICardAmountProps> = ({
   ...htmlProps
 }) => {
   const locale = i18next.language;
-  const currency = getCurrentCurrencyCode();
   const isIncrease = !!diff && diff > 0;
 
   const formatAmount = new Intl.NumberFormat(locale, {
@@ -123,8 +122,8 @@ export const CardAmount: FC<ICardAmountProps> = ({
       </div>
       <Collapsible.Panel render={<div className="flex flex-col gap-2.5" />}>
         <div className="table">
-          {items.map((item) => (
-            <div key={item.date} className="table-row">
+          {items.map((item, index) => (
+            <div key={`${item.date}-${index}`} className="table-row">
               {item.title && (
                 <Body1 className="table-cell min-w-0 pb-2.5 font-semibold [&+.date]:text-right">
                   {item.title}

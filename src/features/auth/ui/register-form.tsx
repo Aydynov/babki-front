@@ -185,7 +185,7 @@ export function RegisterForm() {
         }}
       </form.Field>
 
-      <form.Field name="currency">
+      <form.Field name="defaultCurrency">
         {(field) => {
           const error = getValidationMessage(field.state.meta.errors);
 
