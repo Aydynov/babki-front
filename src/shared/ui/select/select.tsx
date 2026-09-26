@@ -1,6 +1,10 @@
 import type { ComponentProps } from 'react';
 import { Select as SelectPrimitive } from '@base-ui/react/select';
-import { LucideCheckLine, LucideChevronDown, LucideChevronUp } from 'lucide-react';
+import {
+  LucideCheck,
+  LucideChevronDown,
+  LucideChevronUp,
+} from 'lucide-react';
 import { cn } from '@/shared/lib/shadcn-utils';
 
 const Select = SelectPrimitive.Root;
@@ -56,7 +60,7 @@ const SelectItem = ({
     </SelectPrimitive.ItemText>
     <SelectPrimitive.ItemIndicator render={(
       <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
-        <LucideCheckLine className="pointer-events-none" />
+        <LucideCheck className="pointer-events-none" />
       </span>
     )}
     />
@@ -172,7 +176,7 @@ const SelectContent = ({
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
           className={cn(
-            'relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36',
+            'relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 p-1',
             'origin-(--transform-origin) overflow-x-hidden overflow-y-auto',
             'rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10',
             'duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2',

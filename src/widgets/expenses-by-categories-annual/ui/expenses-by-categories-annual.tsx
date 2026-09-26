@@ -1,6 +1,7 @@
 import { expenseCategoriesQueryOptions } from '@/entities/expense-categories';
 import { getReportCurrencySections, reportsQueryOptions } from '@/entities/reports';
 import { usersQueryOptions } from '@/entities/users';
+import { ChartCurrencySelect, getAnnualCategoryCurrencies, useChartCurrency } from '@/features/select-chart-currency';
 import { usePeriodStore } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
@@ -33,11 +34,16 @@ export const ExpensesByAnnualCategories: FC = () => {
   const categories = categoriesQuery.data;
   const userQuery = useQuery(usersQueryOptions.me());
 
-  const chartSections = useMemo(() => getReportCurrencySections(
+  const reportSections = useMemo(() => getReportCurrencySections(
     reportsQuery.data,
     selectedYear,
     userQuery.data?.defaultCurrency ?? 'RUB',
-  ).map((bucket) => {
+  ), [reportsQuery.data, selectedYear, userQuery.data?.defaultCurrency]);
+  const currencies = useMemo(() => (reportsQuery.data
+    ? getAnnualCategoryCurrencies(reportSections)
+    : undefined), [reportsQuery.data, reportSections]);
+  const [currency, setCurrency] = useChartCurrency(currencies, userQuery.data?.defaultCurrency ?? 'RUB');
+  const chartSections = useMemo(() => reportSections.map((bucket) => {
     const data = bucket.expensesByCategory
       .filter((item) => item.total > 0)
       .map((item, index) => {
@@ -58,7 +64,8 @@ export const ExpensesByAnnualCategories: FC = () => {
         { label: item.name, color: item.color },
       ])) as ChartConfig,
     };
-  }), [categories, reportsQuery.data, selectedYear, userQuery.data?.defaultCurrency]);
+  }), [categories, reportSections]);
+  const selectedSection = chartSections.find((section) => section.currency === currency);
 
   if (reportsQuery.isLoading || categoriesQuery.isLoading || userQuery.isLoading) {
     return (
@@ -66,6 +73,7 @@ export const ExpensesByAnnualCategories: FC = () => {
         <span className="sr-only">Загрузка...</span>
         <Card.Header>
           <Card.Title>Расходы по категориям за год</Card.Title>
+          <Card.Controls><Skeleton className="h-8 w-18" /></Card.Controls>
         </Card.Header>
         <Card.Content>
           <div className="flex h-72 w-full items-center justify-center md:w-75">
@@ -91,7 +99,7 @@ export const ExpensesByAnnualCategories: FC = () => {
     );
   }
 
-  if (!chartSections.some(({ data }) => data.length)) {
+  if (!currency || !selectedSection) {
     return (
       <Card.Base className="h-fit w-full min-w-0 md:w-auto md:min-w-min">
         <Card.Header>
@@ -110,6 +118,16 @@ export const ExpensesByAnnualCategories: FC = () => {
     <Card.Base className="h-fit w-full min-w-0 md:w-auto md:min-w-min">
       <Card.Header>
         <Card.Title>Расходы по категориям за год</Card.Title>
+        {currencies && (
+          <Card.Controls>
+            <ChartCurrencySelect
+              chartTitle="Расходы по категориям за год"
+              currencies={currencies}
+              value={currency}
+              onChange={setCurrency}
+            />
+          </Card.Controls>
+        )}
       </Card.Header>
       <Card.Content>
         {(reportsQuery.isError || categoriesQuery.isError || userQuery.isError) && (
@@ -122,45 +140,38 @@ export const ExpensesByAnnualCategories: FC = () => {
             }}
           />
         )}
-        {chartSections.map(({
-          currency, data, total, config,
-        }) => (
-          <div key={currency}>
-            <Body1>{currency}</Body1>
-            <Chart.Root config={config} className="relative h-72 w-full md:w-75">
-              <PieChart>
-                <Chart.Tooltip
-                  content={(
-                    <Chart.TooltipContent
-                      hideLabel
-                      valueFormatter={(value) => {
-                        const n = Number(value);
-                        return Number.isNaN(n) ? value : formatMoney(n, currency);
-                      }}
-                    />
-                  )}
+        <Chart.Root config={selectedSection.config} className="relative h-72 w-full md:w-75">
+          <PieChart>
+            <Chart.Tooltip
+              content={(
+                <Chart.TooltipContent
+                  hideLabel
+                  valueFormatter={(value) => {
+                    const n = Number(value);
+                    return Number.isNaN(n) ? value : formatMoney(n, currency);
+                  }}
                 />
-                <Pie
-                  data={data}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={70}
-                  outerRadius={110}
-                  strokeWidth={2}
-                >
-                  {data.map((item) => (
-                    <Cell key={item.id} fill={item.color} />
-                  ))}
-                </Pie>
-                <Chart.Legend content={<Chart.LegendContent nameKey="name" />} />
-              </PieChart>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-                <span className="text-muted-foreground text-xs">Итого</span>
-                <span className="font-semibold text-sm">{formatMoney(total, currency)}</span>
-              </div>
-            </Chart.Root>
+                  )}
+            />
+            <Pie
+              data={selectedSection.data}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={70}
+              outerRadius={110}
+              strokeWidth={2}
+            >
+              {selectedSection.data.map((item) => (
+                <Cell key={item.id} fill={item.color} />
+              ))}
+            </Pie>
+            <Chart.Legend content={<Chart.LegendContent nameKey="name" />} />
+          </PieChart>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+            <span className="text-muted-foreground text-xs">Итого</span>
+            <span className="font-semibold text-sm">{formatMoney(selectedSection.total, currency)}</span>
           </div>
-        ))}
+        </Chart.Root>
       </Card.Content>
     </Card.Base>
   );

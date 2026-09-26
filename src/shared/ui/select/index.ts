@@ -1,1 +1,1 @@
-export * as Select from './select';
+export * as Select from './index.parts';
