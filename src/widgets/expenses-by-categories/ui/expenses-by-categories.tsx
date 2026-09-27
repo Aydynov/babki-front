@@ -16,6 +16,7 @@ import {
   useMemo,
   type FC,
 } from 'react';
+import { getSortedMonthlyExpenseCategoryRows } from '../model/sort-monthly-expense-category-rows';
 
 export const ExpensesByCategories: FC = () => {
   const selectedPeriod = useSelectedPeriod();
@@ -43,6 +44,10 @@ export const ExpensesByCategories: FC = () => {
     userQuery.data?.defaultCurrency ?? 'RUB',
   );
   const selectedBucket = currencyBuckets.find((bucket) => bucket.currency === currency);
+  const categoryRows = useMemo(() => getSortedMonthlyExpenseCategoryRows(
+    categories,
+    selectedBucket,
+  ), [categories, selectedBucket]);
   const isLoading = reportsQuery.isLoading || categoriesQuery.isLoading || userQuery.isLoading;
   const hasUnavailableData = (reportsQuery.isError && reportsQuery.data === undefined)
     || (categoriesQuery.isError && categoriesQuery.data === undefined)
@@ -94,27 +99,23 @@ export const ExpensesByCategories: FC = () => {
         {!isLoading && !hasUnavailableData && (!categories?.length || !currency) && (
           <Body1 className="text-muted-foreground">Данные отсутствуют</Body1>
         )}
-        {!isLoading && !hasUnavailableData && currency && categories?.map((category) => {
-          const categoryExpenses = selectedBucket?.expensesByCategory
-            .find(({ categoryId }) => categoryId === category._id)?.total ?? 0;
-          return (
-            <div key={category._id} className="px-5 pb-5">
-              <Progress.Root
-                value={getPercent(
-                  categoryExpenses,
-                  selectedBucket?.expenses ?? 0,
-                  { multiplyBy100: true, useDiff: false },
-                )}
-                variant="danger"
-              >
-                <Progress.Label>{category.name}</Progress.Label>
-                <Progress.Value>
-                  {() => formatMoney(categoryExpenses, currency)}
-                </Progress.Value>
-              </Progress.Root>
-            </div>
-          );
-        })}
+        {!isLoading && !hasUnavailableData && currency && categoryRows.map(({ category, total }) => (
+          <div key={category._id} className="px-5 pb-5">
+            <Progress.Root
+              value={getPercent(
+                total,
+                selectedBucket?.expenses ?? 0,
+                { multiplyBy100: true, useDiff: false },
+              )}
+              variant="danger"
+            >
+              <Progress.Label>{category.name}</Progress.Label>
+              <Progress.Value>
+                {() => formatMoney(total, currency)}
+              </Progress.Value>
+            </Progress.Root>
+          </div>
+        ))}
       </Card.Content>
     </Card.Base>
   );
