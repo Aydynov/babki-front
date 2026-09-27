@@ -4,6 +4,7 @@ import type { FC } from 'react';
 
 interface ChartCurrencySelectProps {
   chartTitle: string;
+  ariaLabel?: string;
   currencies: readonly CurrencyCode[];
   value: CurrencyCode | undefined;
   onChange: (currency: CurrencyCode) => void;
@@ -11,6 +12,7 @@ interface ChartCurrencySelectProps {
 
 export const ChartCurrencySelect: FC<ChartCurrencySelectProps> = ({
   chartTitle,
+  ariaLabel,
   currencies,
   value,
   onChange,
@@ -25,7 +27,7 @@ export const ChartCurrencySelect: FC<ChartCurrencySelectProps> = ({
       }}
       disabled={currencies.length < 2}
     >
-      <Select.Trigger aria-label={`Валюта графика «${chartTitle}»`} size="sm">
+      <Select.Trigger aria-label={ariaLabel ?? `Валюта графика «${chartTitle}»`} size="sm">
         <Select.Value>{value}</Select.Value>
       </Select.Trigger>
       <Select.Content>

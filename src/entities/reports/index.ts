@@ -14,6 +14,7 @@ export {
   getReportCurrencySections,
   getReportMetricSections,
 } from './model/report-view-model';
+export { getMonthlyExpenseCategoryBuckets } from './model/monthly-expense-category-buckets';
 export type { ReportMetric } from './model/report-view-model';
 export type {
   FindMonthlyReportsByQuery,
