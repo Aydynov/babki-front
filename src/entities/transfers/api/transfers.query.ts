@@ -1,3 +1,4 @@
+import { loadPaginatedHistory } from '@/shared/lib/paginated-history';
 import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/transfers';
 import { accountsQueryKeys } from '@/entities/accounts/@x/transfers';
 import { reportsQueryKeys } from '@/entities/reports/@x/transfers';
@@ -24,6 +25,10 @@ export const transfersQueryKeys = {
 };
 
 export const transfersQueryOptions = {
+  accountHistory: (query: Pick<ListTransfersQuery, 'accountId' | 'fromDate' | 'toDate'>) => queryOptions({
+    queryKey: [...transfersQueryKeys.lists(), 'account-history', query],
+    queryFn: () => loadPaginatedHistory((pagination) => transfersApi.findAll({ ...query, ...pagination })),
+  }),
   findAll: (query: ListTransfersQuery = {}) => queryOptions({
     queryKey: transfersQueryKeys.list(query),
     queryFn: () => transfersApi.findAll(query),

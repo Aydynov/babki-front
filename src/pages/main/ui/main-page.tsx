@@ -12,7 +12,6 @@ import { Plans } from '@/widgets/plans';
 import { YearExpenses } from '@/widgets/year-expenses';
 import { YearIncomes } from '@/widgets/year-incomes';
 import { YearSavings } from '@/widgets/year-savings';
-import { Transfers } from '@/widgets/transfers';
 import { MonthSwitcher, YearSwitcher } from '@/features/select-period';
 import {
   LogoutButton,
@@ -55,7 +54,6 @@ export function MainPage() {
   );
   const monthlyExpenses = (
     <div key="monthly-expenses" className="flex min-w-0 flex-col gap-5">
-      <Transfers />
       <Expenses />
     </div>
   );

@@ -190,6 +190,7 @@
     },
     "management": {
       "open": "Управление счетами",
+      "current": "Управление счетом",
       "close": "Закрыть",
       "makeDefault": "Сделать основным",
       "archive": "Архивировать",
@@ -205,6 +206,26 @@
       "lifecycleDescription": "Действие изменит доступность счёта для новых операций.",
       "cancel": "Отмена",
       "confirm": "Подтвердить"
+    },
+    "details": {
+      "open": "Открыть детали счета «{{name}}»",
+      "type": "Тип счета",
+      "currency": "Валюта",
+      "balance": "Баланс на конец месяца",
+      "loading": "Загрузка операций…",
+      "error": "Не удалось загрузить операции",
+      "transactions": "Доходы и расходы",
+      "emptyTransactions": "За этот месяц доходов и расходов нет",
+      "date": "Дата",
+      "operation": "Операция",
+      "amount": "Сумма",
+      "income": "Доход",
+      "expense": "Расход",
+      "counterparty": "Второй счет",
+      "pagination": "Страницы: {{title}}",
+      "previous": "Назад",
+      "next": "Далее",
+      "page": "{{page}} из {{pages}} · Всего: {{total}}"
     }
   },
   "transfers": {
@@ -219,14 +240,14 @@
       "insufficientFunds": "Недостаточно средств на счёте списания",
       "precision": "Проверьте точность сумм для выбранных валют",
       "sameCurrencyAmounts": "Для одной валюты суммы должны совпадать",
-      "accountUnavailable": "Выберите два доступных счёта"
+      "accountUnavailable": "Выберите доступный счет"
     },
     "form": {
       "createTitle": "Новый перевод",
       "editTitle": "Редактировать перевод",
       "close": "Закрыть",
       "immutableContext": "Счета и дата перевода неизменяемы",
-      "sourceAccount": "Списать со счёта",
+      "sourceAccount": "Списать с текущего счета",
       "sourcePlaceholder": "Выберите счёт",
       "sourceEmpty": "Нет активных счетов для перевода",
       "destinationAccount": "Зачислить на счёт",

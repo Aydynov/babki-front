@@ -14,7 +14,7 @@ import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
 import {
-  LucideArrowRightLeft, LucidePencil, LucideTrash2, LucideX,
+  LucideArrowRightLeft, LucidePencil, LucidePlus, LucideTrash2, LucideX,
 } from 'lucide-react';
 import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -122,23 +122,14 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
             </div>
           ) : (
             <>
-              <AccountSelect
-                id="transfer-source-account"
-                accounts={accounts}
-                value={values.sourceAccountId}
-                onValueChange={(sourceAccountId) => update({
-                  sourceAccountId,
-                  destinationAccountId: sourceAccountId === values.destinationAccountId
-                    ? ''
-                    : values.destinationAccountId,
-                })}
-                label={t('transfers.form.sourceAccount')}
-                placeholder={t('transfers.form.sourcePlaceholder')}
-                emptyMessage={t('transfers.form.sourceEmpty')}
-                isLoading={accountsQuery.isLoading}
-                error={accountsQuery.isError ? t('accounts.errors.load') : undefined}
-                disabled={pending}
-              />
+              <dl className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3 text-body-2">
+                <dt className="text-muted-foreground">{t('transfers.form.sourceAccount')}</dt>
+                {source && (
+                <dd className="shrink-0 font-medium tabular-nums">
+                  {formatMoney(source.amount, source.currency)}
+                </dd>
+                )}
+              </dl>
               <AccountSelect
                 id="transfer-destination-account"
                 accounts={destinationAccounts}
@@ -264,7 +255,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
   );
 };
 
-export const CreateTransferButton: FC = () => {
+export const CreateTransferButton: FC<{ initialSourceAccountId?: string }> = ({ initialSourceAccountId }) => {
   const { t } = useTranslation();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
   const userQuery = useQuery(usersQueryOptions.me());
@@ -273,7 +264,7 @@ export const CreateTransferButton: FC = () => {
   const [session, setSession] = useState(0);
   const defaultSourceId = getPreferredAccountId(
     accountsQuery.data ?? [],
-    userQuery.data?.defaultAccountId ?? null,
+    initialSourceAccountId ?? userQuery.data?.defaultAccountId ?? null,
   ) ?? '';
 
   return (
@@ -281,13 +272,14 @@ export const CreateTransferButton: FC = () => {
       <Button.Icon
         type="button"
         aria-label={t('transfers.actions.create')}
+        disabled={accountsQuery.isLoading || !accountsQuery.data}
         onClick={() => {
           mutation.reset();
           setSession((value) => value + 1);
           setOpen(true);
         }}
       >
-        <LucideArrowRightLeft />
+        <LucidePlus />
       </Button.Icon>
       {open && (
         <TransferFormDialog

@@ -22,6 +22,7 @@ const AlertDialogContent: FC<AlertDialogContentProps> = ({
 }) => (
   <AlertDialogPrimitive.Portal>
     <AlertDialogPrimitive.Backdrop
+      forceRender
       className="
         fixed inset-0 z-50 bg-foreground/20 backdrop-blur-[2px]
         data-ending-style:opacity-0 data-starting-style:opacity-0

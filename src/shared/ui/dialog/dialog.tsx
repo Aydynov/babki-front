@@ -12,6 +12,7 @@ const DialogContent: FC<ComponentProps<typeof DialogPrimitive.Popup>> = ({
 }) => (
   <DialogPrimitive.Portal>
     <DialogPrimitive.Backdrop
+      forceRender
       className={cn(
         `
           fixed inset-0 z-50 bg-foreground/20 backdrop-blur-[2px]

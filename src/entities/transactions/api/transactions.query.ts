@@ -4,6 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
+import { loadPaginatedHistory, sortHistory } from '@/shared/lib/paginated-history';
 import { transactionsApi } from './transactions.api';
 import type { ListTransactionsQuery } from '../model/schemas';
 
@@ -20,6 +21,15 @@ export const transactionsQueryKeys = {
 };
 
 export const transactionsQueryOptions = {
+  accountHistory: (query: Pick<ListTransactionsQuery, 'accountId' | 'fromDate' | 'toDate'>) => queryOptions({
+    queryKey: [...transactionsQueryKeys.listAll(), 'account-history', query],
+    queryFn: async () => {
+      const lists = await Promise.all((['income', 'expense'] as const).map((transactionType) => (
+        loadPaginatedHistory((pagination) => transactionsApi.findAll({ ...query, ...pagination, transactionType }))
+      )));
+      return sortHistory(lists.flat()).filter((item) => item.type !== 'transfer');
+    },
+  }),
   findAll: (query: ListTransactionsQuery = {}) => queryOptions({
     queryKey: transactionsQueryKeys.list(query),
     queryFn: () => transactionsApi.findAll(query),

@@ -8,13 +8,17 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { groupAccounts } from '../model/account-presentation';
+import { AccountDetailsDialog } from './account-details-dialog';
 import { AccountRow } from './account-row';
 
 export function Accounts() {
   const { t, i18n } = useTranslation();
   const selectedPeriod = useSelectedPeriod();
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const managementTrigger = useRef<HTMLButtonElement | null>(null);
+  const detailsTrigger = useRef<HTMLButtonElement | null>(null);
   const [openAccountIds, setOpenAccountIds] = useState<string[]>([]);
   const accountsQuery = useQuery(accountsQueryOptions.findAll({
     toDate: selectedPeriod.toDate,
@@ -23,6 +27,7 @@ export function Accounts() {
   const loading = accountsQuery.isLoading || userQuery.isLoading;
   const unavailable = !accountsQuery.data || !userQuery.data;
   const groups = groupAccounts(accountsQuery.data ?? [], userQuery.data?.defaultCurrency ?? '', i18n.language);
+  const selectedAccount = accountsQuery.data?.find((account) => account._id === selectedAccountId);
   const accountNames = new Map((accountsQuery.data ?? []).map((account) => [account._id, account.name]));
   const retry = () => {
     accountsQuery.refetch().catch(() => undefined);
@@ -33,7 +38,7 @@ export function Accounts() {
     <Card.Base className="flex w-full min-w-0 max-w-xl flex-col gap-3 p-3.5">
       <div className="flex items-center justify-between gap-2">
         <Typography.Title3 className="text-muted-foreground uppercase">{t('accounts.title')}</Typography.Title3>
-        <Card.Controls><ManageAccountsButton /></Card.Controls>
+        <Card.Controls><ManageAccountsButton triggerRef={managementTrigger} /></Card.Controls>
       </div>
 
       {loading && (
@@ -65,6 +70,10 @@ export function Accounts() {
             <AccountRow
               key={account._id}
               account={account}
+              onDetailsOpen={(trigger) => {
+                detailsTrigger.current = trigger;
+                setSelectedAccountId(account._id);
+              }}
               accountNames={accountNames}
               period={selectedPeriod}
               open={openAccountIds.includes(account._id)}
@@ -75,6 +84,22 @@ export function Accounts() {
           ))}
         </section>
       ))}
+      {selectedAccount && (
+        <AccountDetailsDialog
+          key={`${selectedAccountId}:${selectedPeriod.fromDate}:${selectedPeriod.toDate}`}
+          account={selectedAccount}
+          accountNames={accountNames}
+          period={selectedPeriod}
+          finalFocus={detailsTrigger}
+          onClose={() => setSelectedAccountId(null)}
+          onUnavailable={() => {
+            detailsTrigger.current = managementTrigger.current;
+            setSelectedAccountId(null);
+            // Restore focus after all nested dialogs have run their unmount focus cleanup.
+            requestAnimationFrame(() => managementTrigger.current?.focus());
+          }}
+        />
+      )}
     </Card.Base>
   );
 }

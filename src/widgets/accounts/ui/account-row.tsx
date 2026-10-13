@@ -19,10 +19,11 @@ interface AccountRowProps {
   period: { fromDate: string; toDate: string };
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDetailsOpen: (trigger: HTMLButtonElement) => void;
 }
 
 export function AccountRow({
-  account, accountNames, period, open, onOpenChange,
+  account, accountNames, period, open, onOpenChange, onDetailsOpen,
 }: AccountRowProps) {
   const { t, i18n } = useTranslation();
   const history = useQuery({
@@ -43,12 +44,19 @@ export function AccountRow({
       className="min-w-0 rounded-lg border"
     >
       <div className="flex min-w-0 items-center gap-2 px-3 py-2.5">
-        <Typography.Body2 className="min-w-0 flex-1 truncate" title={account.name}>
-          {account.name}
-        </Typography.Body2>
-        <Typography.Body1 className="shrink-0 font-semibold tabular-nums">
-          {formatMoney(account.amount, account.currency)}
-        </Typography.Body1>
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-sm text-left focus-visible:outline-2"
+          aria-label={t('accounts.details.open', { name: account.name })}
+          onClick={(event) => onDetailsOpen(event.currentTarget)}
+        >
+          <Typography.Body2 className="min-w-0 flex-1 truncate" title={account.name}>
+            {account.name}
+          </Typography.Body2>
+          <Typography.Body1 className="shrink-0 font-semibold tabular-nums">
+            {formatMoney(account.amount, account.currency)}
+          </Typography.Body1>
+        </button>
         <Collapsible.Trigger
           aria-label={t(open ? 'accounts.history.collapse' : 'accounts.history.expand', { name: account.name })}
           render={<Button.Icon />}
