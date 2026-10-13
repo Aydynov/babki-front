@@ -1,19 +1,33 @@
 import { accountsQueryOptions } from '@/entities/accounts';
+import { usersQueryOptions } from '@/entities/users';
 import { ManageAccountsButton } from '@/features/manage-accounts';
 import { useSelectedPeriod } from '@/features/select-period';
-import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
+import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import { groupAccounts } from '../model/account-presentation';
+import { AccountRow } from './account-row';
 
 export function Accounts() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const selectedPeriod = useSelectedPeriod();
+  const [openAccountIds, setOpenAccountIds] = useState<string[]>([]);
   const accountsQuery = useQuery(accountsQueryOptions.findAll({
     toDate: selectedPeriod.toDate,
   }));
+  const userQuery = useQuery(usersQueryOptions.me());
+  const loading = accountsQuery.isLoading || userQuery.isLoading;
+  const unavailable = !accountsQuery.data || !userQuery.data;
+  const groups = groupAccounts(accountsQuery.data ?? [], userQuery.data?.defaultCurrency ?? '', i18n.language);
+  const accountNames = new Map((accountsQuery.data ?? []).map((account) => [account._id, account.name]));
+  const retry = () => {
+    accountsQuery.refetch().catch(() => undefined);
+    userQuery.refetch().catch(() => undefined);
+  };
 
   return (
     <Card.Base className="flex w-full min-w-0 max-w-xl flex-col gap-3 p-3.5">
@@ -22,7 +36,7 @@ export function Accounts() {
         <Card.Controls><ManageAccountsButton /></Card.Controls>
       </div>
 
-      {accountsQuery.isLoading && (
+      {loading && (
         <div className="flex flex-col gap-2" aria-busy="true">
           <span className="sr-only">{t('accounts.loading')}</span>
           <Skeleton className="h-10 w-full" />
@@ -30,37 +44,37 @@ export function Accounts() {
         </div>
       )}
 
-      {accountsQuery.isError && (
-        <Typography.Body2 className="text-destructive" role="alert">
-          {t('accounts.errors.load')}
-        </Typography.Body2>
+      {(accountsQuery.isError || userQuery.isError) && (
+        <QueryError
+          compact={!unavailable}
+          message={t('accounts.errors.load')}
+          onRetry={retry}
+        />
       )}
 
-      {accountsQuery.data?.length === 0 && (
+      {!loading && !unavailable && groups.length === 0 && (
         <Typography.Body2 className="text-muted-foreground">{t('accounts.empty')}</Typography.Body2>
       )}
 
-      {accountsQuery.data && accountsQuery.data.length > 0 && (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-          {accountsQuery.data.map((account) => (
-            <div
+      {!loading && !unavailable && groups.map((group) => (
+        <section key={group.type} className="flex min-w-0 flex-col gap-2">
+          <h3 className="text-body-2 text-muted-foreground">
+            {t(`accounts.groups.${group.type}`)}
+          </h3>
+          {group.accounts.map((account) => (
+            <AccountRow
               key={account._id}
-              className="flex min-w-0 items-center justify-between gap-3 rounded-lg border p-2.5"
-            >
-              <div className="min-w-0">
-                <Typography.Body2 className="truncate">{account.name}</Typography.Body2>
-                <Typography.Caption1 className="text-muted-foreground">
-                  {account.type === 'balance' ? t('accounts.types.balance') : t('accounts.types.saving')}
-                  {account.archivedAt ? ` · ${t('accounts.status.archivedShort')}` : ''}
-                </Typography.Caption1>
-              </div>
-              <Typography.Body1 className="shrink-0">
-                {formatMoney(account.amount, account.currency)}
-              </Typography.Body1>
-            </div>
+              account={account}
+              accountNames={accountNames}
+              period={selectedPeriod}
+              open={openAccountIds.includes(account._id)}
+              onOpenChange={(open) => setOpenAccountIds((ids) => (
+                open ? [...ids, account._id] : ids.filter((id) => id !== account._id)
+              ))}
+            />
           ))}
-        </div>
-      )}
+        </section>
+      ))}
     </Card.Base>
   );
 }

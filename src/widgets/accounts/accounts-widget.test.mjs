@@ -5,14 +5,15 @@ import test from 'node:test';
 const read = async (path) => readFile(new URL(path, import.meta.url), 'utf8').catch(() => '');
 
 test('main dashboard composes the unified accounts widget', async () => {
-  const [widget, mainPage] = await Promise.all([
+  const [widget, mainPage, row] = await Promise.all([
     read('./ui/accounts.tsx'),
     read('../../pages/main/ui/main-page.tsx'),
+    read('./ui/account-row.tsx'),
   ]);
 
   assert.match(widget, /accountsQueryOptions\.findAll/);
   assert.match(widget, /ManageAccountsButton/);
-  assert.match(widget, /account\.currency/);
+  assert.match(row, /account\.currency/);
   assert.match(mainPage, /import \{ Accounts \} from '@\/widgets\/accounts'/);
   assert.doesNotMatch(mainPage, /@\/widgets\/(balance|savings)/);
 });
