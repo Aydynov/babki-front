@@ -9,8 +9,9 @@ can no longer represent or safely mutate the user's financial data.
 
 - **BREAKING**: replace the legacy balance, saving, and save client contracts with unified personal accounts and
   transfers.
-- Add account management to the existing dashboard: list balances and savings by currency, create and rename accounts,
-  set a compatible default account, and archive or delete accounts with lifecycle-aware feedback.
+- Add account management to the existing dashboard: list active balances and savings by currency, create and rename
+  accounts, set a compatible default account, and archive or delete accounts with lifecycle-aware feedback.
+  Keep archived accounts in management and historical context while hiding their rows from the dashboard widget.
 - Add transfer creation and management for same-currency and cross-currency account movements.
 - Require an explicit compatible account when creating incomes and expenses, closing plans, or repaying debts.
 - Add immutable currency selection to expense limits, plans, and debts and display monetary values with their currencies.

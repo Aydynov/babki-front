@@ -159,7 +159,8 @@ during background refresh, and all required user/account/report data for a widge
 - [Simultaneous currencies can make compact cards and charts visually dense] → Use currency-labeled rows or sections,
   stable ordering, and responsive stacking; verify RUB/USD seeded data at desktop and narrow widths.
 - [Archived account history may outlive currently selectable accounts] → Preserve account ids and currency on financial
-  entities, keep archived accounts available for labels, and exclude them only from new-operation eligibility.
+  entities and keep archived accounts available in management and for historical labels. Exclude archived account rows
+  from the dashboard widget and archived accounts from new-operation eligibility without filtering them out of shared caches.
 - [Broad invalidation may increase request volume] → Invalidate by owning query-family prefixes and account-specific keys;
   optimize only after correctness is verified.
 - [Backend contracts are currently present as uncommitted work in the adjacent repository] → Treat the inspected

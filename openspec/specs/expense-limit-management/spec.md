@@ -102,21 +102,21 @@ successful creation.
 #### Scenario: Create succeeds
 - **WHEN** the create request succeeds
 - **THEN** the returned persisted limit replaces the temporary row in place and creation becomes available again if an
-  unused category remains
+  unused category remains in the selected currency
 
 #### Scenario: Create fails
 - **WHEN** the create request fails
 - **THEN** the temporary row and entered values remain available with a row-specific error
 
 ### Requirement: One limit per category per month
-The system MUST prevent selecting a category that is already represented by another limit in the selected month.
+The system MUST prevent selecting a category that is already represented by another limit in the selected month and selected currency.
 
 #### Scenario: Available category options
 - **WHEN** the user opens the category selector in a temporary row
-- **THEN** it offers only loaded categories that are not used by another persisted or local limit row
+- **THEN** it offers only loaded categories that are not used by another persisted or local limit row in the selected currency
 
 #### Scenario: No unused categories
-- **WHEN** every loaded category already has a limit in the selected month
+- **WHEN** every loaded category already has a limit in the selected month and selected currency
 - **THEN** "Добавить лимит" is disabled
 
 #### Scenario: Required category
@@ -124,12 +124,12 @@ The system MUST prevent selecting a category that is already represented by anot
 - **THEN** its save action is disabled and a required-field error is available after interaction
 
 #### Scenario: Concurrent duplicate conflict
-- **WHEN** the create API rejects the request because the category already has a limit for the period
+- **WHEN** the create API rejects the request because the category already has a limit for the period and currency
 - **THEN** the system associates the conflict with the category field and preserves the temporary draft
 
 ### Requirement: Expense-limit amount validation
-The system MUST prevent saving a row unless its amount is a valid positive monetary value with at most two decimal
-places.
+The system MUST prevent saving a row unless its amount is a valid positive monetary value with precision supported
+by the row's selected or persisted currency.
 
 #### Scenario: Required amount
 - **WHEN** a touched amount is empty
@@ -144,7 +144,7 @@ places.
 - **THEN** the row displays a minimum-amount error and its save action is disabled
 
 #### Scenario: Decimal precision
-- **WHEN** an amount contains more than two digits after the decimal separator
+- **WHEN** an amount exceeds the minor-unit precision of the row's selected or persisted currency
 - **THEN** the row displays a precision error and its save action is disabled
 
 #### Scenario: Numeric request amount
@@ -253,3 +253,26 @@ controls.
 #### Scenario: Submit a row from the keyboard
 - **WHEN** focus is in a dirty valid amount and the user presses Enter
 - **THEN** only that expense-limit row is submitted
+
+### Requirement: Currency-scoped expense limits
+The system SHALL manage each expense limit in one immutable ISO currency and SHALL allow the same category and month to have independent limits in different currencies.
+
+#### Scenario: Create a currency limit
+- **WHEN** the user creates a limit for the selected month
+- **THEN** the temporary row requires a currency and the request includes `currency`, category, total, start date, and end date
+
+#### Scenario: Duplicate category in another currency
+- **WHEN** a category already has a limit for the selected month in RUB
+- **THEN** the category remains available for a new USD limit
+
+#### Scenario: Duplicate category in the same currency
+- **WHEN** a category already has a limit for the selected month in the temporary row's currency
+- **THEN** that category is unavailable for the new limit
+
+#### Scenario: Persisted currency is immutable
+- **WHEN** an existing limit row is edited
+- **THEN** its currency is displayed as read-only and only its total can be submitted
+
+#### Scenario: Currency-specific precision
+- **WHEN** a limit total exceeds the selected or persisted currency's supported precision
+- **THEN** the row displays a precision error and cannot be saved

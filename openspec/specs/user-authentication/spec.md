@@ -251,3 +251,18 @@ The system SHALL retain the active challenge after retryable factor failures and
 #### Scenario: Challenge response is invalid
 - **WHEN** challenge completion succeeds at the transport level but does not match the authenticated-session schema
 - **THEN** the system reports a general retryable error and does not establish a session
+
+### Requirement: Currency-aware user contract
+The system SHALL use `defaultCurrency` and nullable `defaultAccountId` in authenticated user contracts while deferring authenticated profile-currency controls to a future change.
+
+#### Scenario: Submit registration currency
+- **WHEN** the registration form submits a supported currency
+- **THEN** the frontend maps that form value to the backend request field `currency`
+
+#### Scenario: Validate an authenticated user
+- **WHEN** login, registration, or current-user lookup returns a user
+- **THEN** the response is accepted only when it includes a supported `defaultCurrency` and a valid object id or null `defaultAccountId`
+
+#### Scenario: No authenticated currency selector
+- **WHEN** an authenticated user opens the dashboard in this change
+- **THEN** the UI does not expose a control for changing `defaultCurrency`

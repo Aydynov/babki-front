@@ -13,7 +13,7 @@
 - [x] 2.3 Add focused tests for active-account eligibility, default-account eligibility, default selection, archived-account labeling, and currency-specific initial-amount validation.
 - [x] 2.4 Implement reusable account presentation and selection UI through the accounts public API, including loading, empty, error, archived, and incompatible states.
 - [x] 2.5 Implement account creation, rename, default selection, archive, and delete features with confirmations, lifecycle-specific errors, mutation locking, and cache reconciliation.
-- [x] 2.6 Replace the legacy balance and savings dashboard cards with a responsive accounts widget that shows all account currencies at the selected period end date.
+- [x] 2.6 Replace the legacy balance and savings dashboard cards with a responsive accounts widget that shows active accounts in their currencies at the selected period end date; keep archived accounts in management and historical context while hiding their dashboard rows.
 
 ## 3. Explicit accounts for income and expense flows
 

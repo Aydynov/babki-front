@@ -5,7 +5,7 @@ Define how users view and manage multiple named personal balance and saving acco
 ## ADDED Requirements
 
 ### Requirement: Multicurrency account overview
-The system SHALL present every personal account returned by the API with its name, type, ISO currency, formatted amount, and lifecycle state without combining amounts from different currencies.
+The system SHALL present active personal accounts in the dashboard widget with their names, types, ISO currencies, and formatted amounts without combining amounts from different currencies. Account management SHALL retain every personal account returned by the API, including archived accounts identified by their lifecycle state. Archived accounts SHALL remain available for historical context but SHALL NOT appear as account rows in the dashboard widget or be selectable for new operations.
 
 #### Scenario: Accounts in multiple currencies
 - **WHEN** the user has active RUB and USD accounts
@@ -18,7 +18,8 @@ The system SHALL present every personal account returned by the API with its nam
 
 #### Scenario: Archived account
 - **WHEN** an account has a non-null archive date
-- **THEN** the overview identifies it as archived and excludes it from new-operation selectors
+- **THEN** account management identifies it as archived and retains access to its historical context
+- **THEN** the dashboard widget omits its account row and new-operation selectors exclude it
 
 ### Requirement: Account creation
 The system SHALL let the user create a named balance or saving account with an ISO currency, initial amount, and opening date.
@@ -67,7 +68,8 @@ The system MUST distinguish archiving an account with history from permanently d
 
 #### Scenario: Archive account
 - **WHEN** the user confirms archival and the API succeeds
-- **THEN** the account becomes unavailable to new operations while remaining visible with its history
+- **THEN** the account becomes unavailable to new operations and disappears from the dashboard widget
+- **THEN** the account remains available in account management and historical context
 
 #### Scenario: Delete unused account
 - **WHEN** the user confirms deletion of an account with no initial balance or financial history and the API succeeds
