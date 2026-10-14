@@ -20,7 +20,7 @@ The system SHALL provide a currency selector in each of the daily expense, month
 - **THEN** the selector cannot switch to an unavailable currency
 
 ### Requirement: Offer only currencies with chart data
-Each chart's selector SHALL list only currencies with at least one plottable value in that chart's selected period. Daily expenses require at least one expense record; monthly reports require at least one nonzero value among their plotted metrics; annual expense categories require at least one positive category expense total.
+Each chart's selector SHALL list only currencies with at least one plottable value in that chart's selected period. Daily expenses require at least one expense record; monthly reports require at least one nonzero expense, income, or saving value, excluding transfer values; annual expense categories require at least one positive category expense total.
 
 #### Scenario: Different chart datasets
 - **WHEN** RUB has daily expenses and USD has an annual category expense, but only RUB has monthly plotted metrics
@@ -30,6 +30,18 @@ Each chart's selector SHALL list only currencies with at least one plottable val
 - **WHEN** no currency has plottable data for a chart in the selected period
 - **THEN** the chart shows an empty state in the card
 - **THEN** no currency is presented as selected for that chart
+
+#### Scenario: Currency with transfers only
+- **WHEN** a currency has nonzero incoming or outgoing transfers but zero expenses, incomes, and savings in every month of the selected period
+- **THEN** the monthly chart does not offer that currency
+
+#### Scenario: Any retained metric makes a currency available
+- **WHEN** a currency has a nonzero expense, income, or saving value in at least one month, including a negative saving value
+- **THEN** the monthly chart offers that currency regardless of its transfer values
+
+#### Scenario: All monthly activity is transfers
+- **WHEN** all currencies have only transfers and zero expenses, incomes, and savings in the selected period
+- **THEN** the monthly chart shows «Данные отсутствуют» and no selected currency
 
 ### Requirement: Stable selection across period changes
 The system SHALL keep each chart's selected currency while it remains available after a period change. When it becomes unavailable, the chart SHALL select the authenticated user's default currency if available, or otherwise the first available currency in ISO-code order.
@@ -47,7 +59,7 @@ The system SHALL keep each chart's selected currency while it remains available 
 - **THEN** it selects the user's default currency if available, otherwise the first available currency in ISO-code order
 
 ### Requirement: Currency-scoped chart values
-The three charts SHALL render only values denominated in their selected currency, without conversion or cross-currency summation. Their labels, totals, legends, and tooltips SHALL identify and format values in that currency.
+The three charts SHALL render only values denominated in their selected currency, without conversion or cross-currency summation. Their labels, totals, legends, and tooltips SHALL identify and format values in that currency. The monthly chart SHALL display only expenses, incomes, and savings and SHALL exclude incoming and outgoing transfers from bars, legend, and tooltips.
 
 #### Scenario: Daily expense chart
 - **WHEN** the user selects USD
@@ -56,7 +68,8 @@ The three charts SHALL render only values denominated in their selected currency
 
 #### Scenario: Monthly report chart
 - **WHEN** the user selects a currency
-- **THEN** the monthly chart shows its existing expense, income, saving, transfer-in, and transfer-out metrics only for that currency
+- **THEN** the monthly chart shows only that currency's expense, income, and saving metrics labeled «Расходы», «Доходы», and «Накопления»
+- **THEN** incoming and outgoing transfers do not appear in bars, legend, or tooltips and do not change the plotted values of the three retained metrics
 
 #### Scenario: Annual expense-category chart
 - **WHEN** the user selects a currency
