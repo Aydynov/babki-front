@@ -19,11 +19,31 @@ test('monthly chart offers currencies with any nonzero plotted metric', () => {
     expenses: 0, incomes: 0, saving: 0, transfersIn: 0, transfersOut: 0,
   };
   assert.deepEqual(getMonthlyMetricCurrencies([
-    { currency: 'RUB', periods: [empty, { ...empty, transfersOut: 10 }] },
+    { currency: 'RUB', periods: [empty, { ...empty, expenses: 10 }] },
     { currency: 'USD', periods: [empty] },
     { currency: 'KZT', periods: [{ ...empty, saving: 1 }] },
   ]), ['KZT', 'RUB']);
   assert.deepEqual(getMonthlyMetricCurrencies([]), []);
+  ['expenses', 'incomes', 'saving'].forEach((metric) => {
+    assert.deepEqual(getMonthlyMetricCurrencies([
+      { currency: 'USD', periods: [empty, { ...empty, [metric]: 10 }] },
+    ]), ['USD']);
+  });
+  assert.deepEqual(getMonthlyMetricCurrencies([
+    { currency: 'USD', periods: [{ ...empty, saving: -10 }] },
+  ]), ['USD']);
+});
+
+test('monthly chart excludes currencies with only transfers or no activity', () => {
+  const empty = {
+    expenses: 0, incomes: 0, saving: 0, transfersIn: 0, transfersOut: 0,
+  };
+  assert.deepEqual(getMonthlyMetricCurrencies([
+    { currency: 'RUB', periods: [empty, { ...empty, transfersOut: 10 }] },
+    { currency: 'USD', periods: [{ ...empty, transfersIn: 10 }] },
+    { currency: 'KZT', periods: [empty] },
+    { currency: 'EUR', periods: [] },
+  ]), []);
 });
 
 test('annual pie offers currencies with a positive category total', () => {

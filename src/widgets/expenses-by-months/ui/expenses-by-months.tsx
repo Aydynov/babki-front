@@ -34,14 +34,6 @@ const chartConfig = {
     label: 'Накопления',
     color: 'var(--chart-3)',
   },
-  transfersIn: {
-    label: 'Переводы входящие',
-    color: 'var(--chart-4)',
-  },
-  transfersOut: {
-    label: 'Переводы исходящие',
-    color: 'var(--chart-5)',
-  },
 } satisfies ChartConfig;
 
 export const ExpensesByMonths: FC = () => {
@@ -168,18 +160,6 @@ export const ExpensesByMonths: FC = () => {
               <Bar
                 dataKey="saving"
                 fill="var(--color-saving)"
-                radius={1}
-                activeBar
-              />
-              <Bar
-                dataKey="transfersIn"
-                fill="var(--color-transfersIn)"
-                radius={1}
-                activeBar
-              />
-              <Bar
-                dataKey="transfersOut"
-                fill="var(--color-transfersOut)"
                 radius={1}
                 activeBar
               />

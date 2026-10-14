@@ -8,8 +8,6 @@ interface MonthlyMetric {
   expenses: number;
   incomes: number;
   saving: number;
-  transfersIn: number;
-  transfersOut: number;
 }
 
 export const getMonthlyMetricCurrencies = (
@@ -17,7 +15,6 @@ export const getMonthlyMetricCurrencies = (
 ): CurrencyCode[] => series
   .filter(({ periods }) => periods.some((period) => (
     period.expenses !== 0 || period.incomes !== 0 || period.saving !== 0
-      || period.transfersIn !== 0 || period.transfersOut !== 0
   )))
   .map(({ currency }) => currency)
   .sort();
