@@ -86,8 +86,8 @@ Both runs completed without JavaScript page errors.
 
 Browser checks use synthetic responses and establish frontend behavior, not live-backend correctness.
 No new dependencies, API changes, routes or generated route files were introduced.
-The change has not been archived or synced; the ordering note for `account-details-dialog` remains
-in design.md and tasks.md for that later workflow.
+At implementation verification time the change was not yet archived or synced; the ordering note
+for `account-details-dialog` was recorded in design.md and tasks.md.
 
 ## Creation form design refinement
 
@@ -118,3 +118,15 @@ Screenshots: [desktop form](screenshots/creation-desktop.png),
 [desktop precision error](screenshots/creation-error-desktop.png),
 [mobile form](screenshots/creation-mobile.png),
 [mobile precision error](screenshots/creation-error-mobile.png).
+
+## Bulk spec sync and archive (2026-10-15)
+
+Synced account-details-dialog first, then accounts-widget-archive-view. All five included deltas
+were compared with main requirements and scenarios before archiving. The common widget spec
+preserves the earlier details action and includes the later active/archive list behavior.
+
+Reconciled Current account management in the main details spec with later implemented behavior:
+separate creation from the active-list plus, archive-list access, and lifecycle focus returning
+to the visible mode switch. Existing history, pagination and all 15 details scenarios remain.
+All four affected main specs passed strict validation. All 16 main specs passed normal validation;
+pre-existing Purpose-placeholder warnings remain in unrelated expense specs.
