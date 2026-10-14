@@ -91,7 +91,8 @@ export function AccountDetailsDialog({
           />
           <AccountHistoryTable
             title={t('transfers.title')}
-            action={<CreateTransferButton initialSourceAccountId={account._id} />}
+            action={account.archivedAt === null
+              ? <CreateTransferButton initialSourceAccountId={account._id} /> : undefined}
             items={transfers.data ?? []}
             loading={transfers.isLoading}
             error={transfers.isError}

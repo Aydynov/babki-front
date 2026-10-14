@@ -1,7 +1,9 @@
 import { accountsQueryOptions } from '@/entities/accounts';
 import { usersQueryOptions } from '@/entities/users';
-import { ManageAccountsButton } from '@/features/manage-accounts';
+import { CreateAccountButton } from '@/features/manage-accounts';
 import { useSelectedPeriod } from '@/features/select-period';
+import { Button } from '@/shared/ui/button';
+import { LucideArchive, LucideArrowLeft } from 'lucide-react';
 import { Card } from '@/shared/ui/card';
 import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -17,7 +19,8 @@ export function Accounts() {
   const { t, i18n } = useTranslation();
   const selectedPeriod = useSelectedPeriod();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const managementTrigger = useRef<HTMLButtonElement | null>(null);
+  const [mode, setMode] = useState<'active' | 'archived'>('active');
+  const modeTrigger = useRef<HTMLButtonElement | null>(null);
   const detailsTrigger = useRef<HTMLButtonElement | null>(null);
   const [openAccountIds, setOpenAccountIds] = useState<string[]>([]);
   const accountsQuery = useQuery(accountsQueryOptions.findAll({
@@ -26,7 +29,7 @@ export function Accounts() {
   const userQuery = useQuery(usersQueryOptions.me());
   const loading = accountsQuery.isLoading || userQuery.isLoading;
   const unavailable = !accountsQuery.data || !userQuery.data;
-  const groups = groupAccounts(accountsQuery.data ?? [], userQuery.data?.defaultCurrency ?? '', i18n.language);
+  const groups = groupAccounts(accountsQuery.data ?? [], userQuery.data?.defaultCurrency ?? '', i18n.language, mode);
   const selectedAccount = accountsQuery.data?.find((account) => account._id === selectedAccountId);
   const accountNames = new Map((accountsQuery.data ?? []).map((account) => [account._id, account.name]));
   const retry = () => {
@@ -37,8 +40,22 @@ export function Accounts() {
   return (
     <Card.Base className="flex w-full min-w-0 max-w-xl flex-col gap-3 p-3.5">
       <div className="flex items-center justify-between gap-2">
-        <Typography.Title3 className="text-muted-foreground uppercase">{t('accounts.title')}</Typography.Title3>
-        <Card.Controls><ManageAccountsButton triggerRef={managementTrigger} /></Card.Controls>
+        <Typography.Title3 className="text-muted-foreground uppercase">
+          {t(mode === 'active' ? 'accounts.title' : 'accounts.archive.title')}
+        </Typography.Title3>
+        <Card.Controls>
+          <Button.Icon
+            ref={modeTrigger}
+            aria-label={t(mode === 'active' ? 'accounts.archive.title' : 'accounts.archive.back')}
+            onClick={() => {
+              setSelectedAccountId(null);
+              setMode((current) => (current === 'active' ? 'archived' : 'active'));
+            }}
+          >
+            {mode === 'active' ? <LucideArchive /> : <LucideArrowLeft />}
+          </Button.Icon>
+          <CreateAccountButton hidden={mode === 'archived'} />
+        </Card.Controls>
       </div>
 
       {loading && (
@@ -58,7 +75,9 @@ export function Accounts() {
       )}
 
       {!loading && !unavailable && groups.length === 0 && (
-        <Typography.Body2 className="text-muted-foreground">{t('accounts.empty')}</Typography.Body2>
+        <Typography.Body2 className="text-muted-foreground">
+          {t(mode === 'active' ? 'accounts.empty' : 'accounts.archive.empty')}
+        </Typography.Body2>
       )}
 
       {!loading && !unavailable && groups.map((group) => (
@@ -93,10 +112,10 @@ export function Accounts() {
           finalFocus={detailsTrigger}
           onClose={() => setSelectedAccountId(null)}
           onUnavailable={() => {
-            detailsTrigger.current = managementTrigger.current;
+            detailsTrigger.current = modeTrigger.current;
             setSelectedAccountId(null);
             // Restore focus after all nested dialogs have run their unmount focus cleanup.
-            requestAnimationFrame(() => managementTrigger.current?.focus());
+            requestAnimationFrame(() => modeTrigger.current?.focus());
           }}
         />
       )}

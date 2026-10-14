@@ -13,7 +13,7 @@ test('main dashboard composes the unified accounts widget', async () => {
   ]);
 
   assert.match(widget, /accountsQueryOptions\.findAll/);
-  assert.match(widget, /ManageAccountsButton/);
+  assert.match(widget, /CreateAccountButton/);
   assert.match(row, /account\.currency/);
   assert.match(mainPage, /import \{ Accounts \} from '@\/widgets\/accounts'/);
   assert.doesNotMatch(mainPage, /@\/widgets\/(balance|savings)/);
@@ -47,6 +47,7 @@ test('account details reuses account management scoped to the selected account',
   ]);
   assert.match(details, /<ManageAccountsButton accountId=\{account\._id\}/);
   assert.match(management, /accounts\.filter\(\(account\) => account\._id === accountId\)/);
-  assert.match(management, /!accountId && \(/);
+  assert.doesNotMatch(management, /submitCreate|subscribeAccountManagementRequests/);
+  assert.match(management, /accountId: string/);
   assert.match(management, /onUnavailable\?\.\(\)/);
 });

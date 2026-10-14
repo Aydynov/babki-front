@@ -1,10 +1,19 @@
 import type { Account, AccountType } from '@/entities/accounts';
 import type { Transfer } from '@/entities/transfers';
 
-export const groupAccounts = (accounts: Account[], defaultCurrency: string, locale: string) => (
+type AccountListMode = 'active' | 'archived';
+
+export const groupAccounts = (
+  accounts: Account[],
+  defaultCurrency: string,
+  locale: string,
+  mode: AccountListMode = 'active',
+) => (
   (['balance', 'saving'] as const).map((type: AccountType) => ({
     type,
-    accounts: accounts.filter((account) => account.type === type && account.archivedAt === null)
+    accounts: accounts.filter((account) => (
+      account.type === type && (mode === 'active' ? account.archivedAt === null : account.archivedAt !== null)
+    ))
       .sort((left, right) => (
         Number(right.currency === defaultCurrency) - Number(left.currency === defaultCurrency)
         || left.currency.localeCompare(right.currency)

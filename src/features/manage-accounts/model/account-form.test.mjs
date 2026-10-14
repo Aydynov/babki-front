@@ -35,3 +35,10 @@ test('distinguishes restricted deletion from generic account errors', async () =
   assert.equal(model.getAccountMutationErrorKey?.({ response: { status: 400 } }), 'validation');
   assert.equal(model.getAccountMutationErrorKey?.({ response: { status: 500 } }), 'generic');
 });
+
+test('submits an empty initial amount as numeric zero', async () => {
+  const model = await modelPromise;
+  assert.equal(model.buildCreateAccountPayload({
+    name: 'Новый', type: 'balance', currency: 'RUB', amount: '', openedAt: '2026-10-15',
+  }).amount, 0);
+});

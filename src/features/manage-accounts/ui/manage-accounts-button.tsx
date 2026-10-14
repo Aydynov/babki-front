@@ -1,59 +1,46 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import {
   accountsQueryOptions,
-  createAccountSchema,
-  hasValidInitialAmount,
   isDefaultAccountCandidate,
-  subscribeAccountManagementRequests,
   useArchiveAccountMutation,
-  useCreateAccountMutation,
   useDeleteAccountMutation,
   useRenameAccountMutation,
 } from '@/entities/accounts';
 import { usersQueryOptions, useUpdateCurrentUserMutation } from '@/entities/users';
-import { currencyCodes, formatMoney } from '@/shared/lib/currency';
+import { formatMoney } from '@/shared/lib/currency';
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LucidePlus, LucideSettings, LucideX } from 'lucide-react';
+import { LucideSettings, LucideX } from 'lucide-react';
 import {
-  type FormEvent, type Ref, useCallback, useEffect, useMemo, useState,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  buildCreateAccountPayload,
   getAccountMutationErrorKey,
-  getLocalDateString,
 } from '../model/account-form';
 import { invalidateAccountDependents } from '../model/cache';
 
 interface LifecycleAction { accountId: string; kind: 'archive' | 'delete' }
 
 interface ManageAccountsButtonProps {
-  accountId?: string;
+  accountId: string;
   onUnavailable?: () => void;
-  triggerRef?: Ref<HTMLButtonElement>;
 }
 
-export function ManageAccountsButton({ accountId, onUnavailable, triggerRef }: ManageAccountsButtonProps) {
+export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccountsButtonProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
   const userQuery = useQuery(usersQueryOptions.me());
-  const createMutation = useCreateAccountMutation();
   const renameMutation = useRenameAccountMutation();
   const archiveMutation = useArchiveAccountMutation();
   const deleteMutation = useDeleteAccountMutation();
   const updateUserMutation = useUpdateCurrentUserMutation();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'balance' | 'saving'>('balance');
-  const [currency, setCurrency] = useState('RUB');
-  const [amount, setAmount] = useState('0');
-  const [openedAt, setOpenedAt] = useState(getLocalDateString);
   const [draftNames, setDraftNames] = useState<Record<string, string>>({});
   const [action, setAction] = useState<LifecycleAction>();
   const [confirmationOpen, setConfirmationOpen] = useState(false);
@@ -65,55 +52,10 @@ export function ManageAccountsButton({ accountId, onUnavailable, triggerRef }: M
   };
   const accounts = accountsQuery.data ?? [];
   const user = userQuery.data;
-  const visibleAccounts = accountId ? accounts.filter((account) => account._id === accountId) : accounts;
+  const visibleAccounts = accounts.filter((account) => account._id === accountId);
 
-  const resetCreateForm = useCallback(() => {
-    setName('');
-    setType('balance');
-    setCurrency(user?.defaultCurrency ?? 'RUB');
-    setAmount('0');
-    setOpenedAt(getLocalDateString());
-  }, [user?.defaultCurrency]);
-
-  useEffect(() => {
-    if (user?.defaultCurrency) setCurrency(user.defaultCurrency);
-  }, [user?.defaultCurrency]);
-
-  useEffect(() => {
-    if (accountId) return undefined;
-    return subscribeAccountManagementRequests(() => {
-      resetCreateForm();
-      setError(undefined);
-      setOpen(true);
-    });
-  }, [accountId, resetCreateForm]);
-  const isPending = createMutation.isPending || renameMutation.isPending
-    || archiveMutation.isPending || deleteMutation.isPending || updateUserMutation.isPending;
-  const payload = useMemo(() => buildCreateAccountPayload({
-    name,
-    type,
-    currency,
-    amount,
-    openedAt,
-  }), [amount, currency, name, openedAt, type]);
-  const canCreate = createAccountSchema.safeParse(payload).success
-    && hasValidInitialAmount(payload.amount, payload.currency);
-  const hasAmountPrecisionError = Number.isFinite(payload.amount)
-    && payload.amount >= 0
-    && !hasValidInitialAmount(payload.amount, payload.currency);
-
-  const submitCreate = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!canCreate) return;
-    setError(undefined);
-    try {
-      await createMutation.mutateAsync(payload);
-      invalidateAccountDependents(queryClient);
-      resetCreateForm();
-    } catch (mutationError) {
-      setError(getAccountMutationErrorKey(mutationError));
-    }
-  };
+  const isPending = renameMutation.isPending || archiveMutation.isPending
+    || deleteMutation.isPending || updateUserMutation.isPending;
 
   const rename = async (targetAccountId: string, currentName: string) => {
     const nextName = draftNames[targetAccountId]?.trim();
@@ -136,10 +78,8 @@ export function ManageAccountsButton({ accountId, onUnavailable, triggerRef }: M
       else await deleteMutation.mutateAsync(action.accountId);
       invalidateAccountDependents(queryClient);
       setConfirmationOpen(false);
-      if (accountId) {
-        setOpen(false);
-        onUnavailable?.();
-      }
+      setOpen(false);
+      onUnavailable?.();
     } catch (mutationError) {
       setError(getAccountMutationErrorKey(mutationError));
     }
@@ -162,7 +102,6 @@ export function ManageAccountsButton({ accountId, onUnavailable, triggerRef }: M
         onOpenChange={(next) => {
           if (isPending) return;
           if (next) {
-            resetCreateForm();
             setError(undefined);
           }
           setOpen(next);
@@ -171,8 +110,7 @@ export function ManageAccountsButton({ accountId, onUnavailable, triggerRef }: M
         <DialogPrimitive.Trigger
           render={(
             <Button.Icon
-              ref={triggerRef}
-              aria-label={t(accountId ? 'accounts.management.current' : 'accounts.management.open')}
+              aria-label={t('accounts.management.current')}
             />
 )}
         >
@@ -180,7 +118,7 @@ export function ManageAccountsButton({ accountId, onUnavailable, triggerRef }: M
         </DialogPrimitive.Trigger>
         <Dialog.Content className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden">
           <Dialog.Header>
-            <Dialog.Title>{t(accountId ? 'accounts.management.current' : 'accounts.title')}</Dialog.Title>
+            <Dialog.Title>{t('accounts.management.current')}</Dialog.Title>
             <Button.Icon
               aria-label={t('accounts.management.close')}
               onClick={() => setOpen(false)}
@@ -271,47 +209,6 @@ export function ManageAccountsButton({ accountId, onUnavailable, triggerRef }: M
               </div>
             ))}
             {!accountsQuery.isLoading && !visibleAccounts.length && <p>{t('accounts.empty')}</p>}
-            {!accountId && (
-            <form className="flex flex-col gap-3 rounded-lg border p-3" onSubmit={submitCreate}>
-              <Typography.Title3>{t('accounts.management.new')}</Typography.Title3>
-              <Input.Base
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder={t('accounts.management.namePlaceholder')}
-              />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <select value={type} onChange={(event) => setType(event.target.value as typeof type)}>
-                  <option value="balance">{t('accounts.types.balance')}</option>
-                  <option value="saving">{t('accounts.types.saving')}</option>
-                </select>
-                <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
-                  {currencyCodes.map((code) => <option key={code}>{code}</option>)}
-                </select>
-                <div>
-                  <Input.Base
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={amount}
-                    hasError={hasAmountPrecisionError}
-                    onChange={(event) => setAmount(event.target.value)}
-                  />
-                  {hasAmountPrecisionError && (
-                    <Input.Error>{t('accounts.errors.precision')}</Input.Error>
-                  )}
-                </div>
-                <Input.Base
-                  type="date"
-                  value={openedAt}
-                  onChange={(event) => setOpenedAt(event.target.value)}
-                />
-              </div>
-              <Button.Base type="submit" disabled={isPending || !canCreate}>
-                <LucidePlus />
-                {t('accounts.management.add')}
-              </Button.Base>
-            </form>
-            )}
             {error && (
               <p role="alert">
                 {error === 'restricted'

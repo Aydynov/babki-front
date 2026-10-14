@@ -1,3 +1,4 @@
+// Run: node --test src/widgets/accounts/model/account-presentation.test.mjs
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { groupAccounts, getTransferEffects } from './account-presentation.ts';
@@ -66,4 +67,24 @@ test('sorts newest first with stable ids and preserves counterparty ids regardle
   assert.equal(getTransferEffects(items, 'destination')[0].counterpartyId, 'source');
   assert.deepEqual(getTransferEffects(items, 'unrelated'), []);
   assert.deepEqual(items, original);
+});
+
+test('archive mode excludes active accounts and preserves grouping and ordering without mutation', () => {
+  const accounts = [
+    account('active', 'balance', 'USD', 'А'),
+    account('rub', 'balance', 'RUB', 'А', '2026-10-01'),
+    account('b', 'balance', 'USD', 'Б', '2026-10-01'),
+    account('a2', 'balance', 'USD', 'А', '2026-10-01'),
+    account('a1', 'balance', 'USD', 'А', '2026-10-01'),
+    account('saving', 'saving', 'EUR', 'А', '2026-10-01'),
+  ];
+  const original = [...accounts];
+  assert.deepEqual(
+    groupAccounts(accounts, 'USD', 'ru', 'archived')
+      .map(({ type, accounts: items }) => [type, items.map(({ _id }) => _id)]),
+    [['balance', ['a1', 'a2', 'b', 'rub']], ['saving', ['saving']]],
+  );
+  assert.deepEqual(accounts, original);
+  assert.deepEqual(groupAccounts([], 'USD', 'ru', 'archived'), []);
+  assert.deepEqual(groupAccounts([accounts[0]], 'USD', 'ru', 'archived'), []);
 });
