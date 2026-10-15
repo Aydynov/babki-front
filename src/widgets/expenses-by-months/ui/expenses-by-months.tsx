@@ -10,7 +10,7 @@ import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Body1 } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
-import { endOfMonth, endOfYear, format } from 'date-fns';
+import { endOfYear, format } from 'date-fns';
 import i18next from 'i18next';
 import { useMemo, type FC } from 'react';
 import {
@@ -38,15 +38,11 @@ const chartConfig = {
 
 export const ExpensesByMonths: FC = () => {
   const selectedYear = usePeriodStore((s) => s.selectedYear);
-  const selectedMonth = usePeriodStore((s) => s.selectedMonth);
-  const currentYear = new Date().getFullYear();
 
   const periodQuery = useMemo(() => ({
     fromDate: format(new Date(selectedYear, 0, 1), 'yyyy-MM-dd'),
-    toDate: selectedYear === currentYear
-      ? format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd')
-      : format(endOfYear(new Date(selectedYear, 11)), 'yyyy-MM-dd'),
-  }), [selectedYear, selectedMonth, currentYear]);
+    toDate: format(endOfYear(new Date(selectedYear, 11)), 'yyyy-MM-dd'),
+  }), [selectedYear]);
 
   const reportsQuery = useQuery(
     reportsQueryOptions.monthly(periodQuery),
