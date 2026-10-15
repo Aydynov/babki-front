@@ -79,7 +79,7 @@ http.createServer(async (req, res) => {
   }
   state.requests.push({ path: p, method: req.method, query: Object.fromEntries(url.searchParams) });
   await pm.state.set('babki.monthly-incomes', state);
-  if (state.flags.delay && (p === '/incomes' || p === '/incomes/revenue')) {
+  if (state.flags.delay && (p === '/incomes' || p === '/incomes/revenue' || p === '/reports/years')) {
     await new Promise((resolve) => {
       setTimeout(resolve, state.flags.delay);
     });
@@ -88,6 +88,7 @@ http.createServer(async (req, res) => {
     && (!state.flags.failMonth || url.searchParams.get('fromDate')?.startsWith(state.flags.failMonth))) {
     return send({ message: 'Synthetic failure' }, 500);
   }
+  if (p === '/reports/years' && state.flags.yearlyReports) return send(state.flags.yearlyReports);
   if (p === '/users/me') {
     return send({
       _id: id(10),
