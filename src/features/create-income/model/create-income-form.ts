@@ -7,7 +7,15 @@ import { hasValidMoneyPrecision, type CurrencyCode } from '../../../shared/lib/c
 interface IncomeAccount {
   _id: string;
   archivedAt: string | null;
+  type: 'balance' | 'saving';
+  currency: CurrencyCode;
 }
+
+export const getIncomeAccounts = <T extends IncomeAccount>(accounts: T[], currency: CurrencyCode) => (
+  accounts.filter((account) => (
+    account.archivedAt === null && account.type === 'balance' && account.currency === currency
+  ))
+);
 
 export const createIncomeFormSchema = z
   .object({

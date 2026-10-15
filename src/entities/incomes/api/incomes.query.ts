@@ -8,6 +8,7 @@ import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/incomes';
 import { accountsQueryKeys } from '@/entities/accounts/@x/incomes';
 import { reportsQueryKeys } from '@/entities/reports/@x/incomes';
 import { transactionsQueryKeys } from '@/entities/transactions/@x/incomes';
+import { loadPaginatedHistory } from '@/shared/lib/paginated-history';
 import { incomesApi } from './incomes.api';
 import type {
   ListIncomesQuery,
@@ -26,6 +27,10 @@ export const incomesQueryKeys = {
 };
 
 export const incomesQueryOptions = {
+  currencyHistory: (query: Required<Pick<ListIncomesQuery, 'fromDate' | 'toDate' | 'currency'>>) => queryOptions({
+    queryKey: [...incomesQueryKeys.listAll(), 'currency-history', query],
+    queryFn: () => loadPaginatedHistory((pagination) => incomesApi.findAll({ ...query, ...pagination })),
+  }),
   findAll: (query: ListIncomesQuery = {}) => queryOptions({
     queryKey: incomesQueryKeys.list(query),
     queryFn: () => incomesApi.findAll(query),

@@ -10,8 +10,8 @@ import { useQuery } from '@tanstack/react-query';
 import { LucideX } from 'lucide-react';
 import type { RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
+import { HistoryTable } from '@/shared/ui/history-table';
 import { getTransferEffects } from '../model/account-presentation';
-import { AccountHistoryTable } from './account-history-table';
 
 interface AccountDetailsDialogProps {
   account: Account;
@@ -33,6 +33,14 @@ export function AccountDetailsDialog({
   const formatDate = (value: string) => new Date(value).toLocaleDateString(i18n.language);
   const month = new Date(period.fromDate).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
   const cellClass = 'min-w-0 break-words border-b px-1 py-2 align-top';
+  const historyLabels = (title: string) => ({
+    loading: t('accounts.details.loading'),
+    error: t('accounts.details.error'),
+    pagination: t('accounts.details.pagination', { title }),
+    previous: t('accounts.details.previous'),
+    next: t('accounts.details.next'),
+    page: (page: number, pages: number, total: number) => t('accounts.details.page', { page, pages, total }),
+  });
   const facts = [
     [t('accounts.details.type'), t(`accounts.types.${account.type}`)],
     [t('accounts.details.currency'), account.currency],
@@ -63,8 +71,9 @@ export function AccountDetailsDialog({
               </div>
             ))}
           </dl>
-          <AccountHistoryTable
+          <HistoryTable
             title={t('accounts.details.transactions')}
+            labels={historyLabels(t('accounts.details.transactions'))}
             items={transactions.data ?? []}
             loading={transactions.isLoading}
             error={transactions.isError}
@@ -89,8 +98,9 @@ export function AccountDetailsDialog({
               </tr>
             )}
           />
-          <AccountHistoryTable
+          <HistoryTable
             title={t('transfers.title')}
+            labels={historyLabels(t('transfers.title'))}
             action={account.archivedAt === null
               ? <CreateTransferButton initialSourceAccountId={account._id} /> : undefined}
             items={transfers.data ?? []}

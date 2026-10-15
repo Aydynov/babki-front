@@ -1,0 +1,5 @@
+simulation: monthly-incomes
+routing: path
+mocks:
+  - routeKey: api
+    path: ../mocks/monthly-incomes/config.yaml

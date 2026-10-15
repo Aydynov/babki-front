@@ -7,6 +7,7 @@ const activeAccount = {
   _id: '507f1f77bcf86cd799439011',
   archivedAt: null,
   currency: 'RUB',
+  type: 'balance',
 };
 
 test('requires an account and maps it into the create request', async () => {
@@ -67,4 +68,22 @@ test('starts with an empty account when no usable default exists', async () => {
     amount: '',
     transactionDate: '',
   });
+});
+
+test('income eligibility excludes saving, archived and other-currency accounts before default selection', async () => {
+  const model = await modelPromise;
+  assert.equal(typeof model.getIncomeAccounts, 'function');
+  const accounts = [
+    activeAccount,
+    { ...activeAccount, _id: 'saving', type: 'saving' },
+    { ...activeAccount, _id: 'archived', archivedAt: '2026-10-01' },
+    { ...activeAccount, _id: 'usd', currency: 'USD' },
+  ];
+  const eligible = model.getIncomeAccounts(accounts, 'RUB');
+  assert.deepEqual(eligible, [activeAccount]);
+  ['saving', 'archived', 'usd', 'missing'].forEach((defaultId) => {
+    assert.equal(model.getIncomeInitialAccountId(eligible, defaultId), '');
+  });
+  assert.equal(model.getIncomeInitialAccountId(eligible, activeAccount._id), activeAccount._id);
+  assert.deepEqual(model.getIncomeAccounts([{ ...activeAccount, archivedAt: '2026-10-02' }], 'RUB'), []);
 });
