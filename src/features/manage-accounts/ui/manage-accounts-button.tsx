@@ -1,6 +1,7 @@
+import { useBudget, useBudgetPermission } from '@/entities/budgets';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import {
-  accountsQueryOptions,
+  useAccountsQueryOptions,
   isDefaultAccountCandidate,
   useArchiveAccountMutation,
   useDeleteAccountMutation,
@@ -13,7 +14,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { LucideSettings, LucideX } from 'lucide-react';
 import {
   useState,
@@ -22,7 +23,6 @@ import { useTranslation } from 'react-i18next';
 import {
   getAccountMutationErrorKey,
 } from '../model/account-form';
-import { invalidateAccountDependents } from '../model/cache';
 
 interface LifecycleAction { accountId: string; kind: 'archive' | 'delete' }
 
@@ -32,8 +32,10 @@ interface ManageAccountsButtonProps {
 }
 
 export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccountsButtonProps) {
+  const accountsQueryOptions = useAccountsQueryOptions();
+  const { scope } = useBudget();
+  const allowed = useBudgetPermission('manageAccounts');
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
   const userQuery = useQuery(usersQueryOptions.me());
   const renameMutation = useRenameAccountMutation();
@@ -63,7 +65,6 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
     setError(undefined);
     try {
       await renameMutation.mutateAsync({ accountId: targetAccountId, payload: { name: nextName } });
-      invalidateAccountDependents(queryClient);
       setDraftNames((current) => ({ ...current, [targetAccountId]: nextName }));
     } catch (mutationError) {
       setError(getAccountMutationErrorKey(mutationError));
@@ -76,7 +77,6 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
     try {
       if (action.kind === 'archive') await archiveMutation.mutateAsync(action.accountId);
       else await deleteMutation.mutateAsync(action.accountId);
-      invalidateAccountDependents(queryClient);
       setConfirmationOpen(false);
       setOpen(false);
       onUnavailable?.();
@@ -89,12 +89,12 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
     setError(undefined);
     try {
       await updateUserMutation.mutateAsync({ defaultAccountId: targetAccountId });
-      invalidateAccountDependents(queryClient);
     } catch (mutationError) {
       setError(getAccountMutationErrorKey(mutationError));
     }
   };
 
+  if (!allowed) return null;
   return (
     <>
       <Dialog.Base
@@ -156,7 +156,7 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
                     </Typography.Caption1>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {user && isDefaultAccountCandidate(account, user.defaultCurrency) && (
+                    {scope.kind === 'personal' && user && isDefaultAccountCandidate(account, user.defaultCurrency) && (
                       <Button.Base
                         type="button"
                         variant="outline"

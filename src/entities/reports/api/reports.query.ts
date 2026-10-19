@@ -1,4 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/reports';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey } from '@/shared/lib/budget-api';
 import { reportsApi } from './reports.api';
 import type { FindMonthlyReportsByQuery, FindYearlyReportsByQuery } from '../model/schemas';
 
@@ -9,12 +12,20 @@ export const reportsQueryKeys = {
 };
 
 export const reportsQueryOptions = {
-  monthly: (query?: FindMonthlyReportsByQuery) => queryOptions({
-    queryKey: reportsQueryKeys.monthly(query),
-    queryFn: () => reportsApi.getMonthly(query),
+  monthly: (query?: FindMonthlyReportsByQuery, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, reportsQueryKeys.monthly(query)),
+    queryFn: ({ signal }) => reportsApi.getMonthly(query, scope, signal),
   }),
-  yearly: (query?: FindYearlyReportsByQuery) => queryOptions({
-    queryKey: reportsQueryKeys.yearly(query),
-    queryFn: () => reportsApi.getYearly(query),
+  yearly: (query?: FindYearlyReportsByQuery, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, reportsQueryKeys.yearly(query)),
+    queryFn: ({ signal }) => reportsApi.getYearly(query, scope, signal),
   }),
+};
+
+export const useReportsQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    monthly: (query?: FindMonthlyReportsByQuery) => reportsQueryOptions.monthly(query, scope),
+    yearly: (query?: FindYearlyReportsByQuery) => reportsQueryOptions.yearly(query, scope),
+  };
 };

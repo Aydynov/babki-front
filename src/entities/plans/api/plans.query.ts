@@ -1,86 +1,101 @@
-import {
-  mutationOptions, queryOptions, useMutation, useQueryClient,
-} from '@tanstack/react-query';
-import { expensesQueryKeys } from '@/entities/expenses/@x/plans';
-import { reportsQueryKeys } from '@/entities/reports/@x/plans';
-import { accountsQueryKeys } from '@/entities/accounts/@x/plans';
-import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/plans';
-import { transactionsQueryKeys } from '@/entities/transactions/@x/plans';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/plans';
+import type { BudgetScope } from '@/shared/types';
+import { invalidateBudget, scopedKey } from '@/shared/lib/budget-api';
 import { plansApi } from './plans.api';
-import type { ClosePlanPayload, ListPlansQuery, UpdatePlanPayload } from '../model/schemas';
+import type {
+  ClosePlanPayload, CreatePlanPayload, ListPlansQuery, UpdatePlanPayload,
+} from '../model/schemas';
 
 export const plansQueryKeys = {
   all: ['plans'] as const,
-  listAll: () => [...plansQueryKeys.all, 'list'] as const,
-  list: (query: ListPlansQuery) => [...plansQueryKeys.listAll(), query] as const,
+  listAll: (scope?: BudgetScope) => [...scopedKey(scope, ['plans']), 'list'] as const,
+  list: (query: ListPlansQuery, scope?: BudgetScope) => [...plansQueryKeys.listAll(scope), query] as const,
+  detail: (id: string, scope?: BudgetScope) => [...scopedKey(scope, ['plans']), 'detail', id] as const,
 };
 
 export const plansQueryOptions = {
-  findAll: (query: ListPlansQuery = {}) => queryOptions({
-    queryKey: plansQueryKeys.list(query),
-    queryFn: () => plansApi.findAll(query),
+  findAll: (query: ListPlansQuery = {}, scope?: BudgetScope) => queryOptions({
+    queryKey: plansQueryKeys.list(query, scope),
+    queryFn: ({ signal }) => plansApi.findAll(query, signal, scope),
+  }),
+  findOne: (id: string, scope?: BudgetScope) => queryOptions({
+    queryKey: plansQueryKeys.detail(id, scope),
+    queryFn: ({ signal }) => plansApi.findOne(id, signal, scope),
   }),
 };
 
-export const useCreatePlanMutation = () => {
-  const queryClient = useQueryClient();
+export const usePlansQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: (query: ListPlansQuery = {}) => plansQueryOptions.findAll(query, scope),
+    findOne: (id: string) => plansQueryOptions.findOne(id, scope),
+  };
+};
 
-  return useMutation(
-    mutationOptions({
-      mutationFn: plansApi.create,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }).catch(() => undefined);
-      },
-    }),
-  );
+export const useCreatePlanMutation = () => {
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (payload: CreatePlanPayload) => plansApi.create(payload, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useUpdatePlanMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({ planId, payload }: { planId: string; payload: UpdatePlanPayload }) => (
-        plansApi.update(planId, payload)
-      ),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }).catch(() => undefined);
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ planId, payload }: { planId: string; payload: UpdatePlanPayload }) => (
+      plansApi.update(planId, payload, scope)
+    ),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useRemovePlanMutation = () => {
-  const queryClient = useQueryClient();
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (id: string) => plansApi.remove(id, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
+};
 
-  return useMutation(
-    mutationOptions({
-      mutationFn: plansApi.remove,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }).catch(() => undefined);
-      },
-    }),
-  );
+export const useArchivePlanMutation = () => {
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (id: string) => plansApi.archive(id, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useClosePlanMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({ planId, payload }: { planId: string; payload: ClosePlanPayload }) => (
-        plansApi.close(planId, payload)
-      ),
-      onSuccess: (_, { payload }) => {
-        Promise.all([
-          queryClient.invalidateQueries({ queryKey: plansQueryKeys.listAll() }),
-          queryClient.invalidateQueries({ queryKey: expensesQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(payload.accountId) }),
-        ]).catch(() => undefined);
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ planId, payload }: { planId: string; payload: ClosePlanPayload }) => (
+      plansApi.close(planId, payload, scope)
+    ),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+    onError: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };

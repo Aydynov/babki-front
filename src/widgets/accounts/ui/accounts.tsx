@@ -1,4 +1,4 @@
-import { accountsQueryOptions } from '@/entities/accounts';
+import { useAccountsQueryOptions } from '@/entities/accounts';
 import { usersQueryOptions } from '@/entities/users';
 import { CreateAccountButton } from '@/features/manage-accounts';
 import { useSelectedPeriod } from '@/features/select-period';
@@ -16,6 +16,7 @@ import { AccountDetailsDialog } from './account-details-dialog';
 import { AccountRow } from './account-row';
 
 export function Accounts() {
+  const accountsQueryOptions = useAccountsQueryOptions();
   const { t, i18n } = useTranslation();
   const selectedPeriod = useSelectedPeriod();
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);

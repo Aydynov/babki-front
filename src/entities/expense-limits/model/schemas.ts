@@ -18,6 +18,8 @@ export const expenseLimitSchema = z
   })
   .extend(entityMetaSchema.shape);
 
+export const groupExpenseLimitSchema = expenseLimitSchema.extend({ total: z.number().min(0) });
+
 export const createExpenseLimitSchema = z.object({
   categoryId: objectIdSchema,
   currency: currencyCodeSchema,

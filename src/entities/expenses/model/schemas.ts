@@ -23,6 +23,7 @@ export const expenseSchema = z
     category: expenseCategorySchema,
     merchant: z.string().max(255).optional(),
     items: expenseItemSchema.array(),
+    categoryUnavailable: z.boolean().optional(),
   })
   .extend(transactionSchema.shape)
   .extend(entityMetaSchema.shape);

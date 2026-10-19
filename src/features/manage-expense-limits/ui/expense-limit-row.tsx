@@ -1,3 +1,4 @@
+import { useBudgetScope } from '@/entities/budgets';
 import {
   CategorySelect,
   type CategorySelectOption,
@@ -28,7 +29,7 @@ import { isExpenseLimitDraftDirty } from '../model/limit-draft';
 import type {
   ExpenseLimitDraftErrors,
 } from '../model/validation';
-import { expenseLimitDraftValuesSchema } from '../model/validation';
+import { getExpenseLimitDraftValuesSchema } from '../model/validation';
 
 interface ExpenseLimitRowProps {
   draft: ExpenseLimitDraft;
@@ -82,7 +83,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
   const genericMutationError = mutationError?.field
     ? undefined
     : mutationError?.message;
-  const isValid = expenseLimitDraftValuesSchema.safeParse(draft.values).success
+  const isValid = getExpenseLimitDraftValuesSchema(useBudgetScope().kind === 'group').safeParse(draft.values).success
     && !errors.categoryId
     && !errors.total
     && categoryAvailable

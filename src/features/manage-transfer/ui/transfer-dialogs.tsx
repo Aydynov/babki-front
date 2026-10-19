@@ -1,4 +1,5 @@
-import { AccountSelect, accountsQueryOptions, getPreferredAccountId } from '@/entities/accounts';
+import { useBudget, useCanManageRecord, BudgetLabel } from '@/entities/budgets';
+import { AccountSelect, useAccountsQueryOptions, getPreferredAccountId } from '@/entities/accounts';
 import {
   type Transfer,
   useCreateTransferMutation,
@@ -52,8 +53,9 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const { scope } = useBudget();
   const { t } = useTranslation();
-  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const [values, setValues] = useState(initialValues);
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
   const source = accounts.find(({ _id }) => _id === values.sourceAccountId);
@@ -67,7 +69,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
     destination,
     transfer?.source.amount,
     Boolean(transfer),
-    !transfer,
+    !transfer && scope.kind === 'personal',
   );
   const schemaValid = transferFormSchema.safeParse(values).success;
   const effectiveRate = getTransferEffectiveRate(values.sourceAmount, values.destinationAmount);
@@ -89,112 +91,117 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
   return (
     <Dialog.Base open={open} onOpenChange={(next) => !next && !pending && onClose()}>
       <Dialog.Content className="max-w-xl">
-        <Dialog.Header>
-          <Dialog.Title>
-            {transfer ? t('transfers.form.editTitle') : t('transfers.form.createTitle')}
-          </Dialog.Title>
-          <Button.Icon
-            type="button"
-            aria-label={t('transfers.form.close')}
-            disabled={pending}
-            onClick={onClose}
-          >
-            <LucideX />
-          </Button.Icon>
-        </Dialog.Header>
-        <Dialog.Body>
-          {transfer ? (
-            <div className="rounded-lg border bg-muted/40 p-3 text-body-2">
-              <div>
-                {sourceName}
-                {' → '}
-                {destinationName}
+        <form onSubmit={(event) => {
+          event.preventDefault();
+        }}
+        >
+          <Dialog.Header>
+            <BudgetLabel />
+            <Dialog.Title>
+              {transfer ? t('transfers.form.editTitle') : t('transfers.form.createTitle')}
+            </Dialog.Title>
+            <Button.Icon
+              type="button"
+              aria-label={t('transfers.form.close')}
+              disabled={pending}
+              onClick={onClose}
+            >
+              <LucideX />
+            </Button.Icon>
+          </Dialog.Header>
+          <Dialog.Body>
+            {transfer ? (
+              <div className="rounded-lg border bg-muted/40 p-3 text-body-2">
+                <div>
+                  {sourceName}
+                  {' → '}
+                  {destinationName}
+                </div>
+                <div>
+                  {formatMoney(transfer.source.amount, transfer.source.currency)}
+                  {' → '}
+                  {formatMoney(transfer.destination.amount, transfer.destination.currency)}
+                </div>
+                <div>{new Date(transfer.transactionDate).toLocaleDateString('ru-RU')}</div>
+                <Typography.Caption1 className="text-muted-foreground">
+                  {t('transfers.form.immutableContext')}
+                </Typography.Caption1>
               </div>
+            ) : (
+              <>
+                <dl className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3 text-body-2">
+                  <dt className="text-muted-foreground">{t('transfers.form.sourceAccount')}</dt>
+                  {source && (
+                  <dd className="shrink-0 font-medium tabular-nums">
+                    {formatMoney(source.amount, source.currency)}
+                  </dd>
+                  )}
+                </dl>
+                <AccountSelect
+                  id="transfer-destination-account"
+                  accounts={destinationAccounts}
+                  value={values.destinationAccountId}
+                  onValueChange={(destinationAccountId) => {
+                    const nextDestination = accounts.find(({ _id }) => _id === destinationAccountId);
+                    update({
+                      destinationAccountId,
+                      destinationAmount: syncTransferDestinationAmount(
+                        values.sourceAmount,
+                        values.destinationAmount,
+                        source?.currency,
+                        nextDestination?.currency,
+                      ),
+                    });
+                  }}
+                  label={t('transfers.form.destinationAccount')}
+                  placeholder={t('transfers.form.destinationPlaceholder')}
+                  emptyMessage={t('transfers.form.destinationEmpty')}
+                  disabled={pending || !values.sourceAccountId}
+                />
+              </>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                {formatMoney(transfer.source.amount, transfer.source.currency)}
-                {' → '}
-                {formatMoney(transfer.destination.amount, transfer.destination.currency)}
-              </div>
-              <div>{new Date(transfer.transactionDate).toLocaleDateString('ru-RU')}</div>
-              <Typography.Caption1 className="text-muted-foreground">
-                {t('transfers.form.immutableContext')}
-              </Typography.Caption1>
-            </div>
-          ) : (
-            <>
-              <dl className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3 text-body-2">
-                <dt className="text-muted-foreground">{t('transfers.form.sourceAccount')}</dt>
-                {source && (
-                <dd className="shrink-0 font-medium tabular-nums">
-                  {formatMoney(source.amount, source.currency)}
-                </dd>
-                )}
-              </dl>
-              <AccountSelect
-                id="transfer-destination-account"
-                accounts={destinationAccounts}
-                value={values.destinationAccountId}
-                onValueChange={(destinationAccountId) => {
-                  const nextDestination = accounts.find(({ _id }) => _id === destinationAccountId);
-                  update({
-                    destinationAccountId,
+                <Input.Label htmlFor="transfer-source-amount">{t('transfers.form.sourceAmount')}</Input.Label>
+                <Input.Base
+                  id="transfer-source-amount"
+                  type="number"
+                  min={source ? 1 / (10 ** getCurrencyMinorUnits(source.currency)) : 0.01}
+                  step={source ? 1 / (10 ** getCurrencyMinorUnits(source.currency)) : 0.01}
+                  value={values.sourceAmount}
+                  disabled={pending}
+                  onChange={(event) => update({
+                    sourceAmount: event.target.value,
                     destinationAmount: syncTransferDestinationAmount(
-                      values.sourceAmount,
+                      event.target.value,
                       values.destinationAmount,
                       source?.currency,
-                      nextDestination?.currency,
+                      destination?.currency,
                     ),
-                  });
-                }}
-                label={t('transfers.form.destinationAccount')}
-                placeholder={t('transfers.form.destinationPlaceholder')}
-                emptyMessage={t('transfers.form.destinationEmpty')}
-                disabled={pending || !values.sourceAccountId}
-              />
-            </>
-          )}
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Input.Label htmlFor="transfer-source-amount">{t('transfers.form.sourceAmount')}</Input.Label>
-              <Input.Base
-                id="transfer-source-amount"
-                type="number"
-                min={source ? 1 / (10 ** getCurrencyMinorUnits(source.currency)) : 0.01}
-                step={source ? 1 / (10 ** getCurrencyMinorUnits(source.currency)) : 0.01}
-                value={values.sourceAmount}
-                disabled={pending}
-                onChange={(event) => update({
-                  sourceAmount: event.target.value,
-                  destinationAmount: syncTransferDestinationAmount(
-                    event.target.value,
-                    values.destinationAmount,
-                    source?.currency,
-                    destination?.currency,
-                  ),
-                })}
-              />
-              {insufficientFundsError && (
+                  })}
+                />
+                {insufficientFundsError && (
                 <Input.Error>{t('transfers.errors.insufficientFunds')}</Input.Error>
-              )}
+                )}
+              </div>
+              <div>
+                <Input.Label htmlFor="transfer-destination-amount">
+                  {t('transfers.form.destinationAmount')}
+                </Input.Label>
+                <Input.Base
+                  id="transfer-destination-amount"
+                  type="number"
+                  min={destination ? 1 / (10 ** getCurrencyMinorUnits(destination.currency)) : 0.01}
+                  step={destination ? 1 / (10 ** getCurrencyMinorUnits(destination.currency)) : 0.01}
+                  value={values.destinationAmount}
+                  disabled={pending || sameCurrency}
+                  onChange={(event) => update({ destinationAmount: event.target.value })}
+                />
+              </div>
             </div>
-            <div>
-              <Input.Label htmlFor="transfer-destination-amount">
-                {t('transfers.form.destinationAmount')}
-              </Input.Label>
-              <Input.Base
-                id="transfer-destination-amount"
-                type="number"
-                min={destination ? 1 / (10 ** getCurrencyMinorUnits(destination.currency)) : 0.01}
-                step={destination ? 1 / (10 ** getCurrencyMinorUnits(destination.currency)) : 0.01}
-                value={values.destinationAmount}
-                disabled={pending || sameCurrency}
-                onChange={(event) => update({ destinationAmount: event.target.value })}
-              />
-            </div>
-          </div>
 
-          {!transfer && (
+            {!transfer && (
             <div>
               <Input.Label htmlFor="transfer-date">{t('transfers.form.date')}</Input.Label>
               <Input.Base
@@ -205,19 +212,19 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
                 onChange={(event) => update({ transactionDate: event.target.value })}
               />
             </div>
-          )}
-          <div>
-            <Input.Label htmlFor="transfer-description">{t('transfers.form.description')}</Input.Label>
-            <Input.Base
-              id="transfer-description"
-              value={values.description}
-              maxLength={1000}
-              disabled={pending}
-              onChange={(event) => update({ description: event.target.value })}
-            />
-          </div>
+            )}
+            <div>
+              <Input.Label htmlFor="transfer-description">{t('transfers.form.description')}</Input.Label>
+              <Input.Base
+                id="transfer-description"
+                value={values.description}
+                maxLength={1000}
+                disabled={pending}
+                onChange={(event) => update({ description: event.target.value })}
+              />
+            </div>
 
-          {effectiveRate && source && destination && source.currency !== destination.currency && (
+            {effectiveRate && source && destination && source.currency !== destination.currency && (
             <Typography.Caption1 className="text-muted-foreground">
               1
               {' '}
@@ -229,27 +236,28 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
               {' '}
               {destination.currency}
             </Typography.Caption1>
-          )}
-          {issue && (
+            )}
+            {issue && (
             <Typography.Caption1 className="text-destructive" role="alert">
               {issue === 'insufficientFunds' && t('transfers.errors.insufficientFunds')}
               {issue === 'precision' && t('transfers.errors.precision')}
               {issue === 'sameCurrencyAmounts' && t('transfers.errors.sameCurrencyAmounts')}
               {issue === 'accountUnavailable' && t('transfers.errors.accountUnavailable')}
             </Typography.Caption1>
-          )}
-          {error && !insufficientFundsError && (
+            )}
+            {error && !insufficientFundsError && (
             <Typography.Caption1 className="text-destructive" role="alert">{error}</Typography.Caption1>
-          )}
-          <Button.Base
-            type="button"
-            disabled={pending || !schemaValid || Boolean(issue)}
-            onClick={submit}
-          >
-            <LucideArrowRightLeft />
-            {pending ? t('transfers.form.saving') : t('transfers.form.save')}
-          </Button.Base>
-        </Dialog.Body>
+            )}
+            <Button.Base
+              type="button"
+              disabled={pending || !schemaValid || Boolean(issue)}
+              onClick={submit}
+            >
+              <LucideArrowRightLeft />
+              {pending ? t('transfers.form.saving') : t('transfers.form.save')}
+            </Button.Base>
+          </Dialog.Body>
+        </form>
       </Dialog.Content>
     </Dialog.Base>
   );
@@ -257,7 +265,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
 
 export const CreateTransferButton: FC<{ initialSourceAccountId?: string }> = ({ initialSourceAccountId }) => {
   const { t } = useTranslation();
-  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const userQuery = useQuery(usersQueryOptions.me());
   const mutation = useCreateTransferMutation();
   const [open, setOpen] = useState(false);
@@ -301,6 +309,10 @@ export const CreateTransferButton: FC<{ initialSourceAccountId?: string }> = ({ 
 };
 
 export const EditTransferButton: FC<{ transfer: Transfer }> = ({ transfer }) => {
+  const allowed = useCanManageRecord(transfer.createdBy);
+  const accounts = useQuery(useAccountsQueryOptions().findAll());
+  const archived = accounts.data?.some((a) => (a._id === transfer.source.accountId
+    || a._id === transfer.destination.accountId) && a.archivedAt !== null);
   const { t } = useTranslation();
   const mutation = useUpdateTransferMutation();
   const [open, setOpen] = useState(false);
@@ -313,6 +325,7 @@ export const EditTransferButton: FC<{ transfer: Transfer }> = ({ transfer }) => 
     description: transfer.description ?? '',
   };
 
+  if (!allowed || archived) return null;
   return (
     <>
       <Button.Icon
@@ -342,9 +355,14 @@ export const EditTransferButton: FC<{ transfer: Transfer }> = ({ transfer }) => 
 };
 
 export const DeleteTransferButton: FC<{ transfer: Transfer }> = ({ transfer }) => {
+  const allowed = useCanManageRecord(transfer.createdBy);
+  const accounts = useQuery(useAccountsQueryOptions().findAll());
+  const archived = accounts.data?.some((a) => (a._id === transfer.source.accountId
+    || a._id === transfer.destination.accountId) && a.archivedAt !== null);
   const { t } = useTranslation();
   const mutation = useDeleteTransferMutation();
   const [open, setOpen] = useState(false);
+  if (!allowed || archived) return null;
   return (
     <>
       <Button.Icon

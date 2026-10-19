@@ -1,5 +1,7 @@
-import { accountsQueryOptions } from '@/entities/accounts';
-import { incomesQueryOptions } from '@/entities/incomes';
+import { useState } from 'react';
+import { IncomeActions } from '@/features/manage-income';
+import { useAccountsQueryOptions } from '@/entities/accounts';
+import { useIncomesQueryOptions } from '@/entities/incomes';
 import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
@@ -18,6 +20,9 @@ interface IncomeDetailsDialogProps {
 export function IncomeDetailsDialog({
   currency, period, finalFocus, onClose,
 }: IncomeDetailsDialogProps) {
+  const [unavailableNotice, setUnavailableNotice] = useState(false);
+  const accountsQueryOptions = useAccountsQueryOptions();
+  const incomesQueryOptions = useIncomesQueryOptions();
   const { t, i18n } = useTranslation();
   const history = useQuery(incomesQueryOptions.currencyHistory({ ...period, currency }));
   const accounts = useQuery(accountsQueryOptions.findAll());
@@ -37,6 +42,7 @@ export function IncomeDetailsDialog({
           <Button.Icon aria-label={t('incomes.details.close')} onClick={onClose}><LucideX /></Button.Icon>
         </Dialog.Header>
         <Dialog.Body>
+          {unavailableNotice && <p role="status">Доход уже удалён или недоступен. Список обновляется.</p>}
           <HistoryTable
             title={title}
             hideTitle
@@ -62,7 +68,18 @@ export function IncomeDetailsDialog({
             renderRow={(item) => (
               <tr key={item._id}>
                 <td className={cellClass}>{new Date(item.transactionDate).toLocaleDateString(i18n.language)}</td>
-                <td className={cellClass}>{item.source || t('incomes.details.unknownSource')}</td>
+                <td className={cellClass}>
+                  {item.source || item.description || t('incomes.details.unknownSource')}
+                  {item.createdByActor && (
+                  <p className="text-muted-foreground">
+                    Добавил(а):
+                    {item.createdByActor.isAnonymized
+                      ? 'Удалённый пользователь' : [item.createdByActor.firstName, item.createdByActor.lastName]
+                        .filter(Boolean).join(' ')}
+                  </p>
+                  )}
+                  <IncomeActions income={item} onUnavailable={() => setUnavailableNotice(true)} />
+                </td>
                 <td className={cellClass}>{names.get(item.accountId) ?? t('incomes.details.unknownAccount')}</td>
                 <td className={`${cellClass} tabular-nums`}>{formatMoney(item.amount, currency, i18n.language)}</td>
               </tr>

@@ -1,4 +1,7 @@
-import { debtTransactionsQueryOptions } from '@/entities/debt-transactions';
+import { useBudgetScope, useCanManageRecord } from '@/entities/budgets';
+import { useArchiveDebtMutation, useCancelDebtRepaymentMutation } from '@/entities/debts';
+import { QueryError } from '@/shared/ui/query-error';
+import { useDebtTransactionsQueryOptions } from '@/entities/debt-transactions';
 import { type Debt } from '@/entities/debts';
 import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
@@ -7,8 +10,10 @@ import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
 import i18next from 'i18next';
 import { LucideCheck, LucidePencil, LucideTrash2 } from 'lucide-react';
-import type { FC } from 'react';
+import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ConfirmActionButton } from './confirm-action-button';
+import { RepaymentCancelButton } from './repayment-cancel-button';
 import { ModalCloseButton } from './modal-close-button';
 
 const locale = i18next.language;
@@ -35,9 +40,16 @@ export const DebtView: FC<DebtViewProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
-  const { data: transactionsData, isLoading: transactionsLoading } = useQuery(
-    debtTransactionsQueryOptions.findAll(debt._id, { limit: 5 }),
+  const scope = useBudgetScope();
+  const canManage = useCanManageRecord('createdBy' in debt ? debt.createdBy : undefined);
+  const mutable = canManage && !debt.archivedAt;
+  const archive = useArchiveDebtMutation();
+  const cancel = useCancelDebtRepaymentMutation();
+  const [page, setPage] = useState(1);
+  const history = useQuery(
+    useDebtTransactionsQueryOptions().findAll(debt._id, { limit: 10, page }),
   );
+  const { data: transactionsData, isLoading: transactionsLoading } = history;
   const transactions = transactionsData?.items ?? [];
 
   return (
@@ -48,6 +60,21 @@ export const DebtView: FC<DebtViewProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
+        {'createdByActor' in debt && (
+          <Typography.Caption1>
+            Автор:
+            {' '}
+            {debt.createdByActor.isAnonymized ? 'Участник' : [
+              debt.createdByActor.firstName, debt.createdByActor.lastName,
+            ].filter(Boolean).join(' ') || 'Участник'}
+          </Typography.Caption1>
+        )}
+        {debt.archivedAt && <Typography.Caption1>Архив · Только чтение</Typography.Caption1>}
+        {(cancel.isError || archive.isError) && (
+          <Typography.Caption1 className="text-destructive">
+            Действие не подтверждено. Проверьте историю. Финансовая отмена недоступна для архивного счёта.
+          </Typography.Caption1>
+        )}
         <div className="flex flex-col gap-1">
           <Typography.Caption1 className="text-muted-foreground">
             {t('debts.details.fields.debtor')}
@@ -101,13 +128,21 @@ export const DebtView: FC<DebtViewProps> = ({
             {t('debts.details.history.title')}
           </Typography.Caption1>
 
+          {history.isError && (
+          <QueryError
+            compact
+            onRetry={() => {
+              history.refetch().catch(() => undefined);
+            }}
+          />
+          )}
           {transactionsLoading && (
             <Typography.Body3 className="text-muted-foreground">
               {t('debts.details.history.loading')}
             </Typography.Body3>
           )}
 
-          {!transactionsLoading && !transactions.length && (
+          {!transactionsLoading && !history.isError && !transactions.length && (
             <Typography.Body3 className="text-muted-foreground">
               {t('debts.details.history.empty')}
             </Typography.Body3>
@@ -127,27 +162,100 @@ export const DebtView: FC<DebtViewProps> = ({
                       </Typography.Caption1>
                     )}
                   </div>
-                  <Typography.Body3 className="shrink-0">
-                    {formatMoney(transaction.amount, debt.currency)}
-                  </Typography.Body3>
+                  <div className="flex flex-col items-end gap-1">
+                    <Typography.Body3>{formatMoney(transaction.amount, debt.currency)}</Typography.Body3>
+                    {'isIncome' in transaction && (
+                      <Typography.Caption1>
+                        {transaction.isIncome ? 'Зачисление на счёт' : 'Без поступления'}
+                      </Typography.Caption1>
+                    )}
+                    {'incomeId' in transaction && transaction.incomeId && (
+                      <Typography.Caption1>
+                        Доход:
+                        {transaction.incomeId}
+                      </Typography.Caption1>
+                    )}
+                    {'createdByActor' in transaction && (
+                      <Typography.Caption1>
+                        {transaction.createdByActor.isAnonymized ? 'Участник' : [
+                          transaction.createdByActor.firstName, transaction.createdByActor.lastName,
+                        ].filter(Boolean).join(' ') || 'Участник'}
+                      </Typography.Caption1>
+                    )}
+                    {'cancelledAt' in transaction && (transaction.cancelledAt ? (
+                      <Typography.Caption1>
+                        Отменено
+                        {' '}
+                        {formatDate.format(new Date(transaction.cancelledAt))}
+                        {transaction.cancelledByActor && ` · ${transaction.cancelledByActor.isAnonymized
+                          ? 'Участник' : [transaction.cancelledByActor.firstName,
+                            transaction.cancelledByActor.lastName].filter(Boolean).join(' ') || 'Участник'}`}
+                      </Typography.Caption1>
+                    ) : mutable && (
+                      <RepaymentCancelButton
+                        debtId={debt._id}
+                        repayment={transaction}
+                        mutation={cancel}
+                      />
+                    ))}
+                  </div>
                 </div>
               ))}
+            </div>
+          )}
+          {(transactionsData?.total ?? 0) > 10 && (
+            <div className="flex items-center justify-between gap-2">
+              <Button.Base
+                variant="outline"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
+                Назад
+              </Button.Base>
+              <span>
+                Страница
+                {page}
+              </span>
+              <Button.Base
+                variant="outline"
+                disabled={page * 10 >= (transactionsData?.total ?? 0)}
+                onClick={() => setPage(page + 1)}
+              >
+                Далее
+              </Button.Base>
             </div>
           )}
         </div>
       </Dialog.Body>
 
       <Dialog.Footer className="justify-between">
-        <Button.Base variant="destructive" onClick={onDelete}>
+        <Button.Base
+          variant="destructive"
+          onClick={onDelete}
+          disabled={!mutable || !history.isSuccess || (transactionsData?.total ?? 0) > 0}
+        >
           <LucideTrash2 />
           {t('debts.details.actions.delete')}
         </Button.Base>
         <div className="flex flex-wrap gap-2.5">
-          <Button.Base variant="outline" onClick={onEdit}>
+          {scope.kind === 'group' && mutable && (
+            <ConfirmActionButton
+              description="Архивировать долг? Изменение, исполнение и отмена станут недоступны. Восстановления нет."
+              pending={archive.isPending}
+              onConfirm={() => archive.mutateAsync(debt._id).then(onClose)}
+            >
+              В архив
+            </ConfirmActionButton>
+          )}
+          <Button.Base
+            variant="outline"
+            onClick={onEdit}
+            disabled={!mutable}
+          >
             <LucidePencil />
             {t('debts.details.actions.edit')}
           </Button.Base>
-          <Button.Base onClick={onRepay} disabled={debt.remainingAmount <= 0}>
+          <Button.Base onClick={onRepay} disabled={!mutable || debt.remainingAmount <= 0}>
             <LucideCheck />
             {t('debts.details.actions.repay')}
           </Button.Base>

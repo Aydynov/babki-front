@@ -56,6 +56,9 @@ const establishSession = (
   authResponse: AuthResponse,
   transition: AuthSessionTransition,
 ) => {
+  if (transition === 'identity-change') {
+    window.dispatchEvent(new Event('babki:session-cleared'));
+  }
   establishAuthSession(authResponse, {
     clearQueryData: () => queryClient.removeQueries(),
     setAccessToken,

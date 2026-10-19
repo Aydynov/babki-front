@@ -1,3 +1,4 @@
+import { useBudget, useBudgetScope } from '@/entities/budgets';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import { useForm } from '@tanstack/react-form';
 import { useCreateDebtMutation } from '@/entities/debts';
@@ -21,6 +22,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   createDebtFormSchema,
+  createGroupDebtFormSchema,
   defaultCreateDebtFormValues,
   hasValidDebtAmountPrecision,
   normalizeDueDate,
@@ -49,6 +51,8 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
   className,
 }) => {
   const { t } = useTranslation();
+  const budgetTitle = useBudget().title;
+  const scope = useBudgetScope();
   const createDebtMutation = useCreateDebtMutation();
   const [open, setOpen] = useState(false);
 
@@ -57,7 +61,7 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
   const form = useForm({
     defaultValues: defaultCreateDebtFormValues,
     validators: {
-      onSubmit: createDebtFormSchema,
+      onSubmit: scope.kind === 'group' ? createGroupDebtFormSchema : createDebtFormSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       if (!hasValidDebtAmountPrecision(value.amount, value.currency)) return;
@@ -68,8 +72,8 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
           debtor: value.debtor.trim(),
           currency: value.currency,
           principalAmount,
-          remainingAmount: principalAmount,
-          dueDate: normalizeDueDate(value),
+          ...(scope.kind === 'personal' ? { remainingAmount: principalAmount } : {}),
+          dueDate: normalizeDueDate(value) || undefined,
         },
       });
 
@@ -151,6 +155,10 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
           </Dialog.Header>
 
           <Dialog.Body>
+            <Typography.Caption1 className="text-muted-foreground">
+              Бюджет:
+              {budgetTitle}
+            </Typography.Caption1>
             <form.Field name="currency">
               {(field) => (
                 <div>

@@ -1,4 +1,5 @@
-import { incomesQueryOptions } from '@/entities/incomes';
+import { useBudgetScope } from '@/entities/budgets';
+import { useIncomesQueryOptions } from '@/entities/incomes';
 import { usersQueryOptions } from '@/entities/users';
 import { useSelectedPeriod } from '@/features/select-period';
 import { sortCurrencyCodes } from '@/shared/lib/currency';
@@ -17,6 +18,8 @@ import { IncomeCurrencyRow } from './income-currency-row';
 import { IncomeDetailsDialog } from './income-details-dialog';
 
 export function Incomes() {
+  const incomesQueryOptions = useIncomesQueryOptions();
+  const scope = useBudgetScope();
   const period = useSelectedPeriod();
   const revenue = useQuery(incomesQueryOptions.findTotalRevenue(period));
   const previousMonth = subMonths(parseISO(period.fromDate), 1);
@@ -36,7 +39,7 @@ export function Incomes() {
   const card = useRef<HTMLDivElement | null>(null);
   const defaultCurrency = user.data?.defaultCurrency ?? 'RUB';
   const currencies = sortCurrencyCodes(revenue.data?.currencies.map(({ currency }) => currency) ?? [], defaultCurrency);
-  if (currencies.length === 0) currencies.push(defaultCurrency);
+  if (currencies.length === 0 && scope.kind === 'personal') currencies.push(defaultCurrency);
   const loading = revenue.isLoading || user.isLoading;
   const unavailable = !revenue.data || !user.data;
   const retry = () => {
@@ -71,6 +74,7 @@ export function Incomes() {
           }}
         />
       )}
+      {!loading && !unavailable && currencies.length === 0 && <p>Пока нет семейных доходов.</p>}
       {!loading && !unavailable && currencies.map((currency) => (
         <IncomeCurrencyRow
           key={currency}

@@ -1,24 +1,9 @@
-import {
-  mutationOptions,
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
-import { expenseLimitsQueryKeys } from '@/entities/expense-limits/@x/expense-categories';
-import { expensesQueryKeys } from '@/entities/expenses/@x/expense-categories';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/expense-categories';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { expenseCategoriesApi } from './expense-categories.api';
-import type {
-  CreateExpenseCategoryDto,
-  UpdateExpenseCategoryDto,
-} from '../model/schemas';
-
-interface DeleteExpenseCategoryMutationPayload {
-  categoryId: string;
-}
-
-const deleteExpenseCategoryMutationFn = ({
-  categoryId,
-}: DeleteExpenseCategoryMutationPayload) => expenseCategoriesApi.remove(categoryId);
+import type { CreateExpenseCategoryDto, UpdateExpenseCategoryDto } from '../model/schemas';
 
 export const expenseCategoriesQueryKeys = {
   all: ['expense-categories'] as const,
@@ -28,84 +13,62 @@ export const expenseCategoriesQueryKeys = {
 };
 
 export const expenseCategoriesQueryOptions = {
-  findAll: () => queryOptions({
-    queryKey: expenseCategoriesQueryKeys.lists(),
-    queryFn: () => expenseCategoriesApi.findAll(),
+  findAll: (scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, expenseCategoriesQueryKeys.lists()),
+    queryFn: ({ signal }) => expenseCategoriesApi.findAll(scope, signal),
   }),
-  findOne: (categoryId: string) => queryOptions({
-    queryKey: expenseCategoriesQueryKeys.detail(categoryId),
-    queryFn: () => expenseCategoriesApi.findOne(categoryId),
+  findOne: (categoryId: string, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, expenseCategoriesQueryKeys.detail(categoryId)),
+    queryFn: ({ signal }) => expenseCategoriesApi.findOne(categoryId, scope, signal),
   }),
+};
+
+export const useExpenseCategoriesQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: () => expenseCategoriesQueryOptions.findAll(scope),
+    findOne: (categoryId: string) => expenseCategoriesQueryOptions.findOne(categoryId, scope),
+  };
 };
 
 export const useCreateExpenseCategoryMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({ payload }: { payload: CreateExpenseCategoryDto }) => expenseCategoriesApi.create(payload),
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: expenseCategoriesQueryKeys.all,
-        });
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ payload }: { payload: CreateExpenseCategoryDto }) => expenseCategoriesApi.create(payload, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useUpdateExpenseCategoryMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({
-        categoryId,
-        payload,
-      }: {
-        categoryId: string;
-        payload: UpdateExpenseCategoryDto;
-      }) => expenseCategoriesApi.update(categoryId, payload),
-      onSuccess: async (category, { categoryId }) => {
-        queryClient.setQueryData(
-          expenseCategoriesQueryKeys.detail(categoryId),
-          category,
-        );
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: expenseCategoriesQueryKeys.lists(),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: expensesQueryKeys.listAll(),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: expenseLimitsQueryKeys.listAll(),
-          }),
-        ]);
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({
+      categoryId,
+      payload,
+    }: {
+      categoryId: string;
+      payload: UpdateExpenseCategoryDto;
+    }) => expenseCategoriesApi.update(categoryId, payload, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useDeleteExpenseCategoryMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: deleteExpenseCategoryMutationFn,
-      onSuccess: async (_, { categoryId }) => {
-        queryClient.removeQueries({
-          queryKey: expenseCategoriesQueryKeys.detail(categoryId),
-          exact: true,
-        });
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: expenseCategoriesQueryKeys.lists(),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: expenseLimitsQueryKeys.listAll(),
-          }),
-        ]);
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ categoryId }: { categoryId: string }) => expenseCategoriesApi.remove(categoryId, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };

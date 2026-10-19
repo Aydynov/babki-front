@@ -23,6 +23,13 @@ export const effectiveRateSchema = z.object({
 });
 
 export const transferSchema = z.object({
+  createdBy: objectIdSchema.optional(),
+  createdByActor: z.object({
+    userId: objectIdSchema,
+    firstName: z.string().nullable(),
+    lastName: z.string().nullable(),
+    isAnonymized: z.boolean(),
+  }).optional(),
   type: z.literal('transfer'),
   transactionDate: dateStringSchema,
   description: z.string().max(1000).optional(),

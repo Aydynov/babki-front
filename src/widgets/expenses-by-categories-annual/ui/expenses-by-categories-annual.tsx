@@ -1,5 +1,6 @@
-import { expenseCategoriesQueryOptions } from '@/entities/expense-categories';
-import { getReportCurrencySections, reportsQueryOptions } from '@/entities/reports';
+import { useBudgetScope } from '@/entities/budgets';
+import { useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
+import { getReportCurrencySections, useReportsQueryOptions } from '@/entities/reports';
 import { usersQueryOptions } from '@/entities/users';
 import { ChartCurrencySelect, getAnnualCategoryCurrencies, useChartCurrency } from '@/features/select-chart-currency';
 import { usePeriodStore } from '@/features/select-period';
@@ -27,6 +28,9 @@ const CHART_COLORS = [
 ];
 
 export const ExpensesByAnnualCategories: FC = () => {
+  const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
+  const includeDefault = useBudgetScope().kind === 'personal';
+  const reportsQueryOptions = useReportsQueryOptions();
   const selectedYear = usePeriodStore((s) => s.selectedYear);
 
   const reportsQuery = useQuery(reportsQueryOptions.yearly());
@@ -38,7 +42,8 @@ export const ExpensesByAnnualCategories: FC = () => {
     reportsQuery.data,
     selectedYear,
     userQuery.data?.defaultCurrency ?? 'RUB',
-  ), [reportsQuery.data, selectedYear, userQuery.data?.defaultCurrency]);
+    includeDefault,
+  ), [reportsQuery.data, selectedYear, userQuery.data?.defaultCurrency, includeDefault]);
   const currencies = useMemo(() => (reportsQuery.data
     ? getAnnualCategoryCurrencies(reportSections)
     : undefined), [reportsQuery.data, reportSections]);

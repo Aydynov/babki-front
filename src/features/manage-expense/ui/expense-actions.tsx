@@ -1,9 +1,11 @@
+import { useCanManageRecord } from '@/entities/budgets';
+import { useAccountsQueryOptions } from '@/entities/accounts';
+import { useQuery } from '@tanstack/react-query';
 import type { Expense } from '@/entities/expenses';
 import { useDeleteTransactionMutation } from '@/entities/transactions';
 import { Button } from '@/shared/ui/button';
 import { Icon } from '@/shared/ui/icon';
 import { Menu } from '@base-ui/react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   LucidePencil,
   LucideX,
@@ -14,10 +16,6 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  refreshExpenseDeletionQueries,
-  removeExpenseFromCachedLists,
-} from '../model/cache';
 import { DeleteConfirmDialog } from './delete-confirm-dialog';
 import { EditExpenseDialog } from './edit-expense-dialog';
 
@@ -28,8 +26,10 @@ interface ExpenseActionsProps {
 export const ExpenseActions: FC<ExpenseActionsProps> = ({
   expense,
 }) => {
+  const allowed = useCanManageRecord(expense.createdBy, expense.participantId);
+  const accounts = useQuery(useAccountsQueryOptions().findAll());
+  const archived = accounts.data?.find((a) => a._id === expense.accountId)?.archivedAt;
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const deleteMutation = useDeleteTransactionMutation();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -53,12 +53,11 @@ export const ExpenseActions: FC<ExpenseActionsProps> = ({
   };
 
   const handleConfirm = async () => {
-    await deleteMutation.mutateAsync({ transactionId: expense._id });
+    await deleteMutation.mutateAsync({ transactionId: expense._id, transactionType: 'expense' });
     setDeleteOpen(false);
-    removeExpenseFromCachedLists(queryClient, expense._id);
-    refreshExpenseDeletionQueries(queryClient, expense.accountId);
   };
 
+  if (!allowed || archived) return null;
   return (
     <>
       <Menu.Root>

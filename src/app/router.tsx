@@ -1,3 +1,4 @@
+import { captureInvitationFragment, pendingInvitation } from '@/shared/lib/pending-invitation';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import { endSession } from '@/features/auth';
@@ -6,14 +7,20 @@ import {
   setUnauthorizedSessionHandler,
 } from '@/shared/api';
 import { queryClient } from '@/shared/lib/query-client';
+import { parseBudgetSearch } from '@/shared/lib/budget-scope';
 import { routeTree } from '@/routeTree.gen';
 
 export interface AppRouterContext {
   queryClient: QueryClient;
 }
 
+if (window.location.pathname === '/join') captureInvitationFragment();
+// Restore the original tab-local expiry even when authentication is the initial route.
+pendingInvitation.read();
+
 const router = createRouter({
   routeTree,
+  parseSearch: parseBudgetSearch,
   context: {
     queryClient,
   },

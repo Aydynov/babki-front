@@ -1,15 +1,9 @@
-import {
-  mutationOptions,
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/accounts';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { accountsApi } from './accounts.api';
-import type {
-  CreateAccountDto,
-  FindAccountByQuery,
-  RenameAccountDto,
-} from '../model/schemas';
+import type { CreateAccountDto, FindAccountByQuery, RenameAccountDto } from '../model/schemas';
 
 export const accountsQueryKeys = {
   all: ['accounts'] as const,
@@ -20,59 +14,72 @@ export const accountsQueryKeys = {
 };
 
 export const accountsQueryOptions = {
-  findAll: (query: FindAccountByQuery = {}) => queryOptions({
-    queryKey: accountsQueryKeys.list(query),
-    queryFn: () => accountsApi.findAll(query),
+  findAll: (query: FindAccountByQuery = {}, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, accountsQueryKeys.list(query)),
+    queryFn: ({ signal }) => accountsApi.findAll(query, scope, signal),
   }),
-  findOne: (accountId: string) => queryOptions({
-    queryKey: accountsQueryKeys.detail(accountId),
-    queryFn: () => accountsApi.findOne(accountId),
+  findOne: (accountId: string, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, accountsQueryKeys.detail(accountId)),
+    queryFn: ({ signal }) => accountsApi.findOne(accountId, scope, signal),
   }),
+};
+
+export const useAccountsQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: (query: FindAccountByQuery = {}) => accountsQueryOptions.findAll(query, scope),
+    findOne: (accountId: string) => accountsQueryOptions.findOne(accountId, scope),
+  };
 };
 
 export const useCreateAccountMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation(mutationOptions({
-    mutationFn: (payload: CreateAccountDto) => accountsApi.create(payload),
-    onSuccess: (account) => {
-      queryClient.setQueryData(accountsQueryKeys.detail(account._id), account);
-      queryClient.invalidateQueries({ queryKey: accountsQueryKeys.lists() }).catch(() => undefined);
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (payload: CreateAccountDto) => accountsApi.create(payload, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
     },
-  }));
+  });
 };
 
 export const useRenameAccountMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation(mutationOptions({
-    mutationFn: ({ accountId, payload }: { accountId: string; payload: RenameAccountDto }) => (
-      accountsApi.rename(accountId, payload)
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ accountId, payload }: { accountId: string; payload: RenameAccountDto }) => accountsApi.rename(
+      accountId,
+      payload,
+      scope,
     ),
-    onSuccess: (account) => {
-      queryClient.setQueryData(accountsQueryKeys.detail(account._id), account);
-      queryClient.invalidateQueries({ queryKey: accountsQueryKeys.lists() }).catch(() => undefined);
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
     },
-  }));
+  });
 };
 
 export const useArchiveAccountMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation(mutationOptions({
-    mutationFn: (accountId: string) => accountsApi.archive(accountId),
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (accountId: string) => accountsApi.archive(accountId, scope),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }).catch(() => undefined);
+      invalidateBudget(client, scope).catch(() => undefined);
     },
-  }));
+  });
 };
 
 export const useDeleteAccountMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: (accountId: string) => accountsApi.remove(accountId),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all });
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (accountId: string) => accountsApi.remove(accountId, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };

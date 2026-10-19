@@ -140,7 +140,11 @@ export function CredentialsLoginForm({
       <Typography.Body3 className="text-center text-muted-foreground">
         {t('auth.login.noAccount')}
         {' '}
-        <Link className="font-medium text-foreground underline underline-offset-4" to="/register">
+        <Link
+          className="font-medium text-foreground underline underline-offset-4"
+          to="/register"
+          search={redirect ? { redirect } : {}}
+        >
           {t('auth.login.registerLink')}
         </Link>
       </Typography.Body3>

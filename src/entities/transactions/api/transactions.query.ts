@@ -1,16 +1,12 @@
-import {
-  mutationOptions,
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/transactions';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { loadPaginatedHistory, sortHistory } from '@/shared/lib/paginated-history';
 import { transactionsApi } from './transactions.api';
 import type { ListTransactionsQuery } from '../model/schemas';
 
-interface DeleteTransactionMutationPayload {
-  transactionId: string;
-}
+type AccountHistoryQuery = Pick<ListTransactionsQuery, 'accountId' | 'fromDate' | 'toDate'>;
 
 export const transactionsQueryKeys = {
   all: ['transactions'] as const,
@@ -21,36 +17,60 @@ export const transactionsQueryKeys = {
 };
 
 export const transactionsQueryOptions = {
-  accountHistory: (query: Pick<ListTransactionsQuery, 'accountId' | 'fromDate' | 'toDate'>) => queryOptions({
-    queryKey: [...transactionsQueryKeys.listAll(), 'account-history', query],
-    queryFn: async () => {
-      const lists = await Promise.all((['income', 'expense'] as const).map((transactionType) => (
-        loadPaginatedHistory((pagination) => transactionsApi.findAll({ ...query, ...pagination, transactionType }))
-      )));
+  findAll: (query: ListTransactionsQuery = {}, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, transactionsQueryKeys.list(query)),
+    queryFn: ({ signal }) => transactionsApi.findAll(query, scope, signal),
+  }),
+  findOne: (transactionId: string, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, transactionsQueryKeys.detail(transactionId)),
+    queryFn: ({ signal }) => transactionsApi.findOne(transactionId, scope, signal),
+  }),
+  accountHistory: (
+    query: AccountHistoryQuery,
+    scope?: BudgetScope,
+  ) => queryOptions({
+    queryKey: scopedKey(scope, ['transactions', 'account-history', query]),
+    queryFn: async ({ signal }) => {
+      const lists = await Promise.all(
+        (['income', 'expense'] as const).map((transactionType) => loadPaginatedHistory(
+          (pagination) => transactionsApi.findAll(
+            { ...query, ...pagination, transactionType },
+            scope,
+            signal,
+          ),
+        )),
+      );
       return sortHistory(lists.flat()).filter((item) => item.type !== 'transfer');
     },
   }),
-  findAll: (query: ListTransactionsQuery = {}) => queryOptions({
-    queryKey: transactionsQueryKeys.list(query),
-    queryFn: () => transactionsApi.findAll(query),
-  }),
-  findOne: (transactionId: string) => queryOptions({
-    queryKey: transactionsQueryKeys.detail(transactionId),
-    queryFn: () => transactionsApi.findOne(transactionId),
-  }),
+};
+
+export const useTransactionsQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: (query: ListTransactionsQuery = {}) => transactionsQueryOptions.findAll(query, scope),
+    findOne: (transactionId: string) => transactionsQueryOptions.findOne(transactionId, scope),
+    accountHistory: (query: AccountHistoryQuery) => transactionsQueryOptions.accountHistory(
+      query,
+      scope,
+    ),
+  };
 };
 
 export const useDeleteTransactionMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({ transactionId }: DeleteTransactionMutationPayload) => transactionsApi.delete(transactionId),
-      onSuccess: () => {
-        queryClient
-          .invalidateQueries({ queryKey: transactionsQueryKeys.listAll() })
-          .catch(() => undefined);
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({
+      transactionId,
+      transactionType,
+    }: {
+      transactionId: string;
+      transactionType?: 'income' | 'expense';
+    }) => transactionsApi.delete(transactionId, scope, transactionType),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };

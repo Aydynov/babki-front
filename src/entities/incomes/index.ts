@@ -20,3 +20,5 @@ export type {
   ListIncomesQuery,
   UpdateIncomeDto,
 } from './model/schemas';
+
+export { useIncomesQueryOptions } from './api/incomes.query';

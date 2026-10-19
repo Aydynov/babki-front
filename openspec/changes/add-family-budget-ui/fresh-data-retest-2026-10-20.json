@@ -1,0 +1,303 @@
+{
+  "groupId": "6ad68eeb1e1e8691ba4ac2cd",
+  "results": [
+    {
+      "groupId": "6ad68f031e1e8691ba4ac2d3",
+      "currency": "KWD",
+      "current": 1,
+      "historical": 1,
+      "reports": [
+        {
+          "period": "2026-10",
+          "currencies": [
+            {
+              "currency": "KWD",
+              "expenses": 0.001,
+              "incomes": 0.001,
+              "transfersIn": 0,
+              "transfersOut": 0,
+              "saving": 0,
+              "balance": 1,
+              "expensesByCategory": [
+                {
+                  "categoryId": "6ad68f031e1e8691ba4ac2d9",
+                  "total": 0.001
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "groupId": "6ad68f031e1e8691ba4ac2dc",
+      "currency": "JPY",
+      "current": 1,
+      "historical": 1,
+      "reports": [
+        {
+          "period": "2026-10",
+          "currencies": [
+            {
+              "currency": "JPY",
+              "expenses": 1,
+              "incomes": 1,
+              "transfersIn": 0,
+              "transfersOut": 0,
+              "saving": 0,
+              "balance": 1,
+              "expensesByCategory": [
+                {
+                  "categoryId": "6ad68f201e1e8691ba4ac2e3",
+                  "total": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "extra": {
+    "cases": [
+      {
+        "type": "saving",
+        "openedAt": "2026-10-01",
+        "success": true,
+        "amount": 1
+      },
+      {
+        "type": "balance",
+        "openedAt": "2026-10-02",
+        "success": false,
+        "status": 503,
+        "message": "Financial operation could not be completed"
+      }
+    ],
+    "duplicateCategory": {
+      "created": false,
+      "status": 409,
+      "message": "An expense category with this name already exists."
+    }
+  },
+  "outcomes": [
+    {
+      "currency": "JPY",
+      "created": true,
+      "amount": 0
+    },
+    {
+      "currency": "KWD",
+      "created": false,
+      "status": 503,
+      "message": "Financial operation could not be completed"
+    }
+  ],
+  "trace": [
+    {
+      "method": "post",
+      "path": "/groups/{newGroupId}/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/{newGroupId}/accounts",
+      "status": 503
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 503
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/expense-categories",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/incomes",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/expenses",
+      "status": 201
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/expense-categories/6ad68f031e1e8691ba4ac2d9",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/reports/months",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 503
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expense-categories",
+      "status": 409
+    },
+    {
+      "method": "get",
+      "path": "/groups/{newGroupId}/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/{newGroupId}/expense-categories",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/expense-categories",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expense-categories",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/expense-categories",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2d3/reports/months",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expense-categories",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expense-categories",
+      "status": 201
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expense-categories",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/incomes",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expenses",
+      "status": 201
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expense-categories/6ad68f201e1e8691ba4ac2e3",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/reports/months",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/accounts",
+      "status": 503
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad68f031e1e8691ba4ac2dc/expense-categories",
+      "status": 409
+    }
+  ]
+}

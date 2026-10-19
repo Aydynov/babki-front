@@ -33,3 +33,12 @@ test('rejects malformed and control-character redirect values', async () => {
   assert.equal(redirect.getSafeInternalRedirect?.('/%E0%A4%A'), null);
   assert.equal(redirect.getSafeInternalRedirect?.('/main\n//example.com'), null);
 });
+
+test('rejects encoded external paths and secret-bearing invitation redirects', async () => {
+  const redirect = await redirectPromise;
+  ['/%2f%2fexample.com', '/%5cexample.com', '/%0aevil', '/join#token=secret',
+    '/join?token=secret', '/login?redirect=/join%23token%3Dsecret'].forEach((value) => {
+    assert.equal(redirect.getSafeInternalRedirect(value), null, value);
+  });
+  assert.equal(redirect.getSafeInternalRedirect('/join'), '/join');
+});

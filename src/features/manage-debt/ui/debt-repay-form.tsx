@@ -1,5 +1,6 @@
+import { useBudget, useBudgetScope } from '@/entities/budgets';
 import { type Debt, type useRepayDebtMutation } from '@/entities/debts';
-import { AccountSelect, accountsQueryOptions, getPreferredAccountId } from '@/entities/accounts';
+import { AccountSelect, useAccountsQueryOptions, getPreferredAccountId } from '@/entities/accounts';
 import { usersQueryOptions } from '@/entities/users';
 import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
@@ -33,8 +34,10 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
+  const budgetTitle = useBudget().title;
+  const scope = useBudgetScope();
   const mutationError = getMutationErrorMessage(mutation.error);
-  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const userQuery = useQuery(usersQueryOptions.me());
   const eligibleAccounts = getEligibleDebtRepaymentAccounts(accountsQuery.data ?? [], debt.currency);
 
@@ -42,6 +45,8 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
     defaultValues: getRepayDebtFormValues(debt),
     validators: { onSubmit: getRepayDebtFormSchema(debt.remainingAmount) },
     onSubmit: async ({ value }) => {
+      if (!hasValidMoneyPrecision(Number(value.amount), debt.currency)) return;
+      if (value.isIncome && !eligibleAccounts.some((account) => account._id === value.accountId)) return;
       const description = value.description.trim();
       const updated = await mutation.mutateAsync({
         debtId: debt._id,
@@ -63,10 +68,10 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
     if (form.state.values.accountId || !accountsQuery.isSuccess || !userQuery.isSuccess) return;
     const accountId = getPreferredAccountId(
       eligibleAccounts,
-      userQuery.data?.defaultAccountId ?? null,
+      scope.kind === 'personal' ? userQuery.data?.defaultAccountId ?? null : null,
     );
     if (accountId) form.setFieldValue('accountId', accountId);
-  }, [accountsQuery.isSuccess, eligibleAccounts, form, userQuery.data, userQuery.isSuccess]);
+  }, [accountsQuery.isSuccess, eligibleAccounts, form, scope.kind, userQuery.data, userQuery.isSuccess]);
 
   const clearMutationError = () => {
     if (mutation.isError) mutation.reset();
@@ -111,6 +116,10 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
+        <Typography.Caption1 className="text-muted-foreground">
+          Бюджет:
+          {budgetTitle}
+        </Typography.Caption1>
         <Dialog.Description>{t('debts.repay.description')}</Dialog.Description>
 
         <form.Field name="repaymentDate">

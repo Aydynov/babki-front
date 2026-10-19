@@ -1,3 +1,4 @@
+export { useDebtTransactionsQueryOptions } from './api/debt-transactions.query';
 export {
   debtTransactionsQueryKeys,
   debtTransactionsQueryOptions,
@@ -14,3 +15,6 @@ export type {
   DebtTransactionsPaginatedResponse,
   ListDebtTransactionsQuery,
 } from './model/schemas';
+
+export type { GroupRepayment } from './model/schemas';
+export { groupRepaymentSchema, groupRepaymentsPaginatedResponseSchema } from './model/schemas';

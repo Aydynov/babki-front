@@ -52,14 +52,57 @@ export const repayDebtSchema = z.object({
 export const listDebtsQuerySchema = paginationQuerySchema.extend({
   currency: currencyCodeSchema.optional(),
   status: debtStatusSchema.optional(),
+  includeArchived: z.boolean().optional(),
 });
 
 export const debtsPaginatedResponseSchema = paginatedResponseSchema(debtSchema);
 
-export type Debt = z.infer<typeof debtSchema>;
+export type Debt = z.infer<typeof debtSchema> | GroupDebt;
 export type DebtStatus = z.infer<typeof debtStatusSchema>;
 export type CreateDebtDto = z.infer<typeof createDebtSchema>;
 export type UpdateDebtDto = z.infer<typeof updateDebtSchema>;
 export type RepayDebtDto = z.infer<typeof repayDebtSchema>;
 export type ListDebtsQuery = z.infer<typeof listDebtsQuerySchema>;
 export type DebtsPaginatedResponse = z.infer<typeof debtsPaginatedResponseSchema>;
+
+const groupActorSchema = z.object({
+  userId: objectIdSchema.nullable(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  isAnonymized: z.boolean(),
+});
+
+const groupOwnershipSchema = z.object({
+  _id: objectIdSchema,
+  ownerType: z.literal('group'),
+  ownerId: objectIdSchema,
+  createdBy: objectIdSchema,
+  createdByActor: groupActorSchema,
+  createdAt: dateStringSchema,
+  updatedAt: dateStringSchema,
+});
+
+export const groupDebtSchema = debtSchema.extend({
+  ...groupOwnershipSchema.shape,
+  principalAmount: z.number().finite().positive(),
+  remainingAmount: z.number().finite().nonnegative(),
+  dueDate: dateStringSchema.nullable().optional(),
+});
+export const groupDebtsPaginatedResponseSchema = paginatedResponseSchema(groupDebtSchema);
+export const createGroupDebtSchema = createDebtSchema.omit({ remainingAmount: true, status: true }).extend({
+  principalAmount: z.number().finite().positive(),
+});
+export const updateGroupDebtSchema = createGroupDebtSchema.omit({ currency: true }).partial().extend({
+  dueDate: dateStringSchema.nullable().optional(),
+});
+export const repayGroupDebtSchema = repayDebtSchema.safeExtend({
+  amount: z.number().finite().positive(),
+  isIncome: z.boolean(),
+}).superRefine(({ accountId, isIncome }, context) => {
+  if (!isIncome && accountId !== undefined) {
+    context.addIssue({ code: 'custom', message: 'accountForbidden', path: ['accountId'] });
+  }
+});
+export type GroupDebt = z.infer<typeof groupDebtSchema>;
+export type CreateGroupDebtDto = z.infer<typeof createGroupDebtSchema>;
+export type UpdateGroupDebtDto = z.infer<typeof updateGroupDebtSchema>;

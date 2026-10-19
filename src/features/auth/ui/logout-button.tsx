@@ -3,6 +3,7 @@ import { useRouter } from '@tanstack/react-router';
 import { LucideLogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { clearAccessToken } from '@/shared/api';
+import { pendingInvitation } from '@/shared/lib/pending-invitation';
 import { env } from '@/shared/lib/env';
 import { Button } from '@/shared/ui/button';
 import { endSession } from '../model/session';
@@ -21,6 +22,7 @@ export function LogoutButton() {
       type="button"
       variant="outline"
       onClick={() => {
+        pendingInvitation.clear();
         endSession({
           clearToken: clearAccessToken,
           clearCache: () => queryClient.clear(),

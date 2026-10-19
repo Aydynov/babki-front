@@ -26,11 +26,12 @@ export const getReportCurrencySections = (
   reports: ReportPeriod[] | undefined,
   period: string | number,
   defaultCurrency: CurrencyCode,
+  includeDefault = true,
 ) => {
   const reportCurrencies = getPeriod(reports, period)?.currencies ?? [];
   const currencies = reportCurrencies.length > 0
     ? reportCurrencies
-    : [getEmptyCurrencyBucket(defaultCurrency)];
+    : (includeDefault ? [getEmptyCurrencyBucket(defaultCurrency)] : []);
   const order = sortCurrencyCodes(currencies.map(({ currency }) => currency), defaultCurrency);
   return [...currencies].sort((left, right) => (
     order.indexOf(left.currency) - order.indexOf(right.currency)
@@ -43,8 +44,9 @@ export const getReportMetricSections = (
   previousPeriod: string | number,
   metric: ReportMetric,
   defaultCurrency: CurrencyCode,
+  includeDefault = true,
 ) => {
-  const current = getReportCurrencySections(reports, period, defaultCurrency);
+  const current = getReportCurrencySections(reports, period, defaultCurrency, includeDefault);
   const previous = getPeriod(reports, previousPeriod)?.currencies ?? [];
   return current.map((bucket) => ({
     currency: bucket.currency,
@@ -56,12 +58,13 @@ export const getReportMetricSections = (
 export const getMonthlyCurrencySeries = (
   reports: ReportPeriod[] | undefined,
   defaultCurrency: CurrencyCode,
+  includeDefault = true,
 ) => {
   const order = sortCurrencyCodes(
     reports?.flatMap(({ currencies }) => currencies.map(({ currency }) => currency)) ?? [],
     defaultCurrency,
   );
-  if (order.length === 0) order.push(defaultCurrency);
+  if (order.length === 0 && includeDefault) order.push(defaultCurrency);
   return order.map((currency) => ({
     currency,
     periods: reports?.map((report) => ({

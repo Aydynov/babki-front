@@ -22,24 +22,27 @@ const expenseLimitTotalSchema = z
   .refine((value) => parseExpenseLimitTotal(value) !== undefined, 'invalid')
   .refine((value) => (parseExpenseLimitTotal(value) ?? 0) >= 0.01, 'min');
 
-export const expenseLimitDraftValuesSchema = z.object({
+export const getExpenseLimitDraftValuesSchema = (group = false) => z.object({
   categoryId: z.string().trim().min(1, 'required'),
   currency: currencyCodeSchema,
-  total: expenseLimitTotalSchema,
+  total: group ? z.string().trim().min(1, 'required')
+    .refine((v) => Number.isFinite(Number(v)) && Number(v) >= 0, 'min') : expenseLimitTotalSchema,
 }).superRefine(({ currency, total }, context) => {
   if (!hasValidMoneyFormat(total, currency)) {
     context.addIssue({ code: 'custom', message: 'precision', path: ['total'] });
   }
 });
 
-export const expenseLimitFormSchema = z.object({
+export const expenseLimitDraftValuesSchema = getExpenseLimitDraftValuesSchema();
+
+export const getExpenseLimitFormSchema = (group = false) => z.object({
   drafts: z.array(z.object({
     key: z.string(),
     limitId: z.string().optional(),
     writeConfirmed: z.boolean().optional(),
     category: z.custom<CategorySelectOption>().optional(),
     baselineTotal: z.number().nullable(),
-    values: expenseLimitDraftValuesSchema,
+    values: getExpenseLimitDraftValuesSchema(group),
   })).superRefine((drafts, context) => {
     drafts.forEach((draft, index) => {
       if (draft.limitId || !draft.values.categoryId) return;
@@ -60,3 +63,5 @@ export const expenseLimitFormSchema = z.object({
     });
   }),
 });
+
+export const expenseLimitFormSchema = getExpenseLimitFormSchema();

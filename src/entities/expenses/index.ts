@@ -20,3 +20,5 @@ export type {
   ListExpensesQuery,
   UpdateExpenseDto,
 } from './model/schemas';
+
+export { useExpensesQueryOptions } from './api/expenses.query';

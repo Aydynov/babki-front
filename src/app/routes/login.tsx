@@ -5,12 +5,12 @@ import {
 } from '@tanstack/react-router';
 import { z } from 'zod';
 import { usersQueryOptions } from '@/entities/users';
-import { confirmSession } from '@/features/auth';
+import { confirmSession, getSafeInternalRedirect } from '@/features/auth';
 import { LoginPage } from '@/pages/login';
 import { getAccessToken } from '@/shared/api';
 
 const loginSearchSchema = z.object({
-  redirect: z.string().optional(),
+  redirect: z.unknown().optional().transform((value) => getSafeInternalRedirect(value) ?? undefined),
 });
 
 function LoginRoute() {
@@ -20,14 +20,14 @@ function LoginRoute() {
 
 export const Route = createFileRoute('/login')({
   validateSearch: loginSearchSchema,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, search }) => {
     const isAuthenticated = await confirmSession(
       getAccessToken(),
       () => context.queryClient.ensureQueryData(usersQueryOptions.me()),
     );
 
     if (isAuthenticated) {
-      redirect({ to: '/main', throw: true });
+      redirect({ href: search.redirect ?? '/main', throw: true });
     }
   },
   component: LoginRoute,

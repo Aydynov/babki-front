@@ -1,6 +1,6 @@
 import type { Account } from '@/entities/accounts';
-import { transactionsQueryOptions } from '@/entities/transactions';
-import { transfersQueryOptions } from '@/entities/transfers';
+import { useTransactionsQueryOptions } from '@/entities/transactions';
+import { useTransfersQueryOptions } from '@/entities/transfers';
 import { ManageAccountsButton } from '@/features/manage-accounts';
 import { CreateTransferButton, DeleteTransferButton, EditTransferButton } from '@/features/manage-transfer';
 import { formatMoney } from '@/shared/lib/currency';
@@ -25,6 +25,8 @@ interface AccountDetailsDialogProps {
 export function AccountDetailsDialog({
   account, accountNames, period, finalFocus, onClose, onUnavailable,
 }: AccountDetailsDialogProps) {
+  const transfersQueryOptions = useTransfersQueryOptions();
+  const transactionsQueryOptions = useTransactionsQueryOptions();
   const { t, i18n } = useTranslation();
   const query = { ...period, accountId: account._id };
   const transactions = useQuery(transactionsQueryOptions.accountHistory(query));
@@ -88,6 +90,14 @@ export function AccountDetailsDialog({
                 <td className={cellClass}>
                   <span>{t(item.type === 'income' ? 'accounts.details.income' : 'accounts.details.expense')}</span>
                   {item.description && <p className="text-muted-foreground">{item.description}</p>}
+                  {item.createdByActor && (
+                  <p className="text-muted-foreground">
+                    Добавил(а):
+                    {item.createdByActor.isAnonymized
+                      ? 'Удалённый пользователь' : [item.createdByActor.firstName, item.createdByActor.lastName]
+                        .filter(Boolean).join(' ')}
+                  </p>
+                  )}
                 </td>
                 <td className={`${cellClass}
                     tabular-nums ${item.type === 'income' ? 'text-success' : 'text-destructive'}`}

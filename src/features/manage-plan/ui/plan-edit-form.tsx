@@ -1,5 +1,6 @@
+import { useBudget } from '@/entities/budgets';
 import { type Plan, type useUpdatePlanMutation } from '@/entities/plans';
-import { CategorySelect, expenseCategoriesQueryOptions } from '@/entities/expense-categories';
+import { CategorySelect, useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/shared/ui/button';
@@ -27,14 +28,18 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
-  const { data: categoriesData } = useQuery(expenseCategoriesQueryOptions.findAll());
-  const categories = categoriesData ?? [];
+  const budgetTitle = useBudget().title;
+  const { data: categoriesData } = useQuery(useExpenseCategoriesQueryOptions().findAll());
+  const categories = (categoriesData ?? []).filter(
+    (category) => !category.isArchived || category._id === plan.categoryId,
+  );
   const mutationError = getMutationErrorMessage(mutation.error);
 
   const form = useForm({
     defaultValues: getEditPlanFormValues(plan),
     validators: { onSubmit: editPlanFormSchema },
     onSubmit: async ({ value }) => {
+      if (!hasValidMoneyPrecision(Number(value.amount), plan.currency)) return;
       const updated = await mutation.mutateAsync({
         planId: plan._id,
         payload: {
@@ -81,6 +86,10 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
+        <Typography.Caption1 className="text-muted-foreground">
+          Бюджет:
+          {budgetTitle}
+        </Typography.Caption1>
         <Typography.Caption1 className="text-muted-foreground">
           Валюта плана:
           {' '}

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   dateStringSchema,
+  objectIdSchema,
   entityMetaSchema,
   paginatedResponseSchema,
   paginationQuerySchema,
@@ -26,3 +27,33 @@ export type ListDebtTransactionsQuery = z.infer<typeof listDebtTransactionsQuery
 export type DebtTransactionsPaginatedResponse = z.infer<
   typeof debtTransactionsPaginatedResponseSchema
 >;
+
+const groupActorSchema = z.object({
+  userId: objectIdSchema.nullable(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  isAnonymized: z.boolean(),
+});
+
+const groupOwnershipSchema = z.object({
+  _id: objectIdSchema,
+  ownerType: z.literal('group'),
+  ownerId: objectIdSchema,
+  createdBy: objectIdSchema,
+  createdByActor: groupActorSchema,
+  createdAt: dateStringSchema,
+  updatedAt: dateStringSchema,
+});
+
+export const groupRepaymentSchema = debtTransactionSchema.extend({
+  ...groupOwnershipSchema.shape,
+  debtId: objectIdSchema,
+  amount: z.number().finite().positive(),
+  isIncome: z.boolean(),
+  incomeId: objectIdSchema.optional(),
+  cancelledAt: dateStringSchema.nullable(),
+  cancelledBy: objectIdSchema.optional(),
+  cancelledByActor: groupActorSchema.optional(),
+});
+export const groupRepaymentsPaginatedResponseSchema = paginatedResponseSchema(groupRepaymentSchema);
+export type GroupRepayment = z.infer<typeof groupRepaymentSchema>;

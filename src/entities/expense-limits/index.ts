@@ -17,3 +17,5 @@ export type {
   FindExpenseLimitQuery,
   UpdateExpenseLimitDto,
 } from './model/schemas';
+
+export { useExpenseLimitsQueryOptions } from './api/expense-limits.query';

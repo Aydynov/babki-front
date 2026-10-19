@@ -11,8 +11,20 @@ import { currencyCodeSchema } from '@/shared/lib/currency';
 import { effectiveRateSchema, transferEffectSchema } from '@/entities/transfers/@x/transactions';
 
 export const transactionTypeEnum = z.enum(['income', 'expense', 'transfer']);
+export const financialActorSchema = z.object({
+  userId: objectIdSchema,
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  isAnonymized: z.boolean(),
+});
+
 export const transactionBaseSchema = z
   .object({
+    createdBy: objectIdSchema.optional(),
+    participantId: objectIdSchema.optional(),
+    createdByActor: financialActorSchema.optional(),
+    participantActor: financialActorSchema.optional(),
+    origin: z.object({ type: z.enum(['plan', 'debt']), id: objectIdSchema }).nullable().optional(),
     transactionDate: dateStringSchema,
     description: z.string().max(1000).optional(),
   })

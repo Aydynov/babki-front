@@ -21,7 +21,11 @@ export const getSafeInternalRedirect = (value: unknown): string | null => {
   }
 
   try {
-    decodeURI(value);
+    const decoded = decodeURIComponent(value);
+    if (decoded.startsWith('//') || decoded.includes('\\') || hasControlCharacter(decoded)
+      || /(?:[?#&]token=|token%3d)/i.test(decoded)) return null;
+    const url = new URL(value, 'https://babki.invalid');
+    if (url.pathname === '/join' && (url.search || url.hash)) return null;
     return value;
   } catch {
     return null;
@@ -34,5 +38,6 @@ export const endSession = (
 ) => {
   dependencies.clearToken();
   dependencies.clearCache();
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('babki:session-cleared'));
   dependencies.navigateToLogin(getSafeInternalRedirect(redirect));
 };

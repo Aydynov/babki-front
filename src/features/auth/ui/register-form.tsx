@@ -13,9 +13,11 @@ import {
   getAuthValidationKey,
   registerSchema,
 } from '../model/auth-form';
+import { getSafeInternalRedirect } from '../model/session';
 import { PasswordInput } from './password-input';
 
-export function RegisterForm() {
+export function RegisterForm({ redirect }: { redirect?: string }) {
+  const safeRedirect = getSafeInternalRedirect(redirect);
   const { t } = useTranslation();
   const router = useRouter();
   const registerMutation = useRegisterMutation();
@@ -37,7 +39,7 @@ export function RegisterForm() {
     onSubmit: async ({ value }) => {
       try {
         await registerMutation.mutateAsync(value);
-        router.history.replace('/main');
+        router.history.replace(safeRedirect ?? '/main');
       } catch {
         // Mutation state retains the error and form values for retry.
       }
@@ -246,7 +248,7 @@ export function RegisterForm() {
         <Link
           className="font-medium text-foreground underline underline-offset-4"
           to="/login"
-          search={{}}
+          search={safeRedirect ? { redirect: safeRedirect } : {}}
         >
           {t('auth.register.loginLink')}
         </Link>

@@ -1,4 +1,4 @@
-import { reportsQueryOptions } from '@/entities/reports';
+import { useReportsQueryOptions } from '@/entities/reports';
 import { Card } from '@/shared/ui/card';
 import { Typography } from '@/shared/ui/typography';
 import { Menu } from '@base-ui/react';
@@ -69,6 +69,7 @@ const YearSwitcherView: FC<YearSwitcherViewProps> = ({
 };
 
 export const YearSwitcher: FC = () => {
+  const reportsQueryOptions = useReportsQueryOptions();
   const { data: yearReports } = useQuery(reportsQueryOptions.yearly());
   const allowedYears = yearReports
     ?.map(({ period }) => Number(period))

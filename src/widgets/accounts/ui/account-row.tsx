@@ -1,5 +1,5 @@
 import type { Account } from '@/entities/accounts';
-import { transfersQueryOptions } from '@/entities/transfers';
+import { useTransfersQueryOptions } from '@/entities/transfers';
 import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { ExpandIcon } from '@/shared/ui/expand-icon';
@@ -25,6 +25,7 @@ interface AccountRowProps {
 export function AccountRow({
   account, accountNames, period, open, onOpenChange, onDetailsOpen,
 }: AccountRowProps) {
+  const transfersQueryOptions = useTransfersQueryOptions();
   const { t, i18n } = useTranslation();
   const history = useQuery({
     ...transfersQueryOptions.findAll({

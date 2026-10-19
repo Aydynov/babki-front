@@ -17,3 +17,5 @@ export type {
   Transaction,
   TransactionsPaginatedResponse,
 } from './model/schemas';
+
+export { useTransactionsQueryOptions } from './api/transactions.query';

@@ -35,3 +35,5 @@ export {
   subscribeAccountManagementRequests,
 } from './model/account-management-events';
 export { AccountSelect } from './ui/account-select';
+
+export { useAccountsQueryOptions } from './api/accounts.query';

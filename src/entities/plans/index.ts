@@ -1,3 +1,4 @@
+export { usePlansQueryOptions, useArchivePlanMutation } from './api/plans.query';
 export {
   plansQueryKeys,
   plansQueryOptions,
@@ -24,3 +25,8 @@ export type {
   PlanStatus,
   UpdatePlanPayload,
 } from './model/schemas';
+export {
+  groupPlanSchema, groupPlansPaginatedResponseSchema, createGroupPlanPayloadSchema,
+  updateGroupPlanPayloadSchema, closeGroupPlanPayloadSchema,
+} from './model/schemas';
+export type { GroupPlan } from './model/schemas';

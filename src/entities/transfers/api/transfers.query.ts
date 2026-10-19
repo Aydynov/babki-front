@@ -1,20 +1,12 @@
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/transfers';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { loadPaginatedHistory } from '@/shared/lib/paginated-history';
-import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/transfers';
-import { accountsQueryKeys } from '@/entities/accounts/@x/transfers';
-import { reportsQueryKeys } from '@/entities/reports/@x/transfers';
-import { transactionsQueryKeys } from '@/entities/transactions/@x/transfers';
-import {
-  mutationOptions,
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
-import type {
-  CreateTransferDto,
-  ListTransfersQuery,
-  UpdateTransferDto,
-} from '../model/schemas';
 import { transfersApi } from './transfers.api';
+import type { CreateTransferDto, ListTransfersQuery, UpdateTransferDto } from '../model/schemas';
+
+type AccountHistoryQuery = Pick<ListTransfersQuery, 'accountId' | 'fromDate' | 'toDate'>;
 
 export const transfersQueryKeys = {
   all: ['transfers'] as const,
@@ -25,82 +17,79 @@ export const transfersQueryKeys = {
 };
 
 export const transfersQueryOptions = {
-  accountHistory: (query: Pick<ListTransfersQuery, 'accountId' | 'fromDate' | 'toDate'>) => queryOptions({
-    queryKey: [...transfersQueryKeys.lists(), 'account-history', query],
-    queryFn: () => loadPaginatedHistory((pagination) => transfersApi.findAll({ ...query, ...pagination })),
+  findAll: (query: ListTransfersQuery = {}, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, transfersQueryKeys.list(query)),
+    queryFn: ({ signal }) => transfersApi.findAll(query, scope, signal),
   }),
-  findAll: (query: ListTransfersQuery = {}) => queryOptions({
-    queryKey: transfersQueryKeys.list(query),
-    queryFn: () => transfersApi.findAll(query),
+  findOne: (transferId: string, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, transfersQueryKeys.detail(transferId)),
+    queryFn: ({ signal }) => transfersApi.findOne(transferId, scope, signal),
   }),
-  findOne: (transferId: string) => queryOptions({
-    queryKey: transfersQueryKeys.detail(transferId),
-    queryFn: () => transfersApi.findOne(transferId),
+  accountHistory: (
+    query: AccountHistoryQuery,
+    scope?: BudgetScope,
+  ) => queryOptions({
+    queryKey: scopedKey(scope, ['transfers', 'accountHistory', query]),
+    queryFn: ({ signal }) => loadPaginatedHistory(
+      (pagination) => transfersApi.findAll({ ...query, ...pagination }, scope, signal),
+    ),
   }),
 };
 
-const invalidateTransferEffects = (
-  queryClient: ReturnType<typeof useQueryClient>,
-  sourceAccountId: string,
-  destinationAccountId: string,
-) => {
-  Promise.all([
-    queryClient.invalidateQueries({ queryKey: transfersQueryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(sourceAccountId) }),
-    queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(destinationAccountId) }),
-  ]).catch(() => undefined);
+export const useTransfersQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: (query: ListTransfersQuery = {}) => transfersQueryOptions.findAll(query, scope),
+    findOne: (transferId: string) => transfersQueryOptions.findOne(transferId, scope),
+    accountHistory: (query: AccountHistoryQuery) => transfersQueryOptions.accountHistory(
+      query,
+      scope,
+    ),
+  };
 };
 
 export const useCreateTransferMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation(mutationOptions({
-    mutationFn: (payload: CreateTransferDto) => transfersApi.create(payload),
-    onSuccess: (transfer) => invalidateTransferEffects(
-      queryClient,
-      transfer.source.accountId,
-      transfer.destination.accountId,
-    ),
-  }));
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (payload: CreateTransferDto) => transfersApi.create(payload, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useUpdateTransferMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation(mutationOptions({
-    mutationFn: ({ transferId, payload }: { transferId: string; payload: UpdateTransferDto }) => (
-      transfersApi.update(transferId, payload)
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ transferId, payload }: { transferId: string; payload: UpdateTransferDto }) => transfersApi.update(
+      transferId,
+      payload,
+      scope,
     ),
-    onSuccess: (transfer) => {
-      queryClient.setQueryData(transfersQueryKeys.detail(transfer._id), transfer);
-      invalidateTransferEffects(
-        queryClient,
-        transfer.source.accountId,
-        transfer.destination.accountId,
-      );
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
     },
-  }));
+  });
 };
 
 export const useDeleteTransferMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation(mutationOptions({
-    mutationFn: async ({
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({
       transferId,
-      sourceAccountId,
-      destinationAccountId,
     }: {
       transferId: string;
       sourceAccountId: string;
       destinationAccountId: string;
-    }) => {
-      await transfersApi.remove(transferId);
-      return { transferId, sourceAccountId, destinationAccountId };
+    }) => transfersApi.remove(transferId, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
     },
-    onSuccess: ({ transferId, sourceAccountId, destinationAccountId }) => {
-      queryClient.removeQueries({ queryKey: transfersQueryKeys.detail(transferId) });
-      invalidateTransferEffects(queryClient, sourceAccountId, destinationAccountId);
-    },
-  }));
+  });
 };

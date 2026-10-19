@@ -1,4 +1,6 @@
-import { AccountSelect, accountsQueryOptions } from '@/entities/accounts';
+import { BudgetLabel, useBudget, useBudgetPermission } from '@/entities/budgets';
+import { z } from 'zod';
+import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { useCreateIncomeMutation } from '@/entities/incomes';
 import { usersQueryOptions } from '@/entities/users';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
@@ -57,14 +59,19 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
   className,
   currency,
 }) => {
+  const { scope } = useBudget();
+  const canCreateAccount = useBudgetPermission('manageAccounts');
   const { t } = useTranslation();
   const createIncomeMutation = useCreateIncomeMutation();
+  const accountsQueryOptions = useAccountsQueryOptions();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
   const userQuery = useQuery(usersQueryOptions.me());
   const [open, setOpen] = useState(false);
   const accounts = useMemo(
-    () => getIncomeAccounts(accountsQuery.data ?? [], currency),
-    [accountsQuery.data, currency],
+    () => (scope.kind === 'group'
+      ? (accountsQuery.data ?? []).filter((a) => a.archivedAt === null && a.currency === currency)
+      : getIncomeAccounts(accountsQuery.data ?? [], currency)),
+    [accountsQuery.data, currency, scope.kind],
   );
 
   const mutationError = getMutationErrorMessage(createIncomeMutation.error);
@@ -72,12 +79,23 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
   const form = useForm({
     defaultValues: defaultCreateIncomeFormValues,
     validators: {
-      onSubmit: createIncomeFormSchema,
+      onSubmit: scope.kind === 'group' ? createIncomeFormSchema.extend({
+        source: z.string().max(1000),
+        amount: z.string().refine((v) => Number.isFinite(Number(v)) && Number(v) > 0, 'min'),
+      }) : createIncomeFormSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       const account = accounts.find(({ _id }) => _id === value.accountId);
       if (!account || !hasValidIncomeAmountPrecision(value.amount, account.currency)) return;
-      await createIncomeMutation.mutateAsync(mapCreateIncomeDto(value));
+      if (value.transactionDate.slice(0, 10) < account.openedAt.slice(0, 10)) return;
+      await createIncomeMutation.mutateAsync(scope.kind === 'group'
+        ? {
+          accountId: value.accountId,
+          amount: Number(value.amount),
+          transactionDate: value.transactionDate,
+          description: value.source.trim(),
+        }
+        : mapCreateIncomeDto(value));
 
       setOpen(false);
       formApi.reset();
@@ -98,6 +116,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
     : '0.01';
 
   useEffect(() => {
+    if (scope.kind === 'group') return;
     if (
       !open
       || !accountsQuery.isSuccess
@@ -116,6 +135,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
     if (accountId) form.setFieldValue('accountId', accountId);
   }, [
     accounts,
+    scope.kind,
     accountsQuery.isSuccess,
     form,
     open,
@@ -172,6 +192,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
           }}
         >
           <Dialog.Header>
+            <BudgetLabel />
             <Dialog.Title>{t('incomes.create.title')}</Dialog.Title>
 
             <div className="flex gap-2.5">
@@ -227,7 +248,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                         ? t('incomes.create.accounts.error')
                         : undefined}
                       disabled={createIncomeMutation.isPending}
-                      offerAccountCreation
+                      offerAccountCreation={canCreateAccount}
                     />
                     {fieldError && <Input.Error>{fieldError}</Input.Error>}
                   </div>
@@ -250,7 +271,8 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                         clearMutationError();
                         field.handleChange(event.target.value);
                       }}
-                      placeholder={t('incomes.create.fields.name')}
+                      placeholder={scope.kind === 'group'
+                        ? 'Описание дохода (необязательно)' : t('incomes.create.fields.name')}
                       hasError={Boolean(fieldError)}
                       disabled={createIncomeMutation.isPending}
                       maxLength={150}

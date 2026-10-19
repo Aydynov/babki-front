@@ -1,4 +1,4 @@
-import { expenseLimitsQueryOptions } from '@/entities/expense-limits';
+import { useExpenseLimitsQueryOptions } from '@/entities/expense-limits';
 import { ManageExpenseLimitsButton } from '@/features/manage-expense-limits';
 import { useSelectedPeriod } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { FC } from 'react';
 
 export const ExpenseLimits: FC = () => {
+  const expenseLimitsQueryOptions = useExpenseLimitsQueryOptions();
   const selectedPeriod = useSelectedPeriod();
   const limitsQuery = useQuery(
     expenseLimitsQueryOptions.findAll({ periodDate: selectedPeriod.toDate }),

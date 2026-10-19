@@ -11,9 +11,14 @@
 import { Route as rootRouteImport } from './app/routes/__root'
 import { Route as RegisterRouteImport } from './app/routes/register'
 import { Route as LoginRouteImport } from './app/routes/login'
+import { Route as JoinRouteImport } from './app/routes/join'
 import { Route as AuthenticatedRouteImport } from './app/routes/_authenticated'
 import { Route as IndexRouteImport } from './app/routes/index'
 import { Route as AuthenticatedMainRouteImport } from './app/routes/_authenticated.main'
+import { Route as AuthenticatedGroupsRouteImport } from './app/routes/_authenticated.groups'
+import { Route as AuthenticatedGroupsIndexRouteImport } from './app/routes/_authenticated.groups.index'
+import { Route as AuthenticatedGroupsNewRouteImport } from './app/routes/_authenticated.groups.new'
+import { Route as AuthenticatedGroupsGroupIdRouteImport } from './app/routes/_authenticated.groups.$groupId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -23,6 +28,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -39,44 +49,103 @@ const AuthenticatedMainRoute = AuthenticatedMainRouteImport.update({
   path: '/main',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedGroupsRoute = AuthenticatedGroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGroupsIndexRoute =
+  AuthenticatedGroupsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedGroupsRoute,
+  } as any)
+const AuthenticatedGroupsNewRoute = AuthenticatedGroupsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedGroupsRoute,
+} as any)
+const AuthenticatedGroupsGroupIdRoute =
+  AuthenticatedGroupsGroupIdRouteImport.update({
+    id: '/$groupId',
+    path: '/$groupId',
+    getParentRoute: () => AuthenticatedGroupsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/main': typeof AuthenticatedMainRoute
+  '/groups/$groupId': typeof AuthenticatedGroupsGroupIdRoute
+  '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/groups/': typeof AuthenticatedGroupsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/main': typeof AuthenticatedMainRoute
+  '/groups/$groupId': typeof AuthenticatedGroupsGroupIdRoute
+  '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/groups': typeof AuthenticatedGroupsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_authenticated/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/_authenticated/main': typeof AuthenticatedMainRoute
+  '/_authenticated/groups/$groupId': typeof AuthenticatedGroupsGroupIdRoute
+  '/_authenticated/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/_authenticated/groups/': typeof AuthenticatedGroupsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/main'
+  fullPaths:
+    | '/'
+    | '/join'
+    | '/login'
+    | '/register'
+    | '/groups'
+    | '/main'
+    | '/groups/$groupId'
+    | '/groups/new'
+    | '/groups/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/main'
+  to:
+    | '/'
+    | '/join'
+    | '/login'
+    | '/register'
+    | '/main'
+    | '/groups/$groupId'
+    | '/groups/new'
+    | '/groups'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/join'
     | '/login'
     | '/register'
+    | '/_authenticated/groups'
     | '/_authenticated/main'
+    | '/_authenticated/groups/$groupId'
+    | '/_authenticated/groups/new'
+    | '/_authenticated/groups/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
 }
@@ -95,6 +164,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -118,14 +194,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMainRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/groups': {
+      id: '/_authenticated/groups'
+      path: '/groups'
+      fullPath: '/groups'
+      preLoaderRoute: typeof AuthenticatedGroupsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/groups/': {
+      id: '/_authenticated/groups/'
+      path: '/'
+      fullPath: '/groups/'
+      preLoaderRoute: typeof AuthenticatedGroupsIndexRouteImport
+      parentRoute: typeof AuthenticatedGroupsRoute
+    }
+    '/_authenticated/groups/new': {
+      id: '/_authenticated/groups/new'
+      path: '/new'
+      fullPath: '/groups/new'
+      preLoaderRoute: typeof AuthenticatedGroupsNewRouteImport
+      parentRoute: typeof AuthenticatedGroupsRoute
+    }
+    '/_authenticated/groups/$groupId': {
+      id: '/_authenticated/groups/$groupId'
+      path: '/$groupId'
+      fullPath: '/groups/$groupId'
+      preLoaderRoute: typeof AuthenticatedGroupsGroupIdRouteImport
+      parentRoute: typeof AuthenticatedGroupsRoute
+    }
   }
 }
 
+interface AuthenticatedGroupsRouteChildren {
+  AuthenticatedGroupsGroupIdRoute: typeof AuthenticatedGroupsGroupIdRoute
+  AuthenticatedGroupsNewRoute: typeof AuthenticatedGroupsNewRoute
+  AuthenticatedGroupsIndexRoute: typeof AuthenticatedGroupsIndexRoute
+}
+
+const AuthenticatedGroupsRouteChildren: AuthenticatedGroupsRouteChildren = {
+  AuthenticatedGroupsGroupIdRoute: AuthenticatedGroupsGroupIdRoute,
+  AuthenticatedGroupsNewRoute: AuthenticatedGroupsNewRoute,
+  AuthenticatedGroupsIndexRoute: AuthenticatedGroupsIndexRoute,
+}
+
+const AuthenticatedGroupsRouteWithChildren =
+  AuthenticatedGroupsRoute._addFileChildren(AuthenticatedGroupsRouteChildren)
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRouteWithChildren
   AuthenticatedMainRoute: typeof AuthenticatedMainRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedGroupsRoute: AuthenticatedGroupsRouteWithChildren,
   AuthenticatedMainRoute: AuthenticatedMainRoute,
 }
 
@@ -136,6 +257,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
 }

@@ -1,5 +1,5 @@
 import { ExpenseCategoryBadge } from '@/entities/expense-categories';
-import { expensesQueryOptions } from '@/entities/expenses';
+import { useExpensesQueryOptions } from '@/entities/expenses';
 import {
   CreateExpenseButton,
   ExpenseActions,
@@ -10,6 +10,7 @@ import {
 } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
+import { Button } from '@/shared/ui/button';
 import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Table } from '@/shared/ui/table';
@@ -45,6 +46,7 @@ const getRowGridClassName = (withActions: boolean) => `
 `;
 
 export const Expenses: FC = () => {
+  const expensesQueryOptions = useExpensesQueryOptions();
   const selectedPeriod = useSelectedPeriod();
   const isCurrentPeriod = useIsCurrentPeriod();
   const rowGridClassName = getRowGridClassName(isCurrentPeriod);
@@ -155,12 +157,30 @@ export const Expenses: FC = () => {
                   <div className={rowGridClassName}>
                     <Table.Cell className="block min-w-0 p-0 md:table-cell md:p-5">
                       <ExpenseCategoryBadge color={category.color}>{category.name}</ExpenseCategoryBadge>
+                      {expense.categoryUnavailable && (
+                        <Button.Base
+                          variant="outline"
+                          disabled={expensesQuery.isFetching}
+                          onClick={() => expensesQuery.refetch().catch(() => undefined)}
+                        >
+                          Загрузить категорию повторно
+                        </Button.Base>
+                      )}
                     </Table.Cell>
                     <Table.Cell
                       className="col-span-2 block min-w-0 p-0 md:col-span-1 md:table-cell md:p-5"
                     >
                       <div className="flex min-w-0 flex-col items-start gap-1 break-words">
                         {description}
+                        {expense.createdByActor && (
+                          <Body2 className="text-muted-foreground">
+                            Добавил(а):
+                            {' '}
+                            {expense.createdByActor.isAnonymized ? 'Удалённый пользователь'
+                              : [expense.createdByActor.firstName, expense.createdByActor.lastName]
+                                .filter(Boolean).join(' ')}
+                          </Body2>
+                        )}
                         {!!items.length && (
                         <Accordion.Trigger>
                           <Body2 className="text-muted-foreground in-data-panel-open:hidden">

@@ -1,5 +1,6 @@
+import { useBudget } from '@/entities/budgets';
 import { type Plan, type useClosePlanMutation } from '@/entities/plans';
-import { AccountSelect, accountsQueryOptions } from '@/entities/accounts';
+import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/shared/ui/button';
@@ -31,14 +32,17 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
+  const budgetTitle = useBudget().title;
   const mutationError = getMutationErrorMessage(mutation.error);
-  const accountsQuery = useQuery(accountsQueryOptions.findAll());
+  const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const eligibleAccounts = getEligiblePlanAccounts(accountsQuery.data ?? [], plan.currency);
 
   const form = useForm({
     defaultValues: getExecutePlanFormValues(plan),
     validators: { onSubmit: executePlanFormSchema },
     onSubmit: async ({ value }) => {
+      if (!hasValidMoneyPrecision(Number(value.amount), plan.currency)) return;
+      if (!eligibleAccounts.some((account) => account._id === value.accountId)) return;
       await mutation.mutateAsync({
         planId: plan._id,
         payload: {
@@ -93,6 +97,10 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
+        <Typography.Caption1 className="text-muted-foreground">
+          Бюджет:
+          {budgetTitle}
+        </Typography.Caption1>
         <Dialog.Description>{t('plans.execute.description')}</Dialog.Description>
 
         <form.Field name="accountId">

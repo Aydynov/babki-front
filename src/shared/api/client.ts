@@ -76,6 +76,14 @@ apiClient.interceptors.response.use(
         ? new AxiosHeaders(error.config.headers).get('Authorization')
         : null;
 
+      const groupMatch = error.config?.url?.match(/\/groups\/([a-f\d]{24})\//i);
+      if (groupMatch && (error.response?.status === 403 || error.response?.status === 404)
+        && authorizationHeader === `Bearer ${getAccessToken()}`) {
+        window.dispatchEvent(new CustomEvent('babki:budget-access', {
+          detail: { status: error.response.status, groupId: groupMatch[1] },
+        }));
+      }
+
       handleUnauthorizedSession({
         status: error.response?.status,
         url: error.config?.url,

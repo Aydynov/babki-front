@@ -1,3 +1,4 @@
+import { useBudgetScope } from '@/entities/budgets';
 import { getFirstFieldError } from '@/shared/lib/form-errors';
 import { useForm } from '@tanstack/react-form';
 import { emptyExpenseLimitFormValues } from './limit-draft';
@@ -5,14 +6,17 @@ import type {
   ExpenseLimitDraftErrors,
   ExpenseLimitDraftFieldError,
 } from './validation';
-import { expenseLimitFormSchema } from './validation';
+import { getExpenseLimitFormSchema } from './validation';
 
-export const useExpenseLimitForm = () => useForm({
-  defaultValues: emptyExpenseLimitFormValues,
-  validators: {
-    onChange: expenseLimitFormSchema,
-  },
-});
+export const useExpenseLimitForm = () => {
+  const scope = useBudgetScope();
+  return useForm({
+    defaultValues: emptyExpenseLimitFormValues,
+    validators: {
+      onChange: getExpenseLimitFormSchema(scope.kind === 'group'),
+    },
+  });
+};
 
 export type ExpenseLimitFormApi = ReturnType<typeof useExpenseLimitForm>;
 

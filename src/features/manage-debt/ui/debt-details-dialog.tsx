@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+import { useDebtsQueryOptions } from '@/entities/debts';
 import {
   type Debt,
   useDeleteDebtMutation,
@@ -19,6 +21,7 @@ interface DebtDetailsDialogProps {
 }
 
 export const DebtDetailsDialog: FC<DebtDetailsDialogProps> = ({ debt, onClose }) => {
+  const detail = useQuery({ ...useDebtsQueryOptions().findOne(debt?._id ?? ''), enabled: Boolean(debt) });
   const [activeDebt, setActiveDebt] = useState<Debt | null>(debt);
   const [mode, setMode] = useState<Mode>('view');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -31,8 +34,9 @@ export const DebtDetailsDialog: FC<DebtDetailsDialogProps> = ({ debt, onClose })
   const open = Boolean(debt);
 
   useEffect(() => {
-    if (debt) setActiveDebt(debt);
-  }, [debt]);
+    if (detail.data) setActiveDebt(detail.data);
+    else if (debt) setActiveDebt(debt);
+  }, [debt, detail.data]);
 
   const resetState = () => {
     setMode('view');

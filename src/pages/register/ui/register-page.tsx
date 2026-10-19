@@ -3,7 +3,7 @@ import { RegisterForm } from '@/features/auth';
 import { Typography } from '@/shared/ui/typography';
 import { AuthShell } from '@/widgets/auth-shell';
 
-export function RegisterPage() {
+export function RegisterPage({ redirect }: { redirect?: string }) {
   const { t } = useTranslation();
 
   return (
@@ -14,7 +14,7 @@ export function RegisterPage() {
           {t('auth.register.description')}
         </Typography.Body3>
       </div>
-      <RegisterForm />
+      <RegisterForm redirect={redirect} />
     </AuthShell>
   );
 }

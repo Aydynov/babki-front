@@ -1,4 +1,4 @@
-import { incomesQueryOptions } from '@/entities/incomes';
+import { useIncomesQueryOptions } from '@/entities/incomes';
 import { CreateIncomeButton } from '@/features/create-income';
 import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
@@ -27,6 +27,7 @@ interface IncomeCurrencyRowProps {
 export function IncomeCurrencyRow({
   currency, total, diff, period, open, onOpenChange, onDetailsOpen,
 }: IncomeCurrencyRowProps) {
+  const incomesQueryOptions = useIncomesQueryOptions();
   const { t, i18n } = useTranslation();
   const history = useQuery({ ...incomesQueryOptions.currencyHistory({ ...period, currency }), enabled: open });
   // Preserve the expanded amount-card formatting, including optional currency decimals.
@@ -103,7 +104,7 @@ export function IncomeCurrencyRow({
                   <Typography.Body1
                     className="table-cell min-w-0 break-words pb-2.5 font-semibold [&+.date]:text-right"
                   >
-                    {item.source || t('incomes.details.unknownSource')}
+                    {item.source || item.description || t('incomes.details.unknownSource')}
                   </Typography.Body1>
                   <Typography.Body2 className="date table-cell pb-2.5 text-right text-muted-foreground">
                     {format(item.transactionDate, 'LLL d, y', { locale: ru })}

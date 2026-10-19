@@ -1,3 +1,4 @@
+import { BudgetLabel, useBudgetPermission } from '@/entities/budgets';
 import {
   createAccountSchema,
   hasValidInitialAmount,
@@ -10,19 +11,18 @@ import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select } from '@/shared/ui/select';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { LucidePlus, LucideX } from 'lucide-react';
 import {
   type FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buildCreateAccountPayload, getAccountMutationErrorKey, getLocalDateString } from '../model/account-form';
-import { invalidateAccountDependents } from '../model/cache';
 
 export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
+  const allowed = useBudgetPermission('manageAccounts');
   const { t } = useTranslation();
   const fieldId = useId();
-  const queryClient = useQueryClient();
   const userQuery = useQuery(usersQueryOptions.me());
   const user = userQuery.data;
   const createMutation = useCreateAccountMutation();
@@ -50,10 +50,11 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
   useEffect(() => subscribeAccountManagementRequests(() => {
     finalFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     originatingDialog.current = finalFocus.current?.closest<HTMLElement>('[role="dialog"]') ?? null;
+    if (!allowed) return;
     resetCreateForm();
     setError(undefined);
     setOpen(true);
-  }), [resetCreateForm]);
+  }), [resetCreateForm, allowed]);
   const { isPending } = createMutation;
   const payload = useMemo(() => buildCreateAccountPayload({
     name,
@@ -74,7 +75,6 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
     setError(undefined);
     try {
       await createMutation.mutateAsync(payload);
-      invalidateAccountDependents(queryClient);
       resetCreateForm();
     } catch (mutationError) {
       setError(getAccountMutationErrorKey(mutationError));
@@ -104,6 +104,7 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
         )}
         >
           <Dialog.Header>
+            <BudgetLabel />
             <Dialog.Title>{t('accounts.management.new')}</Dialog.Title>
             <Button.Icon
               aria-label={t('accounts.management.close')}

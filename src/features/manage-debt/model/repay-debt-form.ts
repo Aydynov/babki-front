@@ -8,8 +8,8 @@ export const getRepayDebtFormSchema = (remainingAmount: number) => z.object({
     .string()
     .trim()
     .min(1, 'required')
-    .refine((value) => !Number.isNaN(Number(value)), 'invalid')
-    .refine((value) => Number(value) >= 0.01, 'min')
+    .refine((value) => Number.isFinite(Number(value)), 'invalid')
+    .refine((value) => Number(value) > 0, 'min')
     .refine((value) => Number(value) <= remainingAmount, 'maxRepayment'),
   description: z
     .string()

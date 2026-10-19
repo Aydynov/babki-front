@@ -1,11 +1,12 @@
+import { useBudget, BudgetLabel } from '@/entities/budgets';
 import {
   AccountSelect,
-  accountsQueryOptions,
+  useAccountsQueryOptions,
 } from '@/entities/accounts';
 import {
   CategorySelect,
   type ExpenseCategory,
-  expenseCategoriesQueryOptions,
+  useExpenseCategoriesQueryOptions,
 } from '@/entities/expense-categories';
 import { usersQueryOptions } from '@/entities/users';
 import { getFirstFieldError } from '@/shared/lib/form-errors';
@@ -93,8 +94,11 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const { scope } = useBudget();
   const { t } = useTranslation();
+  const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
+  const accountsQueryOptions = useAccountsQueryOptions();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
   const userQuery = useQuery(usersQueryOptions.me());
   const [amountOverridden, setAmountOverridden] = useState(initialAmountOverridden);
@@ -140,6 +144,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   );
 
   useEffect(() => {
+    if (scope.kind === 'group') return;
     if (
       !accountEditable
       || form.state.values.accountId
@@ -154,6 +159,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
     if (accountId) form.setFieldValue('accountId', accountId);
   }, [
     accountEditable,
+    scope.kind,
     accounts,
     accountsQuery.isSuccess,
     form,
@@ -208,6 +214,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
         }}
       >
         <Dialog.Header className="shrink-0">
+          <BudgetLabel />
           <Dialog.Title>{title}</Dialog.Title>
           <div className="flex gap-2.5">
             <Button.Base

@@ -1,5 +1,5 @@
-import { expenseCategoriesQueryOptions } from '@/entities/expense-categories';
-import { getMonthlyExpenseCategoryBuckets, reportsQueryOptions } from '@/entities/reports';
+import { useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
+import { getMonthlyExpenseCategoryBuckets, useReportsQueryOptions } from '@/entities/reports';
 import { usersQueryOptions } from '@/entities/users';
 import { ManageExpenseCategoriesButton } from '@/features/manage-expense-categories';
 import { ChartCurrencySelect, useChartCurrency } from '@/features/select-chart-currency';
@@ -19,6 +19,8 @@ import {
 import { getSortedMonthlyExpenseCategoryRows } from '../model/sort-monthly-expense-category-rows';
 
 export const ExpensesByCategories: FC = () => {
+  const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
+  const reportsQueryOptions = useReportsQueryOptions();
   const selectedPeriod = useSelectedPeriod();
   const selectedYear = selectedPeriod.fromDate.slice(0, 4);
   const reportPeriod = selectedPeriod.fromDate.slice(0, 7);

@@ -23,3 +23,5 @@ export type {
   TransfersPaginatedResponse,
   UpdateTransferDto,
 } from './model/schemas';
+
+export { useTransfersQueryOptions } from './api/transfers.query';

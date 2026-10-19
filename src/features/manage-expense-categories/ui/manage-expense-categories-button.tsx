@@ -1,6 +1,7 @@
+import { BudgetLabel, useBudgetPermission } from '@/entities/budgets';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import {
-  expenseCategoriesQueryOptions,
+  useExpenseCategoriesQueryOptions,
   useCreateExpenseCategoryMutation,
   useDeleteExpenseCategoryMutation,
   useUpdateExpenseCategoryMutation,
@@ -40,6 +41,8 @@ import { CategoryFormRow } from './category-form-row';
 import { DeleteConfirmDialog } from './delete-confirm-dialog';
 
 export const ManageExpenseCategoriesButton: FC = () => {
+  const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
+  const allowed = useBudgetPermission('manageCategories');
   const { t } = useTranslation();
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
   const createMutation = useCreateExpenseCategoryMutation();
@@ -235,6 +238,7 @@ export const ManageExpenseCategoriesButton: FC = () => {
     setDeleteCategoryId(undefined);
   };
 
+  if (!allowed) return null;
   return (
     <>
       <Dialog.Base
@@ -259,6 +263,7 @@ export const ManageExpenseCategoriesButton: FC = () => {
           "
         >
           <Dialog.Header className="shrink-0">
+            <BudgetLabel />
             <Dialog.Title>{t('expenseCategories.management.title')}</Dialog.Title>
             <Button.Icon
               type="button"

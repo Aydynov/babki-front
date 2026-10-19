@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+import { usePlansQueryOptions } from '@/entities/plans';
 import {
   type Plan,
   useClosePlanMutation,
@@ -19,6 +21,7 @@ interface PlanDetailsDialogProps {
 }
 
 export const PlanDetailsDialog: FC<PlanDetailsDialogProps> = ({ plan, onClose }) => {
+  const detail = useQuery({ ...usePlansQueryOptions().findOne(plan?._id ?? ''), enabled: Boolean(plan) });
   const [activePlan, setActivePlan] = useState<Plan | null>(plan);
   const [mode, setMode] = useState<Mode>('view');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -31,8 +34,11 @@ export const PlanDetailsDialog: FC<PlanDetailsDialogProps> = ({ plan, onClose })
   const open = Boolean(plan);
 
   useEffect(() => {
-    if (plan) setActivePlan(plan);
-  }, [plan]);
+    if (detail.data) {
+      setActivePlan(detail.data);
+      if (detail.data.status === 'closed' || detail.data.archivedAt) setMode('view');
+    } else if (plan) setActivePlan(plan);
+  }, [plan, detail.data]);
 
   const resetState = () => {
     setMode('view');

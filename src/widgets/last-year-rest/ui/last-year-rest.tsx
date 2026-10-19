@@ -1,4 +1,5 @@
-import { getReportCurrencySections, reportsQueryOptions } from '@/entities/reports';
+import { useBudgetScope } from '@/entities/budgets';
+import { getReportCurrencySections, useReportsQueryOptions } from '@/entities/reports';
 import { usersQueryOptions } from '@/entities/users';
 import { usePeriodStore } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
@@ -10,6 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 export function LastYearRest() {
+  const includeDefault = useBudgetScope().kind === 'personal';
+  const reportsQueryOptions = useReportsQueryOptions();
   const { t, i18n } = useTranslation();
   const reportsQuery = useQuery(reportsQueryOptions.yearly());
   const userQuery = useQuery(usersQueryOptions.me());
@@ -22,6 +25,7 @@ export function LastYearRest() {
     reportsQuery.data,
     currentYear - 1,
     user.defaultCurrency,
+    includeDefault,
   ) : [];
 
   return (

@@ -21,6 +21,11 @@ export const accountSchema = z
   })
   .extend(entityMetaSchema.shape);
 
+export const groupAccountSchema = accountSchema.extend({
+  amount: z.number(),
+  timeline: snapshotSchema.extend({ amount: z.number() }).array(),
+});
+
 export const createAccountSchema = z.object({
   name: z.string().trim().min(1).max(100),
   type: accountTypeEnum,

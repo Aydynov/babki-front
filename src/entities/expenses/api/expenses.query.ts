@@ -1,21 +1,9 @@
-import {
-  mutationOptions,
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
-import { snapshotsQueryKeys } from '@/entities/accounts-snapshots/@x/expenses';
-import { accountsQueryKeys } from '@/entities/accounts/@x/expenses';
-import { expenseLimitsQueryKeys } from '@/entities/expense-limits/@x/expenses';
-import { reportsQueryKeys } from '@/entities/reports/@x/expenses';
-import { transactionsQueryKeys } from '@/entities/transactions/@x/expenses';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/expenses';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { expensesApi } from './expenses.api';
-import { replaceExpenseInPaginatedResponse } from '../model/expense-list-cache';
-import type {
-  ExpensesPaginatedResponse,
-  ListExpensesQuery,
-  UpdateExpenseDto,
-} from '../model/schemas';
+import type { CreateExpenseDto, ListExpensesQuery, UpdateExpenseDto } from '../model/schemas';
 
 export const expensesQueryKeys = {
   all: ['expenses'] as const,
@@ -26,72 +14,48 @@ export const expensesQueryKeys = {
 };
 
 export const expensesQueryOptions = {
-  findAll: (query: ListExpensesQuery = {}) => queryOptions({
-    queryKey: expensesQueryKeys.list(query),
-    queryFn: () => expensesApi.findAll(query),
+  findAll: (query: ListExpensesQuery = {}, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, expensesQueryKeys.list(query)),
+    queryFn: ({ signal }) => expensesApi.findAll(query, scope, signal),
   }),
-  findOne: (expenseId: string) => queryOptions({
-    queryKey: expensesQueryKeys.detail(expenseId),
-    queryFn: () => expensesApi.findOne(expenseId),
+  findOne: (expenseId: string, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, expensesQueryKeys.detail(expenseId)),
+    queryFn: ({ signal }) => expensesApi.findOne(expenseId, scope, signal),
   }),
+};
+
+export const useExpensesQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: (query: ListExpensesQuery = {}) => expensesQueryOptions.findAll(query, scope),
+    findOne: (expenseId: string) => expensesQueryOptions.findOne(expenseId, scope),
+  };
 };
 
 export const useCreateExpenseMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: expensesApi.create,
-      onSuccess: (expense) => {
-        Promise.all([
-          queryClient.invalidateQueries({ queryKey: expensesQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
-          ...(expense
-            ? [queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(expense.accountId) })]
-            : []),
-        ]).catch(() => undefined);
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (payload: CreateExpenseDto) => expensesApi.create(payload, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useUpdateExpenseMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({
-        expenseId,
-        payload,
-      }: {
-        expenseId: string;
-        payload: UpdateExpenseDto;
-      }) => expensesApi.update(expenseId, payload),
-      onSuccess: (expense, { expenseId }) => {
-        if (expense) {
-          queryClient.setQueriesData<ExpensesPaginatedResponse>(
-            { queryKey: expensesQueryKeys.listAll() },
-            (expenses) => (
-              expenses ? replaceExpenseInPaginatedResponse(expenses, expense) : expenses
-            ),
-          );
-          queryClient.setQueryData(expensesQueryKeys.detail(expenseId), expense);
-        }
-
-        Promise.all([
-          queryClient.invalidateQueries({ queryKey: expensesQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.all }),
-          queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
-          ...(expense
-            ? [queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(expense.accountId) })]
-            : []),
-        ]).catch(() => undefined);
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ expenseId, payload }: { expenseId: string; payload: UpdateExpenseDto }) => expensesApi.update(
+      expenseId,
+      payload,
+      scope,
+    ),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };

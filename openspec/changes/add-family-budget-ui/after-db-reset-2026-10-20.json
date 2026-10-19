@@ -1,0 +1,420 @@
+{
+  "run": "after-dev-db-reset-2026-10-20",
+  "initial": {
+    "groups": 0,
+    "personalAccounts": 0
+  },
+  "groups": {
+    "familyA": "6ad6915888e901e4f46f8c74",
+    "familyB": "6ad6915888e901e4f46f8c77"
+  },
+  "initialAccounts": [
+    {
+      "name": "Общий",
+      "type": "balance",
+      "currency": "JPY",
+      "amount": 1000
+    },
+    {
+      "name": "Общий",
+      "type": "balance",
+      "currency": "JPY",
+      "amount": 100
+    },
+    {
+      "name": "Общий",
+      "type": "balance",
+      "currency": "KWD",
+      "amount": 1
+    },
+    {
+      "name": "Резерв",
+      "type": "saving",
+      "currency": "JPY",
+      "amount": 0
+    }
+  ],
+  "sameCategoryNameAcrossGroups": true,
+  "checks": [
+    "Invitation selects intended new group",
+    "No automatic financial permissions",
+    "Explicit full permissions preserve member role",
+    "Editing other author preserves ownership",
+    "Plan preserves planned100 and links actual120 expense",
+    "Financial/noncash repayment and compensation agree",
+    "KWD0.001 and JPY1 cross-currency transfer",
+    "Per-currency limits and zero total",
+    "Overlapping same-currency limit rejects409",
+    "Duplicate category rejected only within same group",
+    "Referenced account deletion RESTRICT409",
+    "Plan cannot close twice",
+    "Repayment cannot cancel twice",
+    "Inter-budget transfer forbidden",
+    "Rename/archive and archived account read",
+    "Exact current account balances",
+    "Exact historical account balances",
+    "JPY report totals include both balance accounts",
+    "KWD report minor units",
+    "Second family remains untouched",
+    "Revoked manager cannot edit another author with same JWT",
+    "Spouse personal budget remains empty"
+  ],
+  "finalAccounts": [
+    {
+      "id": "6ad6915888e901e4f46f8c7a",
+      "name": "Общий",
+      "currency": "JPY",
+      "type": "balance",
+      "amount": 1080,
+      "archived": false
+    },
+    {
+      "id": "6ad6915888e901e4f46f8c7c",
+      "name": "Общий",
+      "currency": "JPY",
+      "type": "balance",
+      "amount": 101,
+      "archived": false
+    },
+    {
+      "id": "6ad6915888e901e4f46f8c7e",
+      "name": "Общий",
+      "currency": "KWD",
+      "type": "balance",
+      "amount": 0.999,
+      "archived": false
+    },
+    {
+      "id": "6ad6915888e901e4f46f8c80",
+      "name": "Резерв",
+      "currency": "JPY",
+      "type": "saving",
+      "amount": 200,
+      "archived": false
+    },
+    {
+      "id": "6ad6919888e901e4f46f8c97",
+      "name": "Переименован",
+      "currency": "JPY",
+      "type": "balance",
+      "amount": 0,
+      "archived": true
+    }
+  ],
+  "reports": [
+    {
+      "period": "2026-10",
+      "currencies": [
+        {
+          "currency": "JPY",
+          "expenses": 220,
+          "incomes": 500,
+          "transfersIn": 201,
+          "transfersOut": 200,
+          "saving": 200,
+          "balance": 1181,
+          "expensesByCategory": [
+            {
+              "categoryId": "6ad6915888e901e4f46f8c84",
+              "total": 220
+            }
+          ]
+        },
+        {
+          "currency": "KWD",
+          "expenses": 0.001,
+          "incomes": 0.001,
+          "transfersIn": 0,
+          "transfersOut": 0.001,
+          "saving": 0,
+          "balance": 0.999,
+          "expensesByCategory": [
+            {
+              "categoryId": "6ad6915888e901e4f46f8c84",
+              "total": 0.001
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "otherFamilyBalance": 50,
+  "trace": [
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c77/accounts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-categories",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c77/expense-categories",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/incomes",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/invitations",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/group-invitations/preview",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/group-invitations/accept",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74",
+      "status": 200
+    },
+    {
+      "method": "patch",
+      "path": "/groups/6ad6915888e901e4f46f8c74/members/6ad6915888e901e4f46f8c73/permissions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74",
+      "status": 200
+    },
+    {
+      "method": "patch",
+      "path": "/groups/6ad6915888e901e4f46f8c74/incomes/6ad6917a88e901e4f46f8c86",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expenses",
+      "status": 201
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-categories/6ad6915888e901e4f46f8c84",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transfers",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/plans",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/plans/6ad6917a88e901e4f46f8c8c/close",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/debts",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/debts/6ad6917a88e901e4f46f8c8e/repayments",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/debts/6ad6917a88e901e4f46f8c8e/repayments",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/debts/6ad6917a88e901e4f46f8c8e/repayments/6ad6917a88e901e4f46f8c90/cancel",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/incomes",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expenses",
+      "status": 201
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-categories/6ad6915888e901e4f46f8c84",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transfers",
+      "status": 201
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-limits",
+      "status": 201
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-categories/6ad6915888e901e4f46f8c84",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-limits",
+      "status": 201
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-categories/6ad6915888e901e4f46f8c84",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-limits",
+      "status": 409
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/expense-categories",
+      "status": 409
+    },
+    {
+      "method": "delete",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts/6ad6915888e901e4f46f8c7a",
+      "status": 409
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/plans/6ad6917a88e901e4f46f8c8c/close",
+      "status": 400
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/debts/6ad6917a88e901e4f46f8c8e/repayments/6ad6917a88e901e4f46f8c90/cancel",
+      "status": 409
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transfers",
+      "status": 404
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts",
+      "status": 201
+    },
+    {
+      "method": "patch",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts/6ad6919888e901e4f46f8c97",
+      "status": 200
+    },
+    {
+      "method": "post",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts/6ad6919888e901e4f46f8c97/archive",
+      "status": 204
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts/6ad6919888e901e4f46f8c97",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/accounts",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/transactions",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c74/reports/months",
+      "status": 200
+    },
+    {
+      "method": "get",
+      "path": "/groups/6ad6915888e901e4f46f8c77/accounts",
+      "status": 200
+    },
+    {
+      "method": "patch",
+      "path": "/groups/6ad6915888e901e4f46f8c74/members/6ad6915888e901e4f46f8c73/permissions",
+      "status": 200
+    },
+    {
+      "method": "patch",
+      "path": "/groups/6ad6915888e901e4f46f8c74/incomes/6ad6917a88e901e4f46f8c86",
+      "status": 403
+    },
+    {
+      "method": "patch",
+      "path": "/groups/6ad6915888e901e4f46f8c74/members/6ad6915888e901e4f46f8c73/permissions",
+      "status": 200
+    }
+  ],
+  "ui": {
+    "desktopWidth": 1440,
+    "mobileWidth": 320,
+    "alerts": 0,
+    "horizontalOverflow": false
+  }
+}

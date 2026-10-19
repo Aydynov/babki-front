@@ -1,9 +1,7 @@
-import {
-  mutationOptions,
-  queryOptions,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBudgetScope } from '@/entities/budgets/@x/expense-limits';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { expenseLimitsApi } from './expense-limits.api';
 import type {
   CreateExpenseLimitDto,
@@ -20,89 +18,60 @@ export const expenseLimitsQueryKeys = {
 };
 
 export const expenseLimitsQueryOptions = {
-  findAll: (query: FindExpenseLimitQuery) => queryOptions({
-    queryKey: expenseLimitsQueryKeys.list(query),
-    queryFn: () => expenseLimitsApi.findAll(query),
+  findAll: (query: FindExpenseLimitQuery, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, expenseLimitsQueryKeys.list(query)),
+    queryFn: ({ signal }) => expenseLimitsApi.findAll(query, scope, signal),
   }),
-  findOne: (limitId: string) => queryOptions({
-    queryKey: expenseLimitsQueryKeys.detail(limitId),
-    queryFn: () => expenseLimitsApi.findOne(limitId),
+  findOne: (limitId: string, scope?: BudgetScope) => queryOptions({
+    queryKey: scopedKey(scope, expenseLimitsQueryKeys.detail(limitId)),
+    queryFn: ({ signal }) => expenseLimitsApi.findOne(limitId, scope, signal),
   }),
 };
 
-const createExpenseLimitMutationFn = async (
-  payload: CreateExpenseLimitDto,
-) => {
-  const createdLimit = await expenseLimitsApi.create(payload);
-  if (createdLimit) return createdLimit;
-
-  const periodDate = payload.startDate ?? payload.endDate;
-  if (!periodDate) return null;
-
-  const limits = await expenseLimitsApi.findAll({ periodDate }).catch(() => null);
-  return limits?.find((limit) => limit.category._id === payload.categoryId) ?? null;
-};
-
-const updateExpenseLimitMutationFn = async (
-  limitId: string,
-  payload: UpdateExpenseLimitDto,
-) => {
-  const updatedLimit = await expenseLimitsApi.update(limitId, payload);
-  if (updatedLimit) return updatedLimit;
-
-  return expenseLimitsApi.findOne(limitId).catch(() => null);
+export const useExpenseLimitsQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: (query: FindExpenseLimitQuery) => expenseLimitsQueryOptions.findAll(query, scope),
+    findOne: (limitId: string) => expenseLimitsQueryOptions.findOne(limitId, scope),
+  };
 };
 
 export const useCreateExpenseLimitMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({
-        payload,
-      }: {
-        payload: CreateExpenseLimitDto;
-      }) => createExpenseLimitMutationFn(payload),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.all });
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ payload }: { payload: CreateExpenseLimitDto }) => expenseLimitsApi.create(payload, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useUpdateExpenseLimitMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: ({
-        limitId,
-        payload,
-      }: {
-        limitId: string;
-        payload: UpdateExpenseLimitDto;
-      }) => updateExpenseLimitMutationFn(limitId, payload),
-      onSuccess: (updatedLimit, { limitId }) => {
-        queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.listAll() });
-        if (updatedLimit) {
-          queryClient.setQueryData(expenseLimitsQueryKeys.detail(limitId), updatedLimit);
-        } else {
-          queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.detail(limitId) });
-        }
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: ({ limitId, payload }: { limitId: string; payload: UpdateExpenseLimitDto }) => expenseLimitsApi.update(
+      limitId,
+      payload,
+      scope,
+    ),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };
 
 export const useDeleteExpenseLimitMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    mutationOptions({
-      mutationFn: expenseLimitsApi.delete,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.listAll() });
-      },
-    }),
-  );
+  const scope = useBudgetScope();
+  const client = useQueryClient();
+  return useMutation({
+    retry: false,
+    mutationFn: (limitId: string) => expenseLimitsApi.delete(limitId, scope),
+    onSuccess: () => {
+      invalidateBudget(client, scope).catch(() => undefined);
+    },
+  });
 };

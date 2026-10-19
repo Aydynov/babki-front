@@ -1,4 +1,4 @@
-import { expensesQueryOptions } from '@/entities/expenses';
+import { useExpensesQueryOptions } from '@/entities/expenses';
 import { usersQueryOptions } from '@/entities/users';
 import { ChartCurrencySelect, getDailyExpenseCurrencies, useChartCurrency } from '@/features/select-chart-currency';
 import { useSelectedPeriod } from '@/features/select-period';
@@ -29,6 +29,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export const ExpensesByDays: FC = () => {
+  const expensesQueryOptions = useExpensesQueryOptions();
   const selectedPeriod = useSelectedPeriod();
   const expensesQuery = useQuery(
     expensesQueryOptions.findAll(selectedPeriod),

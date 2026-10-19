@@ -1,49 +1,49 @@
+import { useBudgetScope } from '@/entities/budgets/@x/debt-transactions';
+import type { BudgetScope } from '@/shared/types';
+import { scopedKey } from '@/shared/lib/budget-api';
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { debtTransactionsApi } from './debt-transactions.api';
 import type { ListDebtTransactionsQuery } from '../model/schemas';
 
 export const debtTransactionsQueryKeys = {
   all: ['debt-transactions'] as const,
-  lists: (debtId: string) => [
-    ...debtTransactionsQueryKeys.all,
-    debtId,
-    'list',
-  ] as const,
-  list: (debtId: string, query: ListDebtTransactionsQuery) => [
-    ...debtTransactionsQueryKeys.lists(debtId),
-    query,
-  ] as const,
-  details: (debtId: string) => [
-    ...debtTransactionsQueryKeys.all,
-    debtId,
-    'detail',
-  ] as const,
-  detail: (debtId: string, transactionId: string) => [
-    ...debtTransactionsQueryKeys.details(debtId),
-    transactionId,
-  ] as const,
+  lists: (id: string, scope?: BudgetScope) => [...scopedKey(scope, ['debt-transactions']), id, 'list'] as const,
+  list: (id: string, query: ListDebtTransactionsQuery, scope?: BudgetScope) => (
+    [...debtTransactionsQueryKeys.lists(id, scope), query] as const
+  ),
+  detail: (id: string, transactionId: string, scope?: BudgetScope) => (
+    [...scopedKey(scope, ['debt-transactions']), id, 'detail', transactionId] as const
+  ),
 };
 
 export const debtTransactionsQueryOptions = {
   findAll: (
     debtId: string,
     query: ListDebtTransactionsQuery = {},
+    scope?: BudgetScope,
   ) => queryOptions({
-    queryKey: debtTransactionsQueryKeys.list(debtId, query),
-    queryFn: () => debtTransactionsApi.findAll(debtId, query),
+    queryKey: debtTransactionsQueryKeys.list(debtId, query, scope),
+    queryFn: ({ signal }) => debtTransactionsApi.findAll(debtId, query, signal, scope),
   }),
-  findOne: (debtId: string, transactionId: string) => queryOptions({
-    queryKey: debtTransactionsQueryKeys.detail(debtId, transactionId),
-    queryFn: () => debtTransactionsApi.findOne(debtId, transactionId),
+  findOne: (debtId: string, transactionId: string, scope?: BudgetScope) => queryOptions({
+    queryKey: debtTransactionsQueryKeys.detail(debtId, transactionId, scope),
+    queryFn: ({ signal }) => debtTransactionsApi.findOne(debtId, transactionId, signal, scope),
   }),
 };
 
-export const useDebtTransactionsListQuery = (
-  debtId: string,
-  query: ListDebtTransactionsQuery = {},
-) => useQuery(debtTransactionsQueryOptions.findAll(debtId, query));
+export const useDebtTransactionsQueryOptions = () => {
+  const scope = useBudgetScope();
+  return {
+    findAll: (id: string, query: ListDebtTransactionsQuery = {}) => (
+      debtTransactionsQueryOptions.findAll(id, query, scope)
+    ),
+    findOne: (id: string, transactionId: string) => debtTransactionsQueryOptions.findOne(id, transactionId, scope),
+  };
+};
 
-export const useDebtTransactionQuery = (
-  debtId: string,
-  transactionId: string,
-) => useQuery(debtTransactionsQueryOptions.findOne(debtId, transactionId));
+export const useDebtTransactionsListQuery = (id: string, query: ListDebtTransactionsQuery = {}) => (
+  useQuery(useDebtTransactionsQueryOptions().findAll(id, query))
+);
+export const useDebtTransactionQuery = (id: string, transactionId: string) => (
+  useQuery(useDebtTransactionsQueryOptions().findOne(id, transactionId))
+);

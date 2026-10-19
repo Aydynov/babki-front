@@ -1,4 +1,5 @@
-import { getReportMetricSections, reportsQueryOptions } from '@/entities/reports';
+import { useBudgetScope } from '@/entities/budgets';
+import { getReportMetricSections, useReportsQueryOptions } from '@/entities/reports';
 import { usersQueryOptions } from '@/entities/users';
 import { usePeriodStore } from '@/features/select-period';
 import { getPercent } from '@/shared/lib/getPercent';
@@ -8,6 +9,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 export function YearSavings() {
+  const includeDefault = useBudgetScope().kind === 'personal';
+  const reportsQueryOptions = useReportsQueryOptions();
   const selectedYear = usePeriodStore((state) => state.selectedYear);
   const reportsQuery = useQuery(reportsQueryOptions.yearly());
   const userQuery = useQuery(usersQueryOptions.me());
@@ -21,6 +24,7 @@ export function YearSavings() {
     selectedYear - 1,
     'saving',
     user.defaultCurrency,
+    includeDefault,
   ) : [];
 
   return (

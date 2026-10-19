@@ -1,3 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
+import { useDebtTransactionsQueryOptions } from '@/entities/debt-transactions';
+import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
+import { useBudget, useBudgetScope } from '@/entities/budgets';
 import { type Debt, type useUpdateDebtMutation } from '@/entities/debts';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
@@ -24,19 +28,29 @@ export const DebtEditForm: FC<DebtEditFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
+  const budgetTitle = useBudget().title;
+  const scope = useBudgetScope();
+  const history = useQuery({
+    ...useDebtTransactionsQueryOptions().findAll(debt._id, { limit: 1 }),
+    enabled: scope.kind === 'group',
+  });
+  const canChangePrincipal = scope.kind === 'group' && history.isSuccess && history.data.total === 0;
   const mutationError = getMutationErrorMessage(mutation.error);
 
   const form = useForm({
     defaultValues: getEditDebtFormValues(debt),
     validators: { onSubmit: editDebtFormSchema },
     onSubmit: async ({ value }) => {
+      const principal = Number(value.principalAmount);
+      if (canChangePrincipal && (!hasValidMoneyPrecision(principal, debt.currency) || principal <= 0)) return;
       const description = value.description.trim();
       const updated = await mutation.mutateAsync({
         debtId: debt._id,
         payload: {
           debtor: value.debtor.trim(),
+          ...(canChangePrincipal ? { principalAmount: principal } : {}),
           description: description || undefined,
-          dueDate: value.dueDate,
+          dueDate: value.dueDate || (scope.kind === 'group' ? null : undefined),
         },
       });
 
@@ -76,6 +90,37 @@ export const DebtEditForm: FC<DebtEditFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
+        <Typography.Caption1 className="text-muted-foreground">
+          Бюджет:
+          {budgetTitle}
+        </Typography.Caption1>
+        {scope.kind === 'group' && (
+          <form.Field name="principalAmount">
+            {(field) => (
+              <div>
+                <label htmlFor="edit-debt-principal">
+                  Первоначальная сумма (
+                  {debt.currency}
+                  )
+                </label>
+                <Input.Base
+                  id="edit-debt-principal"
+                  type="number"
+                  value={field.state.value}
+                  step={1 / (10 ** getCurrencyMinorUnits(debt.currency))}
+                  min={1 / (10 ** getCurrencyMinorUnits(debt.currency))}
+                  disabled={!canChangePrincipal || mutation.isPending}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                />
+                {!canChangePrincipal && (
+                  <Typography.Caption1>
+                    Сумма доступна для изменения только до появления любой истории.
+                  </Typography.Caption1>
+                )}
+              </div>
+            )}
+          </form.Field>
+        )}
         <form.Field name="debtor">
           {(field) => {
             const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));

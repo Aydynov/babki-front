@@ -1,10 +1,11 @@
+import { BudgetLabel, useBudgetPermission } from '@/entities/budgets';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import {
-  expenseCategoriesQueryOptions,
+  useExpenseCategoriesQueryOptions,
   type CategorySelectOption,
 } from '@/entities/expense-categories';
 import {
-  expenseLimitsQueryOptions,
+  useExpenseLimitsQueryOptions,
   useCreateExpenseLimitMutation,
   useDeleteExpenseLimitMutation,
   useUpdateExpenseLimitMutation,
@@ -116,10 +117,13 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
   periodDate,
 }) => {
   const periodKey = periodDate.slice(0, 7);
+  const allowed = useBudgetPermission('manageLimits');
   const { t } = useTranslation();
+  const expenseLimitsQueryOptions = useExpenseLimitsQueryOptions();
   const limitsQuery = useQuery(
     expenseLimitsQueryOptions.findAll({ periodDate }),
   );
+  const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
   const createMutation = useCreateExpenseLimitMutation();
   const updateMutation = useUpdateExpenseLimitMutation();
@@ -430,6 +434,7 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
     setDeleteLimitId(undefined);
   };
 
+  if (!allowed) return null;
   return (
     <>
       <Dialog.Base
@@ -454,6 +459,7 @@ export const ManageExpenseLimitsButton: FC<ManageExpenseLimitsButtonProps> = ({
           "
         >
           <Dialog.Header className="shrink-0">
+            <BudgetLabel />
             <Dialog.Title>{t('expenseLimits.management.title')}</Dialog.Title>
             <Button.Icon
               type="button"

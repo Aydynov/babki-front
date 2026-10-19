@@ -12,8 +12,8 @@ export const createDebtFormSchema = z
       .string()
       .trim()
       .min(1, 'required')
-      .refine((value) => !Number.isNaN(Number(value)), 'invalid')
-      .refine((value) => Number(value) >= 0.01, 'min'),
+      .refine((value) => Number.isFinite(Number(value)), 'invalid')
+      .refine((value) => Number(value) > 0, 'min'),
     dateMode: z.enum(['day', 'month']),
     dayDate: z.string(),
     monthDate: z.string(),
@@ -29,6 +29,8 @@ export const createDebtFormSchema = z
       });
     }
   });
+
+export const createGroupDebtFormSchema = z.object(createDebtFormSchema.shape);
 
 export type CreateDebtFormValues = z.infer<typeof createDebtFormSchema>;
 
@@ -47,6 +49,7 @@ export const hasValidDebtAmountPrecision = (amount: string, currency: CurrencyCo
 
 export const normalizeDueDate = (values: CreateDebtFormValues) => {
   if (values.dateMode === 'month') {
+    if (!values.monthDate) return '';
     return format(endOfMonth(new Date(`${values.monthDate}-01`)), 'yyyy-MM-dd');
   }
 
