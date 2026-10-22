@@ -44,7 +44,7 @@ Each chart's selector SHALL list only currencies with at least one plottable val
 - **THEN** the monthly chart shows «Данные отсутствуют» and no selected currency
 
 ### Requirement: Stable selection across period changes
-The system SHALL keep each chart's selected currency while it remains available after a period change. When it becomes unavailable, the chart SHALL select the authenticated user's default currency if available, or otherwise the first available currency in ISO-code order.
+The system SHALL keep each chart's selected currency while it remains available after a period change. When it becomes unavailable, the chart SHALL select the first available currency in ascending ISO-code order, without consulting a profile currency.
 
 #### Scenario: Selected currency remains available
 - **WHEN** the user changes period and the selected currency has chart data in both periods
@@ -52,11 +52,11 @@ The system SHALL keep each chart's selected currency while it remains available 
 
 #### Scenario: Selected currency becomes unavailable
 - **WHEN** the user changes period and the selected currency has no chart data in the new period
-- **THEN** the chart selects the user's default currency if it has data, otherwise the first available currency in ISO-code order
+- **THEN** the chart selects the first available currency in ascending ISO-code order
 
 #### Scenario: Initial selection
 - **WHEN** a chart first receives data with multiple currencies
-- **THEN** it selects the user's default currency if available, otherwise the first available currency in ISO-code order
+- **THEN** it selects the first available currency in ascending ISO-code order
 
 ### Requirement: Currency-scoped chart values
 The three charts SHALL render only values denominated in their selected currency, without conversion or cross-currency summation. Their labels, totals, legends, and tooltips SHALL identify and format values in that currency. The monthly chart SHALL display only expenses, incomes, and savings and SHALL exclude incoming and outgoing transfers from bars, legend, and tooltips.

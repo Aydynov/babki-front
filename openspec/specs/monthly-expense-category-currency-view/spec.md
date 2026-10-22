@@ -20,7 +20,7 @@ The monthly expense-category widget SHALL display one selected currency at a tim
 - **THEN** the selector cannot switch to a currency without expenses in that month
 
 ### Requirement: Stable monthly category currency selection
-The widget SHALL keep its selected currency across month changes while that currency has expenses in the new month. Otherwise it SHALL select the authenticated user's default currency if available, or the first available currency in ISO-code order.
+The widget SHALL keep its selected currency across month changes while that currency has expenses in the new month. Otherwise it SHALL select the first available currency in ascending ISO-code order, without consulting a profile currency.
 
 #### Scenario: Selection remains available
 - **WHEN** the user changes months and the previously selected USD has expenses in both months
@@ -28,11 +28,11 @@ The widget SHALL keep its selected currency across month changes while that curr
 
 #### Scenario: Selection becomes unavailable
 - **WHEN** the user changes months and the previously selected currency has no expenses in the new month
-- **THEN** the widget displays the user's default currency if it has expenses, or otherwise the first available currency in ISO-code order
+- **THEN** the widget displays the first available currency in ascending ISO-code order
 
 #### Scenario: Initial selection
 - **WHEN** the widget first receives expenses in multiple currencies
-- **THEN** it selects the user's default currency if available, or otherwise the first available currency in ISO-code order
+- **THEN** it selects the first available currency in ascending ISO-code order
 
 ### Requirement: Currency-scoped category breakdown
 The widget SHALL show one row for every configured expense category, including categories with zero expenses, and SHALL calculate each amount and progress percentage solely from expenses in the selected month and currency. It MUST NOT sum or compare amounts across currencies.
@@ -58,7 +58,7 @@ When the selected month has no expenses, the widget SHALL show an empty state in
 #### Scenario: Month without expenses
 - **WHEN** the selected month has no expenses in any currency
 - **THEN** the widget shows an empty state instead of category rows or a selected currency
-- **THEN** the category-management control remains available
+- **THEN** the category-management control remains available only with manageCategories
 
 #### Scenario: Keyboard selection
 - **WHEN** a keyboard user selects another offered currency in the widget

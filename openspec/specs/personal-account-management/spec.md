@@ -7,7 +7,7 @@ Define how users view and manage multiple named personal balance and saving acco
 ## Requirements
 
 ### Requirement: Multicurrency account overview
-The system SHALL present personal accounts with their names, types, ISO currencies, and formatted amounts without combining amounts from different currencies. The default dashboard list SHALL contain active accounts only; the archive mode SHALL contain archived accounts only. Every personal account returned by the API SHALL remain accessible through its matching list and details. Archived accounts SHALL retain historical context and SHALL NOT be selectable for new operations.
+The system SHALL present accounts of the selected space with their names, types, ISO currencies, and formatted amounts without combining amounts from different currencies. The default dashboard list SHALL contain active accounts only; the archive mode SHALL contain archived accounts only. Every space account returned by the API SHALL remain accessible through its matching list and details. Archived accounts SHALL retain historical context and SHALL NOT be selectable for new operations.
 
 #### Scenario: Accounts in multiple currencies
 - **WHEN** the user has active RUB and USD accounts
@@ -16,7 +16,7 @@ The system SHALL present personal accounts with their names, types, ISO currenci
 
 #### Scenario: Account history at the selected period
 - **WHEN** the dashboard period changes
-- **THEN** account amounts are requested at the selected period end date and displayed without replacing them with current balances
+- **THEN** account amounts are resolved from space account history at the selected period end date and displayed without replacing them with current balances
 
 #### Scenario: Archived account
 - **WHEN** an account has a non-null archive date
@@ -24,12 +24,12 @@ The system SHALL present personal accounts with their names, types, ISO currenci
 - **THEN** the active dashboard list omits its account row and new-operation selectors exclude it
 
 ### Requirement: Account creation
-The system SHALL let the user create a named balance or saving account with an ISO currency, initial amount, and opening date. The active list's plus button SHALL open only the creation form, with an accessible name identifying account creation. Creation SHALL NOT display the existing-account management list. Existing creation actions from operation forms SHALL continue to open the creation form.
+The system SHALL let a user with manageAccounts create a named balance or saving account with an ISO currency, initial amount, and opening date. The active list's plus button SHALL open only the creation form, with an accessible name identifying account creation. Creation SHALL NOT display the existing-account management list. Existing creation actions from operation forms SHALL continue to open the creation form.
 
 #### Scenario: Open account creation
 - **WHEN** the user activates the account creation action
-- **THEN** the dialog initializes an empty name, a balance type, the authenticated user's default currency, an empty initial-amount field, and the current local date
-- **THEN** the dialog displays only account creation, without renaming, default selection, archive or deletion actions for existing accounts
+- **THEN** the dialog initializes an empty name, a balance type, an explicitly selectable currency with RUB as the initial form suggestion, an empty initial-amount field, and the current local date
+- **THEN** the dialog displays only account creation, without renaming, archive or deletion actions for existing accounts
 
 #### Scenario: Submit a valid account
 - **WHEN** the user submits valid account values
@@ -56,23 +56,8 @@ The system SHALL allow an account name to change while treating its type, curren
 - **WHEN** the user opens account editing
 - **THEN** type, currency, initial amount, and opening date are presented as read-only context rather than editable fields
 
-### Requirement: Default account selection
-The system SHALL identify the authenticated user's default account and allow choosing another active balance account only when its currency matches the user's default currency.
-
-#### Scenario: Current default account
-- **WHEN** an account id equals the authenticated user's `defaultAccountId`
-- **THEN** the account is visibly identified as the default
-
-#### Scenario: Choose a compatible default account
-- **WHEN** the user selects an active balance account in `defaultCurrency`
-- **THEN** the system updates `defaultAccountId`, refreshes the authenticated user, and reflects the new default indicator
-
-#### Scenario: Incompatible account
-- **WHEN** an account is a saving account, archived, or denominated in another currency
-- **THEN** the system does not offer it as a default-account choice
-
 ### Requirement: Account archive and deletion lifecycle
-The system MUST distinguish archiving an account with history from permanently deleting an unused account. Management SHALL operate only on the account opened from its list. An archived account SHALL NOT offer repeated archival, default selection, or creation of new financial operations. Existing confirmation, pending, error handling and dependent refresh rules SHALL remain in effect.
+The system MUST distinguish archiving an account with history from permanently deleting an unused account. Management SHALL operate only on the account opened from its list. An archived account SHALL NOT offer repeated archival or creation of new financial operations. Existing confirmation, pending, error handling and dependent refresh rules SHALL remain in effect.
 
 #### Scenario: Archive account
 - **WHEN** the user confirms archival and the API succeeds
@@ -100,8 +85,8 @@ The system MUST distinguish archiving an account with history from permanently d
 The system SHALL reconcile account mutations with all dependent financial data without combining mutation success with later refresh failures.
 
 #### Scenario: Account mutation succeeds
-- **WHEN** an account is created, renamed, archived, deleted, or selected as default
-- **THEN** account, user, snapshot, transaction, report, plan, debt, and expense-limit query families affected by the change are refreshed
+- **WHEN** an account is created, renamed, archived or deleted
+- **THEN** space-scoped account, historical-balance, transaction, report, plan, debt, and expense-limit query families affected by the change are refreshed
 
 #### Scenario: Dependent refresh fails
 - **WHEN** the server confirms an account mutation but a dependent refresh fails

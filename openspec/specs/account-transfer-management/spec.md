@@ -8,7 +8,7 @@ Define creation and lifecycle management of atomic movements between personal ac
 
 ### Requirement: Transfer entry point and account selection
 The system SHALL provide transfer management from account details opened on the dashboard,
-without a separate transfers widget, and require two different active personal accounts.
+without a separate transfers widget, and require two different active balance or saving accounts of the selected space.
 
 #### Scenario: Open a new transfer
 - **WHEN** the user activates the transfer action in account details
@@ -63,7 +63,7 @@ and description to be edited. Full paired context SHALL remain available in tran
 #### Scenario: Present a transfer
 - **WHEN** a transfer is listed in account details
 - **THEN** it shows the counterparty account, date, and the signed amount in the open account currency
-- **THEN** editing and deletion actions are available for that transfer
+- **THEN** editing and deletion are available only to its author, the space owner or manageTransactions, and only while both accounts are active
 
 #### Scenario: Edit a transfer
 - **WHEN** the user edits an existing transfer
@@ -103,4 +103,4 @@ The system SHALL reject invalid local inputs and refresh every affected account 
 
 #### Scenario: Transfer mutation succeeds
 - **WHEN** a transfer is created, updated, or deleted
-- **THEN** transfer, general transaction, account, snapshot, and report query families are refreshed for both accounts
+- **THEN** transfer, general transaction, space-scoped account, historical-balance, and report query families are refreshed for both accounts

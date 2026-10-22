@@ -247,7 +247,7 @@ reclassifying a successful creation as failed when a dependent refresh fails.
 
 #### Scenario: Refresh account-derived views
 - **WHEN** expense creation succeeds and the response identifies the affected account
-- **THEN** the system invalidates balance queries and account-snapshot queries for that account
+- **THEN** the system invalidates balance queries and space-scoped account timeline and historical-balance queries for that account
 
 #### Scenario: Refresh general transactions
 - **WHEN** expense creation succeeds
@@ -259,15 +259,15 @@ reclassifying a successful creation as failed when a dependent refresh fails.
   failed
 
 ### Requirement: Explicit expense account
-The system SHALL require an active personal account for expense creation and SHALL derive the expense currency from that account.
+The system SHALL require an active balance or saving account of the selected space for expense creation and SHALL derive the expense currency from that account.
 
 #### Scenario: Initialize account selection
-- **WHEN** the user opens expense creation and the authenticated user's default account is active
-- **THEN** that account is preselected and every active personal account remains available
+- **WHEN** the user opens expense creation
+- **THEN** selection starts empty and an explicit active balance or saving account of the selected space is required
 
 #### Scenario: Default account is unavailable
-- **WHEN** `defaultAccountId` is null, archived, or absent from loaded accounts
-- **THEN** the form leaves account selection empty and requires an explicit choice
+- **WHEN** old local state contains defaultAccountId
+- **THEN** it is ignored and no profile default is requested or sent
 
 #### Scenario: Map expense account
 - **WHEN** the user submits a valid expense
@@ -278,5 +278,5 @@ The system SHALL require an active personal account for expense creation and SHA
 - **THEN** the form displays a field-level error and does not submit
 
 #### Scenario: No active account
-- **WHEN** no active personal account exists
-- **THEN** expense submission is unavailable and the dialog offers account creation
+- **WHEN** no active balance or saving account of the selected space exists
+- **THEN** expense submission is unavailable and the dialog offers account creation only with manageAccounts, otherwise explains the required owner action

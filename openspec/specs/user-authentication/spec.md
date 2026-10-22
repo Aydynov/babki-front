@@ -50,11 +50,11 @@ The system SHALL retain entered login values and display localized, accessible f
 - **THEN** the login page reports a general retryable error without clearing the entered values
 
 ### Requirement: Public registration page
-The system SHALL provide a localized registration page at `/register` containing only required first name, last name, email, password, and currency controls, plus navigation to `/login`.
+The system SHALL provide a localized registration page at `/register` containing only required first name, last name, email, and password controls, plus navigation to `/login`.
 
 #### Scenario: Registration form defaults
 - **WHEN** an unauthenticated user opens `/register`
-- **THEN** the system displays the required registration fields with currency initialized to `RUB`
+- **THEN** the system displays the required registration fields without a currency control
 
 #### Scenario: Authenticated user opens registration
 - **WHEN** a user with a confirmed session navigates to `/register`
@@ -65,12 +65,12 @@ The system SHALL create and establish the new session from a schema-valid regist
 a validated internal destination when supplied, using `/main` otherwise.
 
 #### Scenario: User registers successfully
-- **WHEN** a user submits valid first name, last name, email, password, and currency values and `/auth/register` returns a valid authentication response without a valid internal destination
+- **WHEN** a user submits valid first name, last name, email, and password values and `/auth/register` returns a valid authentication response without a valid internal destination
 - **THEN** the system persists the token, caches the returned user, and navigates to `/main`
 
 #### Scenario: Optional profile values are omitted
 - **WHEN** the registration form submits its payload
-- **THEN** the system omits birth date and notes from the registration request
+- **THEN** the system omits birth date, currency and notes from the registration request
 
 #### Scenario: Registration restores an invitation destination
 - **WHEN** registration succeeds with a valid internal redirect to `/join`
@@ -111,7 +111,7 @@ The system SHALL validate authentication fields before submission using the fron
 - **THEN** the form displays a field-level password error and does not submit
 
 #### Scenario: Registration value exceeds its contract
-- **WHEN** a first or last name exceeds 100 characters, a password exceeds 128 characters, or currency is not a three-letter code
+- **WHEN** a first or last name exceeds 100 characters, or a password exceeds 128 characters
 - **THEN** the registration form displays the corresponding field error and does not submit
 
 #### Scenario: Authentication submission is pending
@@ -268,19 +268,19 @@ The system SHALL retain the active challenge after retryable factor failures and
 - **THEN** the system reports a general retryable error and does not establish a session
 
 ### Requirement: Currency-aware user contract
-The system SHALL use `defaultCurrency` and nullable `defaultAccountId` in authenticated user contracts while deferring authenticated profile-currency controls to a future change.
+The system SHALL validate auth/current-user responses without requiring defaultCurrency or defaultAccountId, and SHALL exclude these fields from profile changes. Registration SHALL send only firstName, lastName, email and password from the existing form; the API contract MAY accept optional notes without adding a new form control.
 
 #### Scenario: Submit registration currency
-- **WHEN** the registration form submits a supported currency
-- **THEN** the frontend maps that form value to the backend request field `currency`
+- **WHEN** the registration form is submitted
+- **THEN** no currency or defaultCurrency field is sent, including when old form data exists
 
 #### Scenario: Validate an authenticated user
-- **WHEN** login, registration, or current-user lookup returns a user
-- **THEN** the response is accepted only when it includes a supported `defaultCurrency` and a valid object id or null `defaultAccountId`
+- **WHEN** login, registration, recovery completion or current-user lookup returns a user without financial defaults
+- **THEN** the frontend accepts the response and establishes or preserves the confirmed session
 
 #### Scenario: No authenticated currency selector
-- **WHEN** an authenticated user opens the dashboard in this change
-- **THEN** the UI does not expose a control for changing `defaultCurrency`
+- **WHEN** an authenticated user opens profile or finance management
+- **THEN** profile currency and default-account controls are absent and profile PATCH omits both removed fields
 
 ### Requirement: Safe destination across authentication pages
 The system SHALL preserve a validated internal destination when switching between login and registration,

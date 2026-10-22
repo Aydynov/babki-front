@@ -112,12 +112,12 @@ reconcile them with authoritative server data.
 - **THEN** the system invalidates expense list and detail queries so active expense data refetches from the server
 
 ### Requirement: Refresh every deletion-dependent aggregate
-The system SHALL begin parallel refresh of all server-backed financial data affected by a confirmed expense deletion.
+The system SHALL begin parallel refresh of all affected space-scoped server-backed financial data affected by a confirmed expense deletion.
 
 #### Scenario: Refresh dependent query families
-- **WHEN** the transaction delete request succeeds
+- **WHEN** the DELETE /spaces/:spaceId/expenses/:id request succeeds
 - **THEN** the system invalidates transaction lists, monthly and yearly reports, expense limits, balances, and account
-  snapshots for the deleted expense's account
+  timeline and historical-balance data for the deleted expense's account
 
 #### Scenario: Reflect refreshed aggregates
 - **WHEN** the dependent refetches succeed
