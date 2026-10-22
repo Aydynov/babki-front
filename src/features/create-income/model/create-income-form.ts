@@ -11,42 +11,35 @@ interface IncomeAccount {
   currency: CurrencyCode;
 }
 
-export const getIncomeAccounts = <T extends IncomeAccount>(accounts: T[], currency: CurrencyCode) => (
+export const getIncomeAccounts = <T extends IncomeAccount>(accounts: T[], currency?: CurrencyCode) => (
   accounts.filter((account) => (
-    account.archivedAt === null && account.type === 'balance' && account.currency === currency
+    account.archivedAt === null && (currency === undefined || account.currency === currency)
   ))
 );
 
 export const createIncomeFormSchema = z
   .object({
     accountId: z.string().trim().min(1, 'required'),
-    source: z.string().trim().min(1, 'required').max(255, 'tooLong'),
+    description: z.string().trim().max(1000, 'tooLong'),
     amount: z
       .string()
       .trim()
       .min(1, 'required')
       .refine((value) => !Number.isNaN(Number(value)), 'invalid')
-      .refine((value) => Number(value) >= 0.01, 'min'),
-    transactionDate: z.string(),
+      .refine((value) => Number(value) > 0, 'min'),
+    transactionDate: z.string().min(1, 'required').pipe(z.iso.date('invalid')),
   });
 
 export type CreateIncomeFormValues = z.infer<typeof createIncomeFormSchema>;
 
 export const getDefaultCreateIncomeFormValues = (): CreateIncomeFormValues => ({
   accountId: '',
-  source: '',
+  description: '',
   amount: '',
   transactionDate: '',
 });
 
 export const defaultCreateIncomeFormValues = getDefaultCreateIncomeFormValues();
-
-export const getIncomeInitialAccountId = (
-  accounts: IncomeAccount[],
-  defaultAccountId: string | null,
-) => accounts.find(({ _id, archivedAt }) => (
-  _id === defaultAccountId && archivedAt === null
-))?._id ?? '';
 
 export const hasValidIncomeAmountPrecision = (
   amount: string,
@@ -57,7 +50,7 @@ export const mapCreateIncomeDto = (
   values: CreateIncomeFormValues,
 ): CreateIncomeDto => ({
   accountId: values.accountId.trim(),
-  source: values.source.trim(),
+  description: values.description.trim() || undefined,
   amount: Number(values.amount),
   transactionDate: values.transactionDate,
 });

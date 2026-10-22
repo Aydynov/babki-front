@@ -1,10 +1,8 @@
 import { z } from 'zod';
 import {
   entityMetaSchema,
-  objectIdSchema,
   paginatedResponseSchema,
 } from '@/shared/api';
-import { currencyCodeSchema } from '@/shared/lib/currency';
 
 export const userSchema = z
   .object({
@@ -12,8 +10,6 @@ export const userSchema = z
     lastName: z.string().max(100),
     email: z.email(),
     description: z.string().max(2000).optional(),
-    defaultCurrency: currencyCodeSchema,
-    defaultAccountId: objectIdSchema.nullable(),
   })
   .extend(entityMetaSchema.shape);
 
@@ -22,9 +18,7 @@ export const updateUserSchema = z.object({
   lastName: z.string().max(100),
   email: z.email(),
   description: z.string().max(2000).optional(),
-  defaultCurrency: currencyCodeSchema,
-  defaultAccountId: objectIdSchema.nullable(),
-}).partial();
+}).partial().strict();
 
 export const usersPaginatedResponseSchema = paginatedResponseSchema(userSchema);
 

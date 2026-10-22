@@ -1,7 +1,4 @@
-import type {
-  Expense,
-  ExpensesPaginatedResponse,
-} from './schemas';
+import type { Expense, ExpensesPaginatedResponse } from './schemas';
 
 export const replaceExpenseInPaginatedResponse = (
   expenses: ExpensesPaginatedResponse,
@@ -11,8 +8,6 @@ export const replaceExpenseInPaginatedResponse = (
 
   return {
     ...expenses,
-    items: expenses.items.map((expense) => (
-      expense._id === updatedExpense._id ? updatedExpense : expense
-    )),
+    items: expenses.items.map((expense) => (expense._id === updatedExpense._id ? updatedExpense : expense)),
   };
 };

@@ -1,1 +1,1 @@
-export type { BudgetScope, BudgetGroup } from './budget';
+export type { BudgetScope, BudgetSpace } from './budget';

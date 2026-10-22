@@ -4,12 +4,11 @@ import { resolveChartCurrency } from './resolve-chart-currency';
 
 export const useChartCurrency = (
   available: readonly CurrencyCode[] | undefined,
-  defaultCurrency: CurrencyCode,
 ) => {
   const [requestedCurrency, setRequestedCurrency] = useState<CurrencyCode>();
   const selectedCurrency = available === undefined
     ? undefined
-    : resolveChartCurrency(requestedCurrency, available, defaultCurrency);
+    : resolveChartCurrency(requestedCurrency, available);
 
   useEffect(() => {
     if (available !== undefined && requestedCurrency !== selectedCurrency) {

@@ -14,7 +14,7 @@ test('requires an account and maps it into the create request', async () => {
   const model = await modelPromise;
   const values = {
     accountId: activeAccount._id,
-    source: '  Зарплата  ',
+    description: '  Зарплата  ',
     amount: '1000.50',
     transactionDate: '2026-09-23',
   };
@@ -22,31 +22,16 @@ test('requires an account and maps it into the create request', async () => {
   assert.equal(model.createIncomeFormSchema?.safeParse(values).success, true);
   assert.deepEqual(model.mapCreateIncomeDto?.(values), {
     accountId: activeAccount._id,
-    source: 'Зарплата',
+    description: 'Зарплата',
     amount: 1000.5,
     transactionDate: '2026-09-23',
   });
   assert.equal(model.createIncomeFormSchema?.safeParse({ ...values, accountId: '' }).success, false);
 });
 
-test('preselects only a loaded active default account', async () => {
+test('starts with explicit account selection', async () => {
   const model = await modelPromise;
-  const archivedAccount = {
-    ...activeAccount,
-    _id: '507f1f77bcf86cd799439012',
-    archivedAt: '2026-09-01T00:00:00.000Z',
-  };
-
-  assert.equal(typeof model.getIncomeInitialAccountId, 'function');
-  assert.equal(
-    model.getIncomeInitialAccountId?.([activeAccount, archivedAccount], activeAccount._id),
-    activeAccount._id,
-  );
-  assert.equal(
-    model.getIncomeInitialAccountId?.([activeAccount, archivedAccount], archivedAccount._id),
-    '',
-  );
-  assert.equal(model.getIncomeInitialAccountId?.([activeAccount], null), '');
+  assert.equal(model.getDefaultCreateIncomeFormValues().accountId, '');
 });
 
 test('validates income amount precision for the selected account currency', async () => {
@@ -64,26 +49,27 @@ test('starts with an empty account when no usable default exists', async () => {
 
   assert.deepEqual(model.getDefaultCreateIncomeFormValues?.(), {
     accountId: '',
-    source: '',
+    description: '',
     amount: '',
     transactionDate: '',
   });
 });
 
-test('income eligibility excludes saving, archived and other-currency accounts before default selection', async () => {
+test('income eligibility allows saving and filters only active selected-currency accounts', async () => {
   const model = await modelPromise;
-  assert.equal(typeof model.getIncomeAccounts, 'function');
-  const accounts = [
-    activeAccount,
-    { ...activeAccount, _id: 'saving', type: 'saving' },
-    { ...activeAccount, _id: 'archived', archivedAt: '2026-10-01' },
-    { ...activeAccount, _id: 'usd', currency: 'USD' },
-  ];
-  const eligible = model.getIncomeAccounts(accounts, 'RUB');
-  assert.deepEqual(eligible, [activeAccount]);
-  ['saving', 'archived', 'usd', 'missing'].forEach((defaultId) => {
-    assert.equal(model.getIncomeInitialAccountId(eligible, defaultId), '');
-  });
-  assert.equal(model.getIncomeInitialAccountId(eligible, activeAccount._id), activeAccount._id);
-  assert.deepEqual(model.getIncomeAccounts([{ ...activeAccount, archivedAt: '2026-10-02' }], 'RUB'), []);
+  const saving = { ...activeAccount, _id: 'saving', type: 'saving' };
+  const usd = { ...activeAccount, _id: 'usd', currency: 'USD' };
+  const accounts = [activeAccount, saving, usd, { ...activeAccount, archivedAt: '2026-10-01' }];
+  assert.deepEqual(model.getIncomeAccounts(accounts, 'RUB'), [activeAccount, saving]);
+  assert.deepEqual(model.getIncomeAccounts(accounts), [activeAccount, saving, usd]);
+});
+
+test('requires a valid income date before submission', async () => {
+  const model = await modelPromise;
+  const values = {
+    accountId: activeAccount._id, description: '', amount: '1', transactionDate: '',
+  };
+  assert.equal(model.createIncomeFormSchema.safeParse(values).success, false);
+  assert.equal(model.createIncomeFormSchema.safeParse({ ...values, transactionDate: 'not-a-date' }).success, false);
+  assert.equal(model.createIncomeFormSchema.safeParse({ ...values, transactionDate: '2026-10-22' }).success, true);
 });

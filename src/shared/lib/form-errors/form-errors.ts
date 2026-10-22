@@ -1,4 +1,5 @@
 import type { StandardSchemaV1Issue } from '@tanstack/react-form';
+import { getApiErrorMessage } from '@/shared/api';
 
 function isStandardSchemaV1Issue(error: unknown): error is StandardSchemaV1Issue {
   return error !== null
@@ -8,6 +9,8 @@ function isStandardSchemaV1Issue(error: unknown): error is StandardSchemaV1Issue
 }
 
 export function getMutationErrorMessage(error: unknown) {
+  const message = getApiErrorMessage(error);
+  if (message !== undefined) return message;
   if (error && typeof error === 'object' && 'message' in error) {
     return String(error.message);
   }

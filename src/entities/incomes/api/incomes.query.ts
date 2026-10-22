@@ -1,10 +1,18 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useBudgetScope } from '@/entities/budgets/@x/incomes';
 import type { BudgetScope } from '@/shared/types';
 import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { loadPaginatedHistory } from '@/shared/lib/paginated-history';
 import { incomesApi } from './incomes.api';
-import type { CreateIncomeDto, ListIncomesQuery, UpdateIncomeDto } from '../model/schemas';
+import type {
+  CreateIncomeDto,
+  ListIncomesQuery,
+  UpdateIncomeDto,
+} from '../model/schemas';
 
 export const incomesQueryKeys = {
   all: ['incomes'] as const,
@@ -16,23 +24,30 @@ export const incomesQueryKeys = {
 };
 
 export const incomesQueryOptions = {
-  findAll: (query: ListIncomesQuery = {}, scope?: BudgetScope) => queryOptions({
+  findAll: (query: ListIncomesQuery, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, incomesQueryKeys.list(query)),
     queryFn: ({ signal }) => incomesApi.findAll(query, scope, signal),
   }),
-  findOne: (incomeId: string, scope?: BudgetScope) => queryOptions({
+  findOne: (incomeId: string, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, incomesQueryKeys.detail(incomeId)),
     queryFn: ({ signal }) => incomesApi.findOne(incomeId, scope, signal),
   }),
-  findTotalRevenue: (query: ListIncomesQuery = {}, scope?: BudgetScope) => queryOptions({
+  findTotalRevenue: (query: ListIncomesQuery, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, incomesQueryKeys.totalRevenue(query)),
     queryFn: ({ signal }) => incomesApi.findTotalRevenue(query, scope, signal),
   }),
   currencyHistory: (
-    query: Pick<ListIncomesQuery, 'accountId' | 'fromDate' | 'toDate' | 'currency'>,
-    scope?: BudgetScope,
+    query: Pick<
+      ListIncomesQuery,
+      'accountId' | 'fromDate' | 'toDate' | 'currency'
+    >,
+    scope: BudgetScope,
   ) => queryOptions({
-    queryKey: scopedKey(scope, [...incomesQueryKeys.listAll(), 'currency-history', query]),
+    queryKey: scopedKey(scope, [
+      ...incomesQueryKeys.listAll(),
+      'currency-history',
+      query,
+    ]),
     queryFn: ({ signal }) => loadPaginatedHistory(
       (pagination) => incomesApi.findAll({ ...query, ...pagination }, scope, signal),
     ),
@@ -46,7 +61,10 @@ export const useIncomesQueryOptions = () => {
     findOne: (incomeId: string) => incomesQueryOptions.findOne(incomeId, scope),
     findTotalRevenue: (query: ListIncomesQuery = {}) => incomesQueryOptions.findTotalRevenue(query, scope),
     currencyHistory: (
-      query: Pick<ListIncomesQuery, 'accountId' | 'fromDate' | 'toDate' | 'currency'>,
+      query: Pick<
+        ListIncomesQuery,
+        'accountId' | 'fromDate' | 'toDate' | 'currency'
+      >,
     ) => incomesQueryOptions.currencyHistory(query, scope),
   };
 };
@@ -68,11 +86,13 @@ export const useUpdateIncomeMutation = () => {
   const client = useQueryClient();
   return useMutation({
     retry: false,
-    mutationFn: ({ incomeId, payload }: { incomeId: string; payload: UpdateIncomeDto }) => incomesApi.update(
+    mutationFn: ({
       incomeId,
       payload,
-      scope,
-    ),
+    }: {
+      incomeId: string;
+      payload: UpdateIncomeDto;
+    }) => incomesApi.update(incomeId, payload, scope),
     onSuccess: () => {
       invalidateBudget(client, scope).catch(() => undefined);
     },

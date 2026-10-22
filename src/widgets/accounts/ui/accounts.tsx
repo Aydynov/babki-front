@@ -1,5 +1,4 @@
 import { useAccountsQueryOptions } from '@/entities/accounts';
-import { usersQueryOptions } from '@/entities/users';
 import { CreateAccountButton } from '@/features/manage-accounts';
 import { useSelectedPeriod } from '@/features/select-period';
 import { Button } from '@/shared/ui/button';
@@ -27,15 +26,13 @@ export function Accounts() {
   const accountsQuery = useQuery(accountsQueryOptions.findAll({
     toDate: selectedPeriod.toDate,
   }));
-  const userQuery = useQuery(usersQueryOptions.me());
-  const loading = accountsQuery.isLoading || userQuery.isLoading;
-  const unavailable = !accountsQuery.data || !userQuery.data;
-  const groups = groupAccounts(accountsQuery.data ?? [], userQuery.data?.defaultCurrency ?? '', i18n.language, mode);
+  const loading = accountsQuery.isLoading;
+  const unavailable = !accountsQuery.data;
+  const groups = groupAccounts(accountsQuery.data ?? [], i18n.language, mode);
   const selectedAccount = accountsQuery.data?.find((account) => account._id === selectedAccountId);
   const accountNames = new Map((accountsQuery.data ?? []).map((account) => [account._id, account.name]));
   const retry = () => {
     accountsQuery.refetch().catch(() => undefined);
-    userQuery.refetch().catch(() => undefined);
   };
 
   return (
@@ -67,7 +64,7 @@ export function Accounts() {
         </div>
       )}
 
-      {(accountsQuery.isError || userQuery.isError) && (
+      {(accountsQuery.isError) && (
         <QueryError
           compact={!unavailable}
           message={t('accounts.errors.load')}

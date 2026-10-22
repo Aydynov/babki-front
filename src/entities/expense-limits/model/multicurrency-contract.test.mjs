@@ -16,8 +16,10 @@ test('expense limits carry immutable currency through response, create, and filt
   const categoryId = '507f1f77bcf86cd799439011';
   const limit = {
     _id: '507f1f77bcf86cd799439012',
+    spaceId: categoryId,
     category: {
       _id: categoryId,
+      spaceId: categoryId,
       name: 'Еда',
       color: '#ffffff',
       isArchived: false,

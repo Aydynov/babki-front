@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   dateStringSchema,
+  financialActorSchema,
   entityMetaSchema,
   objectIdSchema,
   paginatedResponseSchema,
@@ -11,7 +12,7 @@ import { currencyCodeSchema, type CurrencyCode } from '@/shared/lib/currency';
 
 export const transferEffectSchema = z.object({
   accountId: objectIdSchema,
-  snapshotId: objectIdSchema,
+  snapshotId: objectIdSchema.optional(),
   amount: z.number().positive(),
   currency: currencyCodeSchema,
 });
@@ -22,38 +23,40 @@ export const effectiveRateSchema = z.object({
   rate: z.number().positive(),
 });
 
-export const transferSchema = z.object({
-  createdBy: objectIdSchema.optional(),
-  createdByActor: z.object({
-    userId: objectIdSchema,
-    firstName: z.string().nullable(),
-    lastName: z.string().nullable(),
-    isAnonymized: z.boolean(),
-  }).optional(),
-  type: z.literal('transfer'),
-  transactionDate: dateStringSchema,
-  description: z.string().max(1000).optional(),
-  source: transferEffectSchema,
-  destination: transferEffectSchema,
-  effectiveRate: effectiveRateSchema,
-}).extend(entityMetaSchema.shape).refine(
-  ({ source, destination }) => (
-    source.currency !== destination.currency || source.amount === destination.amount
-  ),
-  { message: 'sameCurrencyAmounts', path: ['destination', 'amount'] },
-);
+export const transferSchema = z
+  .object({
+    createdBy: objectIdSchema,
+    createdByActor: financialActorSchema,
+    type: z.literal('transfer'),
+    transactionDate: dateStringSchema,
+    description: z.string().max(1000).optional(),
+    source: transferEffectSchema,
+    destination: transferEffectSchema,
+    effectiveRate: effectiveRateSchema,
+  })
+  .extend({ ...entityMetaSchema.shape, spaceId: objectIdSchema })
+  .refine(
+    ({ source, destination }) => source.currency !== destination.currency
+      || source.amount === destination.amount,
+    { message: 'sameCurrencyAmounts', path: ['destination', 'amount'] },
+  );
 
-export const createTransferSchema = z.object({
-  sourceAccountId: objectIdSchema,
-  destinationAccountId: objectIdSchema,
-  sourceAmount: z.number().positive(),
-  destinationAmount: z.number().positive(),
-  transactionDate: dateStringSchema,
-  description: z.string().max(1000).optional(),
-}).refine(
-  ({ sourceAccountId, destinationAccountId }) => sourceAccountId !== destinationAccountId,
-  { message: 'accountsDistinct', path: ['destinationAccountId'] },
-);
+export const createTransferSchema = z
+  .object({
+    sourceAccountId: objectIdSchema,
+    destinationAccountId: objectIdSchema,
+    sourceAmount: z.number().positive(),
+    destinationAmount: z.number().positive(),
+    transactionDate: dateStringSchema,
+    description: z.string().max(1000).optional(),
+  })
+  .refine(
+    ({ sourceAccountId, destinationAccountId }) => sourceAccountId !== destinationAccountId,
+    {
+      message: 'accountsDistinct',
+      path: ['destinationAccountId'],
+    },
+  );
 
 export const updateTransferSchema = z.object({
   sourceAmount: z.number().positive().optional(),
@@ -74,11 +77,14 @@ export const hasValidSameCurrencyTransferAmounts = (
   transfer: Pick<CreateTransferDto, 'sourceAmount' | 'destinationAmount'>,
   sourceCurrency: CurrencyCode,
   destinationCurrency: CurrencyCode,
-) => sourceCurrency !== destinationCurrency || transfer.sourceAmount === transfer.destinationAmount;
+) => sourceCurrency !== destinationCurrency
+  || transfer.sourceAmount === transfer.destinationAmount;
 
 export type TransferEffect = z.infer<typeof transferEffectSchema>;
 export type Transfer = z.infer<typeof transferSchema>;
 export type CreateTransferDto = z.infer<typeof createTransferSchema>;
 export type UpdateTransferDto = z.infer<typeof updateTransferSchema>;
 export type ListTransfersQuery = z.infer<typeof listTransfersQuerySchema>;
-export type TransfersPaginatedResponse = z.infer<typeof transfersPaginatedResponseSchema>;
+export type TransfersPaginatedResponse = z.infer<
+  typeof transfersPaginatedResponseSchema
+>;

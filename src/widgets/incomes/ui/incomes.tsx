@@ -1,6 +1,5 @@
-import { useBudgetScope } from '@/entities/budgets';
+import { CreateIncomeButton } from '@/features/create-income';
 import { useIncomesQueryOptions } from '@/entities/incomes';
-import { usersQueryOptions } from '@/entities/users';
 import { useSelectedPeriod } from '@/features/select-period';
 import { sortCurrencyCodes } from '@/shared/lib/currency';
 import { getPercent } from '@/shared/lib/getPercent';
@@ -19,7 +18,6 @@ import { IncomeDetailsDialog } from './income-details-dialog';
 
 export function Incomes() {
   const incomesQueryOptions = useIncomesQueryOptions();
-  const scope = useBudgetScope();
   const period = useSelectedPeriod();
   const revenue = useQuery(incomesQueryOptions.findTotalRevenue(period));
   const previousMonth = subMonths(parseISO(period.fromDate), 1);
@@ -31,20 +29,16 @@ export function Incomes() {
     }),
     enabled: hasIncome,
   });
-  const user = useQuery(usersQueryOptions.me());
   const { t } = useTranslation();
   const [openCurrencies, setOpenCurrencies] = useState<string[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
   const detailsTrigger = useRef<HTMLButtonElement | null>(null);
   const card = useRef<HTMLDivElement | null>(null);
-  const defaultCurrency = user.data?.defaultCurrency ?? 'RUB';
-  const currencies = sortCurrencyCodes(revenue.data?.currencies.map(({ currency }) => currency) ?? [], defaultCurrency);
-  if (currencies.length === 0 && scope.kind === 'personal') currencies.push(defaultCurrency);
-  const loading = revenue.isLoading || user.isLoading;
-  const unavailable = !revenue.data || !user.data;
+  const currencies = sortCurrencyCodes(revenue.data?.currencies.map(({ currency }) => currency) ?? []);
+  const loading = revenue.isLoading;
+  const unavailable = !revenue.data;
   const retry = () => {
     revenue.refetch().catch(() => undefined);
-    user.refetch().catch(() => undefined);
   };
 
   return (
@@ -53,7 +47,10 @@ export function Incomes() {
       tabIndex={-1}
       className="flex w-full min-w-0 max-w-xl flex-col gap-3 p-3.5"
     >
-      <Typography.Title3 className="text-muted-foreground uppercase">{t('incomes.title')}</Typography.Title3>
+      <div className="flex items-center justify-between">
+        <Typography.Title3 className="text-muted-foreground uppercase">{t('incomes.title')}</Typography.Title3>
+        {currencies.length === 0 && <CreateIncomeButton />}
+      </div>
       {loading && (
         <div
           className="flex flex-col gap-2"
@@ -64,7 +61,7 @@ export function Incomes() {
           <Skeleton className="h-10 w-full" />
         </div>
       )}
-      {(revenue.isError || user.isError) && <QueryError compact={!unavailable} onRetry={retry} />}
+      {(revenue.isError) && <QueryError compact={!unavailable} onRetry={retry} />}
       {hasIncome && previousRevenue.isError && (
         <QueryError
           compact
@@ -74,7 +71,7 @@ export function Incomes() {
           }}
         />
       )}
-      {!loading && !unavailable && currencies.length === 0 && <p>Пока нет семейных доходов.</p>}
+      {!loading && !unavailable && currencies.length === 0 && <p>Пока нет доходов.</p>}
       {!loading && !unavailable && currencies.map((currency) => (
         <IncomeCurrencyRow
           key={currency}

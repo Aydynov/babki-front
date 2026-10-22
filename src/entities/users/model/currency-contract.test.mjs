@@ -22,28 +22,21 @@ const baseUser = {
   firstName: 'Иван',
   lastName: 'Петров',
   email: 'user@example.ru',
-  defaultCurrency: 'RUB',
 };
 
-test('requires default currency and accepts nullable default account', async () => {
+test('accepts user and auth responses without financial defaults', async () => {
   const schemas = await loadSchemas();
+  assert.deepEqual(schemas.userSchema.parse(baseUser), {
+    _id: baseUser._id,
+    firstName: baseUser.firstName,
+    lastName: baseUser.lastName,
+    email: baseUser.email,
+  });
+});
 
-  assert.ok(schemas.userSchema, 'userSchema must be exported');
-  assert.equal(schemas.userSchema.safeParse({
-    ...baseUser,
-    defaultAccountId: null,
-  }).success, true);
-  assert.equal(schemas.userSchema.safeParse({
-    ...baseUser,
-    defaultAccountId: '507f191e810c19729de860ea',
-  }).success, true);
-  assert.equal(schemas.userSchema.safeParse({
-    ...baseUser,
-    defaultCurrency: undefined,
-    defaultAccountId: null,
-  }).success, false);
-  assert.equal(schemas.userSchema.safeParse({
-    ...baseUser,
-    defaultAccountId: 'not-an-object-id',
-  }).success, false);
+test('rejects removed profile financial fields in outgoing changes', async () => {
+  const schemas = await loadSchemas();
+  assert.equal(schemas.updateUserSchema.safeParse({ defaultCurrency: 'RUB' }).success, false);
+  assert.equal(schemas.updateUserSchema.safeParse({ defaultAccountId: null }).success, false);
+  assert.deepEqual(schemas.updateUserSchema.parse({ firstName: 'Анна' }), { firstName: 'Анна' });
 });

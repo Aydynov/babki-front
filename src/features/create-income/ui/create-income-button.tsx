@@ -1,8 +1,6 @@
-import { BudgetLabel, useBudget, useBudgetPermission } from '@/entities/budgets';
-import { z } from 'zod';
+import { BudgetLabel, useBudgetPermission } from '@/entities/budgets';
 import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { useCreateIncomeMutation } from '@/entities/incomes';
-import { usersQueryOptions } from '@/entities/users';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
@@ -29,7 +27,6 @@ import { useTranslation } from 'react-i18next';
 import {
   createIncomeFormSchema,
   defaultCreateIncomeFormValues,
-  getIncomeInitialAccountId,
   getIncomeAccounts,
   hasValidIncomeAmountPrecision,
   mapCreateIncomeDto,
@@ -37,7 +34,7 @@ import {
 
 interface CreateIncomeButtonProps {
   className?: string;
-  currency: CurrencyCode;
+  currency?: CurrencyCode;
 }
 
 const mapErrorMessage = (code: string | undefined) => {
@@ -59,19 +56,15 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
   className,
   currency,
 }) => {
-  const { scope } = useBudget();
   const canCreateAccount = useBudgetPermission('manageAccounts');
   const { t } = useTranslation();
   const createIncomeMutation = useCreateIncomeMutation();
   const accountsQueryOptions = useAccountsQueryOptions();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
-  const userQuery = useQuery(usersQueryOptions.me());
   const [open, setOpen] = useState(false);
   const accounts = useMemo(
-    () => (scope.kind === 'group'
-      ? (accountsQuery.data ?? []).filter((a) => a.archivedAt === null && a.currency === currency)
-      : getIncomeAccounts(accountsQuery.data ?? [], currency)),
-    [accountsQuery.data, currency, scope.kind],
+    () => getIncomeAccounts(accountsQuery.data ?? [], currency),
+    [accountsQuery.data, currency],
   );
 
   const mutationError = getMutationErrorMessage(createIncomeMutation.error);
@@ -79,23 +72,13 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
   const form = useForm({
     defaultValues: defaultCreateIncomeFormValues,
     validators: {
-      onSubmit: scope.kind === 'group' ? createIncomeFormSchema.extend({
-        source: z.string().max(1000),
-        amount: z.string().refine((v) => Number.isFinite(Number(v)) && Number(v) > 0, 'min'),
-      }) : createIncomeFormSchema,
+      onSubmit: createIncomeFormSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       const account = accounts.find(({ _id }) => _id === value.accountId);
       if (!account || !hasValidIncomeAmountPrecision(value.amount, account.currency)) return;
       if (value.transactionDate.slice(0, 10) < account.openedAt.slice(0, 10)) return;
-      await createIncomeMutation.mutateAsync(scope.kind === 'group'
-        ? {
-          accountId: value.accountId,
-          amount: Number(value.amount),
-          transactionDate: value.transactionDate,
-          description: value.source.trim(),
-        }
-        : mapCreateIncomeDto(value));
+      await createIncomeMutation.mutateAsync(mapCreateIncomeDto(value));
 
       setOpen(false);
       formApi.reset();
@@ -105,45 +88,17 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
 
   const values = useStore(form.store, (state) => state.values);
   const selectedAccount = accounts.find(({ _id }) => _id === values.accountId);
+  useEffect(() => {
+    if (accountsQuery.isSuccess && values.accountId && !selectedAccount) form.setFieldValue('accountId', '');
+  }, [accountsQuery.isSuccess, form, selectedAccount, values.accountId]);
   const amountPrecisionInvalid = selectedAccount !== undefined
     && values.amount.trim() !== ''
     && !hasValidIncomeAmountPrecision(values.amount, selectedAccount.currency);
   const activeAccountsUnavailable = accountsQuery.isLoading
-    || userQuery.isLoading
     || !selectedAccount;
   const moneyStep = selectedAccount
     ? String(1 / (10 ** getCurrencyMinorUnits(selectedAccount.currency)))
     : '0.01';
-
-  useEffect(() => {
-    if (scope.kind === 'group') return;
-    if (
-      !open
-      || !accountsQuery.isSuccess
-      || !userQuery.isSuccess
-    ) return;
-
-    if (values.accountId) {
-      if (!selectedAccount) form.setFieldValue('accountId', '');
-      return;
-    }
-
-    const accountId = getIncomeInitialAccountId(
-      accounts,
-      userQuery.data?.defaultAccountId ?? null,
-    );
-    if (accountId) form.setFieldValue('accountId', accountId);
-  }, [
-    accounts,
-    scope.kind,
-    accountsQuery.isSuccess,
-    form,
-    open,
-    userQuery.data,
-    userQuery.isSuccess,
-    values.accountId,
-    selectedAccount,
-  ]);
 
   const resetForm = () => {
     form.reset();
@@ -178,7 +133,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
           `,
           className,
         )}
-        aria-label={t('incomes.create.open', { currency })}
+        aria-label={currency ? t('incomes.create.open', { currency }) : t('incomes.create.openWithoutCurrency')}
       >
         <LucidePlus className="size-5" />
       </DialogPrimitive.Trigger>
@@ -191,8 +146,8 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
             await form.handleSubmit();
           }}
         >
+          <BudgetLabel />
           <Dialog.Header>
-            <BudgetLabel />
             <Dialog.Title>{t('incomes.create.title')}</Dialog.Title>
 
             <div className="flex gap-2.5">
@@ -243,8 +198,8 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                       label={t('incomes.create.fields.account')}
                       placeholder={t('incomes.create.accounts.placeholder')}
                       emptyMessage={t('incomes.create.accounts.empty', { currency })}
-                      isLoading={accountsQuery.isLoading || userQuery.isLoading}
-                      error={accountsQuery.isError || userQuery.isError
+                      isLoading={accountsQuery.isLoading}
+                      error={accountsQuery.isError
                         ? t('incomes.create.accounts.error')
                         : undefined}
                       disabled={createIncomeMutation.isPending}
@@ -256,12 +211,13 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
               }}
             </form.Field>
 
-            <form.Field name="source">
+            <form.Field name="description">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
 
                 return (
                   <div>
+                    <Input.Label htmlFor="description">{t('incomes.create.fields.description')}</Input.Label>
                     <Input.Base
                       id={field.name}
                       name={field.name}
@@ -271,11 +227,10 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                         clearMutationError();
                         field.handleChange(event.target.value);
                       }}
-                      placeholder={scope.kind === 'group'
-                        ? 'Описание дохода (необязательно)' : t('incomes.create.fields.name')}
+                      placeholder={t('incomes.create.fields.descriptionPlaceholder')}
                       hasError={Boolean(fieldError)}
                       disabled={createIncomeMutation.isPending}
-                      maxLength={150}
+                      maxLength={1000}
                     />
                     {fieldError && <Input.Error>{fieldError}</Input.Error>}
                   </div>
@@ -295,6 +250,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
 
                 return (
                   <div>
+                    <Input.Label htmlFor="amount">{t('incomes.create.fields.amountLabel')}</Input.Label>
                     <Input.Base
                       id={field.name}
                       name={field.name}
@@ -324,10 +280,12 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
 
                 return (
                   <>
+                    <Input.Label htmlFor="create-income-date">{t('incomes.create.fields.date')}</Input.Label>
                     <Input.Base
                       id="create-income-date"
                       name={field.name}
                       type="date"
+                      min={selectedAccount?.openedAt.slice(0, 10)}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) => {

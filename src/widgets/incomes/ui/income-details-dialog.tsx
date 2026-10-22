@@ -1,3 +1,4 @@
+import { actorLabel } from '@/shared/lib/actor-label';
 import { useState } from 'react';
 import { IncomeActions } from '@/features/manage-income';
 import { useAccountsQueryOptions } from '@/entities/accounts';
@@ -69,13 +70,11 @@ export function IncomeDetailsDialog({
               <tr key={item._id}>
                 <td className={cellClass}>{new Date(item.transactionDate).toLocaleDateString(i18n.language)}</td>
                 <td className={cellClass}>
-                  {item.source || item.description || t('incomes.details.unknownSource')}
+                  {item.description || t('incomes.details.unknownSource')}
                   {item.createdByActor && (
                   <p className="text-muted-foreground">
                     Добавил(а):
-                    {item.createdByActor.isAnonymized
-                      ? 'Удалённый пользователь' : [item.createdByActor.firstName, item.createdByActor.lastName]
-                        .filter(Boolean).join(' ')}
+                    {actorLabel(item.createdByActor)}
                   </p>
                   )}
                   <IncomeActions income={item} onUnavailable={() => setUnavailableNotice(true)} />

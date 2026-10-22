@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react';
-import type { BudgetGroup, BudgetScope } from '@/shared/types';
+import type { BudgetSpace, BudgetScope } from '@/shared/types';
 
 export interface BudgetContextValue {
   scope: BudgetScope;
-  group?: BudgetGroup;
+  space: BudgetSpace;
   title: string;
 }
 
@@ -15,12 +15,12 @@ export const useBudget = () => {
   return budget;
 };
 export const useBudgetScope = () => useBudget().scope;
-export const useBudgetPermission = (permission: keyof BudgetGroup['permissions']) => {
-  const { scope, group } = useBudget();
-  return scope.kind === 'personal' || group?.permissions[permission] === true;
+export const useBudgetPermission = (permission: keyof BudgetSpace['permissions']) => {
+  const { space } = useBudget();
+  return space.permissions[permission];
 };
 export const useCanManageRecord = (createdBy?: string, participantId?: string) => {
-  const { scope, group } = useBudget();
-  return scope.kind === 'personal' || group?.role === 'owner' || group?.permissions.manageTransactions === true
+  const { scope, space } = useBudget();
+  return space.role === 'owner' || space.permissions.manageTransactions === true
     || createdBy === scope.userId || participantId === scope.userId;
 };

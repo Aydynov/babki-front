@@ -1,3 +1,4 @@
+import { useCanManageRecord } from '@/entities/budgets';
 import {
   type Expense,
   useUpdateExpenseMutation,
@@ -30,12 +31,14 @@ export const EditExpenseDialog: FC<EditExpenseDialogProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  const canAssignParticipant = useCanManageRecord(expense.createdBy);
   const updateExpenseMutation = useUpdateExpenseMutation();
   const defaultValues = useMemo(() => getEditExpenseFormValues(expense), [expense]);
   const initialAmountOverridden = useMemo(() => isExpenseAmountOverridden(
     defaultValues.amount,
     defaultValues.items,
-  ), [defaultValues]);
+    expense.currency,
+  ), [defaultValues, expense.currency]);
 
   const handleClose = () => {
     if (updateExpenseMutation.isPending) return;
@@ -55,6 +58,8 @@ export const EditExpenseDialog: FC<EditExpenseDialogProps> = ({
           defaultValues={defaultValues}
           initialAmountOverridden={initialAmountOverridden}
           currentCategory={expense.category}
+          canAssignParticipant={canAssignParticipant}
+          participantActor={expense.participantActor}
           dateDisabled
           immutableCurrency={expense.currency}
           pending={updateExpenseMutation.isPending}
@@ -74,7 +79,9 @@ export const EditExpenseDialog: FC<EditExpenseDialogProps> = ({
           onSubmit={async (values) => {
             await updateExpenseMutation.mutateAsync({
               expenseId: expense._id,
-              payload: mapUpdateExpenseDto(values),
+              payload: mapUpdateExpenseDto(canAssignParticipant ? values : {
+                ...values, participantId: expense.participantId, originalParticipantId: expense.participantId,
+              }),
             });
             onClose();
           }}

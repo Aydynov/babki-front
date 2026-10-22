@@ -1,7 +1,4 @@
-export {
-  reportsQueryKeys,
-  reportsQueryOptions,
-} from './api/reports.query';
+export { reportsQueryKeys, reportsQueryOptions } from './api/reports.query';
 export {
   findMonthlyReportsByQuerySchema,
   findYearlyReportsByQuerySchema,

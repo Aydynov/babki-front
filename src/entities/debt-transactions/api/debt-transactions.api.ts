@@ -3,10 +3,7 @@ import { budgetPath } from '@/shared/lib/budget-api';
 import { apiClient, parseRequiredWithSchema } from '@/shared/api';
 import {
   type DebtTransaction,
-  type GroupRepayment,
   debtTransactionSchema,
-  groupRepaymentSchema,
-  groupRepaymentsPaginatedResponseSchema,
   debtTransactionsPaginatedResponseSchema,
   type ListDebtTransactionsQuery,
   listDebtTransactionsQuerySchema,
@@ -17,31 +14,43 @@ class DebtTransactionsApi {
 
   async findAll(
     debtId: string,
-    query: ListDebtTransactionsQuery = {},
-    signal?: AbortSignal,
-    scope?: BudgetScope,
-  ): Promise<{ items: (DebtTransaction | GroupRepayment)[]; total: number; page: number; limit: number }> {
+    query: ListDebtTransactionsQuery,
+    signal: AbortSignal | undefined,
+    scope: BudgetScope,
+  ): Promise<{
+    items: DebtTransaction[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const params = listDebtTransactionsQuerySchema.parse(query);
     const response = await this.client.get(
-      budgetPath(scope, `/debts/${debtId}/${scope?.kind === 'group' ? 'repayments' : 'transactions'}`),
-      { params, signal },
+      budgetPath(scope, `/debts/${debtId}/repayments`),
+      {
+        params,
+        signal,
+      },
     );
 
-    return parseRequiredWithSchema(scope?.kind === 'group'
-      ? groupRepaymentsPaginatedResponseSchema : debtTransactionsPaginatedResponseSchema, response.data);
+    return parseRequiredWithSchema(
+      debtTransactionsPaginatedResponseSchema,
+      response.data,
+    );
   }
 
-  async findOne(debtId: string, debtTransactionId: string, signal?: AbortSignal, scope?: BudgetScope) {
-    const collection = scope?.kind === 'group' ? 'repayments' : 'transactions';
+  async findOne(
+    debtId: string,
+    debtTransactionId: string,
+    signal: AbortSignal | undefined,
+    scope: BudgetScope,
+  ) {
+    const collection = 'repayments';
     const response = await this.client.get(
       budgetPath(scope, `/debts/${debtId}/${collection}/${debtTransactionId}`),
       { signal },
     );
 
-    return parseRequiredWithSchema(
-      scope?.kind === 'group' ? groupRepaymentSchema : debtTransactionSchema,
-      response.data,
-    );
+    return parseRequiredWithSchema(debtTransactionSchema, response.data);
   }
 }
 

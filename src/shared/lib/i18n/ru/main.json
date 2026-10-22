@@ -288,18 +288,23 @@
       "fields": {
         "account": "Счёт",
         "name": "Источник",
-        "amount": "00.00"
+        "amount": "00.00",
+        "description": "Описание",
+        "descriptionPlaceholder": "Описание дохода (необязательно)",
+        "amountLabel": "Сумма",
+        "date": "Дата дохода"
       },
       "accounts": {
         "placeholder": "Выберите счёт",
-        "empty": "Нет активных расчётных счетов в {{currency}}. Добавьте подходящий счёт.",
+        "empty": "Нет активных счетов в {{currency}}. Выберите другой счёт или добавьте подходящий.",
         "error": "Не удалось загрузить счета."
       },
       "validation": {
         "precision": "Сумма не соответствует точности валюты {{currency}}"
       },
       "open": "Добавить доход в {{currency}}",
-      "currency": "Валюта дохода: {{currency}}"
+      "currency": "Валюта дохода: {{currency}}",
+      "openWithoutCurrency": "Добавить доход"
     },
     "history": {
       "expand": "Показать последние доходы в {{currency}}",
@@ -311,10 +316,10 @@
       "open": "Открыть все доходы в {{currency}}",
       "title": "Доходы · {{currency}}",
       "date": "Дата",
-      "source": "Источник",
+      "source": "Описание",
       "account": "Счёт",
       "amount": "Сумма",
-      "unknownSource": "Без источника",
+      "unknownSource": "Без описания",
       "unknownAccount": "Неизвестный счёт",
       "loading": "Загрузка доходов",
       "error": "Не удалось загрузить доходы",

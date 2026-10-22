@@ -1,4 +1,8 @@
-export { useDebtsQueryOptions, useArchiveDebtMutation, useCancelDebtRepaymentMutation } from './api/debts.query';
+export {
+  useDebtsQueryOptions,
+  useArchiveDebtMutation,
+  useCancelDebtRepaymentMutation,
+} from './api/debts.query';
 export {
   debtsQueryKeys,
   debtsQueryOptions,
@@ -25,8 +29,3 @@ export type {
   RepayDebtDto,
   UpdateDebtDto,
 } from './model/schemas';
-export {
-  groupDebtSchema, groupDebtsPaginatedResponseSchema, createGroupDebtSchema,
-  updateGroupDebtSchema, repayGroupDebtSchema,
-} from './model/schemas';
-export type { GroupDebt, CreateGroupDebtDto, UpdateGroupDebtDto } from './model/schemas';

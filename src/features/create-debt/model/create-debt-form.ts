@@ -30,8 +30,6 @@ export const createDebtFormSchema = z
     }
   });
 
-export const createGroupDebtFormSchema = z.object(createDebtFormSchema.shape);
-
 export type CreateDebtFormValues = z.infer<typeof createDebtFormSchema>;
 
 export const defaultCreateDebtFormValues: CreateDebtFormValues = {

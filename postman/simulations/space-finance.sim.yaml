@@ -1,0 +1,5 @@
+simulation: space-finance
+routing: path
+mocks:
+  - routeKey: api
+    path: ../mocks/space-finance/config.yaml

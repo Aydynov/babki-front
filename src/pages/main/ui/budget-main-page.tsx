@@ -1,32 +1,35 @@
 import { useEffect, useState } from 'react';
 import { LucideArrowRight, LucideUserPlus, LucideX } from 'lucide-react';
-import { useBlocker, useNavigate, useSearch } from '@tanstack/react-router';
+import {
+  Link, useBlocker, useNavigate, useSearch,
+} from '@tanstack/react-router';
 import { useIsMutating, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { BudgetProvider } from '@/entities/budgets';
-import { groupsQueryOptions } from '@/entities/groups';
+import { spacesQueryOptions } from '@/entities/spaces';
 import { usersQueryOptions } from '@/entities/users';
-import { BudgetSelector } from '@/features/manage-groups';
+import { BudgetSelector } from '@/features/manage-spaces';
 import { requestAccountManagement, accountsQueryOptions } from '@/entities/accounts';
-import { GroupInvitations } from '@/features/group-invitations';
+import { SpaceInvitations } from '@/features/space-invitations';
 import { readBudgetPreference, resolveBudgetChoice, saveBudgetPreference } from '@/shared/lib/budget-scope';
 import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Button } from '@/shared/ui/button';
 import type { BudgetScope } from '@/shared/types';
+import { LogoutButton, TwoFactorManagementDialog } from '@/features/auth';
 import { MainPage } from './main-page';
 
-function FamilySetup({ groupId, scope }: { groupId: string; scope: BudgetScope }) {
+function SpaceSetup({ spaceId, scope }: { spaceId: string; scope: BudgetScope }) {
   const accounts = useQuery(accountsQueryOptions.findAll({}, scope));
-  const group = useQuery(groupsQueryOptions.detail(scope.userId, groupId));
+  const space = useQuery(spacesQueryOptions.detail(scope.userId, spaceId));
   const [invite, setInvite] = useState(false);
-  if (group.data?.role !== 'owner' || !accounts.isSuccess) return null;
+  if (space.data?.role !== 'owner' || !accounts.isSuccess) return null;
   return (
     <div className="mx-(--app-inline-padding) mt-3 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed px-4 py-3">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-sm font-medium">
-            {accounts.data.length === 0 ? 'Начните семейный учёт' : 'Ведите бюджет вместе'}
+            {accounts.data.length === 0 ? 'Начните учёт' : 'Ведите бюджет вместе'}
           </p>
           <p className="text-xs leading-relaxed text-muted-foreground">
             {accounts.data.length === 0
@@ -44,15 +47,15 @@ function FamilySetup({ groupId, scope }: { groupId: string; scope: BudgetScope }
           <Button.Base
             variant="outline"
             aria-expanded={invite}
-            aria-controls="family-invitations"
+            aria-controls="space-invitations"
             onClick={() => setInvite(!invite)}
           >
             {invite ? <LucideX aria-hidden="true" /> : <LucideUserPlus aria-hidden="true" />}
-            {invite ? 'Скрыть приглашения' : 'Пригласить в семью'}
+            {invite ? 'Скрыть приглашения' : 'Пригласить участников'}
           </Button.Base>
         </div>
       </div>
-      {invite && <div id="family-invitations" className="mt-3 max-w-xl"><GroupInvitations groupId={groupId} /></div>}
+      {invite && <div id="space-invitations" className="mt-3 max-w-xl"><SpaceInvitations spaceId={spaceId} /></div>}
     </div>
   );
 }
@@ -62,18 +65,28 @@ export function BudgetMainPage() {
   const client = useQueryClient();
   const user = useQuery(usersQueryOptions.me());
   const userId = user.data?._id ?? '';
-  const choice = resolveBudgetChoice(search.budget, userId ? readBudgetPreference(userId) : undefined);
-  const groupId = choice === 'personal' ? '' : choice;
-  const group = useQuery({
-    ...groupsQueryOptions.detail(userId, groupId),
-    enabled: Boolean(userId && groupId),
+  const spaceId = resolveBudgetChoice(search.spaceId, userId ? readBudgetPreference(userId) : undefined);
+  const space = useQuery({
+    ...spacesQueryOptions.detail(userId, spaceId),
+    enabled: Boolean(userId && spaceId),
     retry: false,
     refetchOnWindowFocus: true,
   });
   const [notice, setNotice] = useState('');
   const mutations = useIsMutating();
-  const scope: BudgetScope = groupId ? { kind: 'group', userId, groupId } : { kind: 'personal', userId };
+  const scope: BudgetScope = { userId, spaceId };
   const [dirtyForms] = useState(() => new Set<HTMLFormElement>());
+  useEffect(() => {
+    if (!userId || !spaceId || !space.isSuccess) return;
+    saveBudgetPreference(userId, spaceId);
+    if (search.spaceId === undefined) {
+      navigate({ to: '/main', search: { spaceId }, replace: true }).catch(() => undefined);
+    }
+  }, [navigate, search.spaceId, space.isSuccess, spaceId, userId]);
+  useEffect(() => () => {
+    client.cancelQueries({ predicate: ({ queryKey }) => queryKey[1] === userId && queryKey[2] === spaceId })
+      .catch(() => undefined);
+  }, [client, userId, spaceId]);
   useEffect(() => {
     const mark = (event: Event) => {
       const form = (event.target as HTMLInputElement | null)?.form;
@@ -103,21 +116,16 @@ export function BudgetMainPage() {
     enableBeforeUnload: () => [...dirtyForms].some((form) => form.isConnected),
   });
   useEffect(() => {
-    if (!userId) return;
-    if (search.budget !== choice) {
-      navigate({ to: '/main', search: { budget: choice }, replace: true }).catch(() => undefined);
-    }
-    if (!groupId || group.isSuccess) saveBudgetPreference(userId, choice);
-  }, [choice, group.isSuccess, groupId, navigate, search.budget, userId]);
-  useEffect(() => {
-    if (!groupId || !axios.isAxiosError(group.error) || group.error.response?.status !== 404) return;
-    client.removeQueries({ predicate: ({ queryKey }) => queryKey[1] === userId && queryKey[3] === groupId });
-    saveBudgetPreference(userId, 'personal');
-    setNotice('Группа недоступна. Открыт личный бюджет.');
+    if (!spaceId || !axios.isAxiosError(space.error)
+      || ![403, 404].includes(space.error.response?.status ?? 0)) return;
+    client.invalidateQueries({ queryKey: ['spaces', userId] }).catch(() => undefined);
+    client.removeQueries({ predicate: ({ queryKey }) => queryKey[1] === userId && queryKey[2] === spaceId });
+    saveBudgetPreference(userId, null);
+    setNotice('Пространство недоступно. Выберите другое пространство.');
     navigate({
-      to: '/main', search: { budget: 'personal' }, replace: true, ignoreBlocker: true,
+      to: '/main', search: {}, replace: true, ignoreBlocker: true,
     }).catch(() => undefined);
-  }, [client, group.error, groupId, navigate, userId]);
+  }, [client, space.error, spaceId, navigate, userId]);
   useEffect(() => {
     try {
       const message = sessionStorage.getItem('budget-notice');
@@ -129,43 +137,71 @@ export function BudgetMainPage() {
   }, []);
   useEffect(() => {
     const refresh = (event: Event) => {
-      const { detail } = (event as CustomEvent<{ status: number; groupId: string }>);
-      if (detail.groupId === groupId && (detail.status === 403 || detail.status === 404)) {
-        group.refetch().catch(() => undefined);
+      const { detail } = (event as CustomEvent<{ status: number; spaceId: string }>);
+      if (detail.spaceId === spaceId && (detail.status === 403 || detail.status === 404)) {
+        space.refetch().catch(() => undefined);
       }
     };
     window.addEventListener('babki:budget-access', refresh);
     return () => window.removeEventListener('babki:budget-access', refresh);
-  }, [group, groupId]);
-  if (!user.data || (groupId && group.isLoading)) {
+  }, [space, spaceId]);
+  if (!user.data || (spaceId && space.isLoading)) {
     return <div className="p-5" aria-busy="true"><Skeleton className="h-40 w-full" /></div>;
   }
-  if (groupId && (group.isError || !group.data)) {
+  if (spaceId && (space.isError || !space.data)) {
     return (
       <QueryError
-        message="Не удалось проверить доступ к группе"
+        message="Не удалось проверить доступ к пространству"
         onRetry={() => {
-          group.refetch().catch(() => undefined);
+          space.refetch().catch(() => undefined);
         }}
       />
     );
   }
-  const title = group.data?.name ?? 'Личный бюджет';
+  if (!spaceId || !space.data) {
+    return (
+      <main className="mx-auto flex max-w-5xl flex-col gap-5 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">{user.data.firstName}</h1>
+            <p>{user.data.email}</p>
+          </div>
+          <div className="flex gap-2">
+            <TwoFactorManagementDialog />
+            <LogoutButton />
+          </div>
+        </div>
+        {notice && <p role="status">{notice}</p>}
+        <h2 className="text-lg font-semibold">Выберите пространство</h2>
+        <p>Откройте пространство или создайте новое. Для вступления откройте ссылку приглашения.</p>
+        <BudgetSelector
+          userId={userId}
+          disabled={mutations > 0}
+          onSelect={(id) => {
+            navigate({ to: '/main', search: { spaceId: id } }).catch(() => undefined);
+          }}
+        />
+        <Link to="/join" className="underline">Присоединиться по приглашению</Link>
+      </main>
+    );
+  }
+  if (search.spaceId === undefined) return <div className="p-5" aria-busy="true"><Skeleton className="h-40" /></div>;
+  const title = space.data.name;
   return (
-    <BudgetProvider value={{ scope, group: groupId ? group.data : undefined, title }}>
+    <BudgetProvider value={{ scope, space: space.data, title }}>
       <div className="px-(--app-inline-padding) pt-4">
         {notice && <p role="status" className="mb-3 rounded-lg border p-3">{notice}</p>}
         <BudgetSelector
           userId={userId}
-          currentGroupId={groupId || undefined}
+          currentSpaceId={spaceId || undefined}
           disabled={mutations > 0}
           onSelect={(id) => {
-            navigate({ to: '/main', search: { budget: id ?? 'personal' } }).catch(() => undefined);
+            navigate({ to: '/main', search: { spaceId: id } }).catch(() => undefined);
           }}
         />
       </div>
-      <div key={`${userId}:${choice}`}>
-        {groupId && <FamilySetup groupId={groupId} scope={scope} />}
+      <div key={`${userId}:${spaceId}`}>
+        {spaceId && <SpaceSetup spaceId={spaceId} scope={scope} />}
         <MainPage />
       </div>
     </BudgetProvider>

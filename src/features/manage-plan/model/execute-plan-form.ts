@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Plan } from '@/entities/plans';
 
 export const executePlanFormSchema = z.object({
+  participantId: z.string(),
   accountId: z.string().trim().min(1, 'required'),
   closingDate: z.string().trim().min(1, 'required'),
   amount: z
@@ -23,6 +24,7 @@ export const todayDateInputValue = () => new Date().toISOString().slice(0, 10);
 
 export const getExecutePlanFormValues = (plan: Plan): ExecutePlanFormValues => ({
   accountId: '',
+  participantId: '',
   closingDate: todayDateInputValue(),
   amount: String(plan.amount),
   description: plan.description,

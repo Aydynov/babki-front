@@ -13,38 +13,47 @@ import {
 class TransactionsApi {
   private readonly client = apiClient;
 
-  async findAll(query: ListTransactionsQuery = {}, scope?: BudgetScope, signal?: AbortSignal) {
+  async findAll(
+    query: ListTransactionsQuery,
+    scope: BudgetScope,
+    signal?: AbortSignal,
+  ) {
     const params = listTransactionsQuerySchema.parse(query);
     const response = await this.client.get<TransactionsPaginatedResponse>(
       budgetPath(scope, '/transactions'),
       {
-        params: scope?.kind === 'group' ? utcPeriod(params) : params,
+        params: utcPeriod(params),
         signal,
       },
     );
-    return parseRequiredWithSchema(transactionsPaginatedResponseSchema, response.data);
+    return parseRequiredWithSchema(
+      transactionsPaginatedResponseSchema,
+      response.data,
+    );
   }
 
-  async findOne(transactionId: string, scope?: BudgetScope, signal?: AbortSignal) {
+  async findOne(
+    transactionId: string,
+    scope: BudgetScope,
+    transactionType: Transaction['type'],
+    signal?: AbortSignal,
+  ) {
     const response = await this.client.get<Transaction>(
-      budgetPath(scope, `/transactions/${transactionId}`),
+      budgetPath(scope, `/${transactionType}s/${transactionId}`),
       { signal },
     );
     return parseRequiredWithSchema(transactionSchema, response.data);
   }
 
-  async delete(transactionId: string, scope?: BudgetScope, transactionType?: 'income' | 'expense') {
-    if (scope?.kind === 'group') {
-      if (!transactionType) throw new Error('Не указан тип операции');
-      await this.client.delete(
-        budgetPath(
-          scope,
-          `/${transactionType === 'income' ? 'incomes' : 'expenses'}/${transactionId}`,
-        ),
-      );
-      return;
-    }
-    await this.client.delete(`/transactions/${transactionId}`);
+  async delete(
+    transactionId: string,
+    scope: BudgetScope,
+    transactionType: Transaction['type'],
+  ) {
+    if (!transactionType) throw new Error('Не указан тип операции');
+    await this.client.delete(
+      budgetPath(scope, `/${transactionType}s/${transactionId}`),
+    );
   }
 }
 

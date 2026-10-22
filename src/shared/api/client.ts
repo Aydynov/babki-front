@@ -2,6 +2,7 @@ import { env } from '@/shared/lib/env';
 import axios, { AxiosHeaders } from 'axios';
 import { z } from 'zod';
 import { handleUnauthorizedSession } from './unauthorized-session';
+import { getApiErrorStatus } from './errors';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -76,16 +77,17 @@ apiClient.interceptors.response.use(
         ? new AxiosHeaders(error.config.headers).get('Authorization')
         : null;
 
-      const groupMatch = error.config?.url?.match(/\/groups\/([a-f\d]{24})\//i);
-      if (groupMatch && (error.response?.status === 403 || error.response?.status === 404)
+      const status = getApiErrorStatus(error);
+      const spaceMatch = error.config?.url?.match(/\/spaces\/([a-f\d]{24})(?:\/|$)/i);
+      if (typeof window !== 'undefined' && spaceMatch && (status === 403 || status === 404)
         && authorizationHeader === `Bearer ${getAccessToken()}`) {
         window.dispatchEvent(new CustomEvent('babki:budget-access', {
-          detail: { status: error.response.status, groupId: groupMatch[1] },
+          detail: { status, spaceId: spaceMatch[1] },
         }));
       }
 
       handleUnauthorizedSession({
-        status: error.response?.status,
+        status,
         url: error.config?.url,
         authorization: typeof authorizationHeader === 'string'
           ? authorizationHeader

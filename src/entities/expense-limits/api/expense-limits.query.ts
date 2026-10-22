@@ -1,4 +1,8 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useBudgetScope } from '@/entities/budgets/@x/expense-limits';
 import type { BudgetScope } from '@/shared/types';
 import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
@@ -18,11 +22,11 @@ export const expenseLimitsQueryKeys = {
 };
 
 export const expenseLimitsQueryOptions = {
-  findAll: (query: FindExpenseLimitQuery, scope?: BudgetScope) => queryOptions({
+  findAll: (query: FindExpenseLimitQuery, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, expenseLimitsQueryKeys.list(query)),
     queryFn: ({ signal }) => expenseLimitsApi.findAll(query, scope, signal),
   }),
-  findOne: (limitId: string, scope?: BudgetScope) => queryOptions({
+  findOne: (limitId: string, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, expenseLimitsQueryKeys.detail(limitId)),
     queryFn: ({ signal }) => expenseLimitsApi.findOne(limitId, scope, signal),
   }),
@@ -53,11 +57,13 @@ export const useUpdateExpenseLimitMutation = () => {
   const client = useQueryClient();
   return useMutation({
     retry: false,
-    mutationFn: ({ limitId, payload }: { limitId: string; payload: UpdateExpenseLimitDto }) => expenseLimitsApi.update(
+    mutationFn: ({
       limitId,
       payload,
-      scope,
-    ),
+    }: {
+      limitId: string;
+      payload: UpdateExpenseLimitDto;
+    }) => expenseLimitsApi.update(limitId, payload, scope),
     onSuccess: () => {
       invalidateBudget(client, scope).catch(() => undefined);
     },

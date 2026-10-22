@@ -11,7 +11,6 @@ export const invalidateBudget = async (client: QueryClient, scope: BudgetScope) 
   if (!isActiveBudgetIdentity(client, scope)) return;
   await client.invalidateQueries({
     predicate: ({ queryKey }) => queryKey[1] === scope.userId
-      && queryKey[2] === scope.kind
-      && queryKey[3] === (scope.groupId ?? scope.userId),
+      && queryKey[2] === scope.spaceId,
   });
 };

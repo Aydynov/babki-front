@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAccountsQueryOptions } from '@/entities/accounts';
 import { useIncomesQueryOptions } from '@/entities/incomes';
-import type { GroupRepayment } from '@/entities/debt-transactions';
+import type { DebtTransaction } from '@/entities/debt-transactions';
 import type { useCancelDebtRepaymentMutation } from '@/entities/debts';
 import { Typography } from '@/shared/ui/typography';
 import { ConfirmActionButton } from './confirm-action-button';
 
 interface RepaymentCancelButtonProps {
   debtId: string;
-  repayment: GroupRepayment;
+  repayment: DebtTransaction;
   mutation: ReturnType<typeof useCancelDebtRepaymentMutation>;
 }
 

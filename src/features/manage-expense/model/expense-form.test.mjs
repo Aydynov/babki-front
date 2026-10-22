@@ -19,6 +19,7 @@ test('creates fresh form values for the supplied local date', async () => {
     model.getDefaultExpenseFormValues?.(new Date(2026, 7, 8)),
     {
       accountId: '',
+      participantId: '',
       categoryId: '',
       amount: '',
       transactionDate: '2026-08-08',
@@ -290,6 +291,8 @@ test('prefills editable values from an existing expense', async () => {
     })),
   }, {
     accountId: '507f1f77bcf86cd799439013',
+    participantId: undefined,
+    originalParticipantId: undefined,
     categoryId: '507f1f77bcf86cd799439011',
     amount: '179.8',
     transactionDate: '2026-08-08',
@@ -415,34 +418,10 @@ const accountFixture = {
   archivedAt: null,
 };
 
-test('initializes only an active loaded default account and preserves explicit selection', async () => {
+test('new expenses require explicit account selection', async () => {
   const model = await modelPromise;
-  const otherAccount = {
-    ...accountFixture,
-    _id: '507f1f77bcf86cd799439099',
-    name: 'Доллары',
-    currency: 'USD',
-  };
-
-  assert.equal(typeof model.getExpenseInitialAccountId, 'function');
-  assert.equal(
-    model.getExpenseInitialAccountId?.([accountFixture, otherAccount], accountFixture._id),
-    accountFixture._id,
-  );
-  assert.equal(
-    model.getExpenseInitialAccountId?.([accountFixture, otherAccount], otherAccount._id),
-    otherAccount._id,
-  );
-});
-
-test('leaves account empty when the default is missing or archived', async () => {
-  const model = await modelPromise;
-
-  assert.equal(model.getExpenseInitialAccountId?.([accountFixture], null), '');
-  assert.equal(model.getExpenseInitialAccountId?.([accountFixture], '507f1f77bcf86cd799439099'), '');
-  assert.equal(model.getExpenseInitialAccountId?.([
-    { ...accountFixture, archivedAt: '2026-08-09T00:00:00.000Z' },
-  ], accountFixture._id), '');
+  assert.equal(model.getDefaultExpenseFormValues().accountId, '');
+  assert.equal(model.expenseFormSchema.safeParse(model.getDefaultExpenseFormValues()).success, false);
 });
 
 test('keeps archived account available as immutable editing context', async () => {
@@ -484,4 +463,26 @@ test('validates amount and every item price using the account currency precision
     amount: '100',
     items: [{ ...validItem, price: '10' }],
   }, 'JPY'), true);
+});
+
+test('maps explicit participants and preserves an unchanged historical assignment on edits', async () => {
+  const model = await modelPromise;
+  const values = { ...model.getDefaultExpenseFormValues(), amount: '10', description: 'Покупка' };
+  assert.equal(Object.hasOwn(model.mapCreateExpenseDto(values), 'participantId'), false);
+  assert.equal(model.mapCreateExpenseDto({ ...values, participantId: 'member' }).participantId, 'member');
+  assert.equal(Object.hasOwn(model.mapUpdateExpenseDto({
+    ...values, participantId: 'former', originalParticipantId: 'former',
+  }), 'participantId'), false);
+  assert.equal(model.mapUpdateExpenseDto({
+    ...values, participantId: 'new', originalParticipantId: 'former',
+  }).participantId, 'new');
+});
+
+test('automatic item totals and overrides respect currency minor units', async () => {
+  const model = await modelPromise;
+  const items = [{ ...validItem, price: '0.001' }];
+  assert.equal(model.calculateExpenseItemsTotal(items, 'KWD'), '0.001');
+  assert.equal(model.isExpenseAmountOverridden('0.002', items, 'KWD'), true);
+  assert.deepEqual(model.applyAmountInput('', items, 'KWD'), { amount: '0.001', amountOverridden: false });
+  assert.equal(model.calculateExpenseItemsTotal([{ ...validItem, price: '12' }], 'JPY'), '12');
 });

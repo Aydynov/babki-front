@@ -12,7 +12,6 @@ test('requires trimmed registration identity and keeps only submitted auth field
     lastName: 'Петров',
     email: 'user@example.ru',
     password: 'password',
-    defaultCurrency: 'RUB',
   }).success, false);
 
   assert.deepEqual(model.registerSchema.parse({
@@ -20,7 +19,6 @@ test('requires trimmed registration identity and keeps only submitted auth field
     lastName: '  Петров  ',
     email: '  user@example.ru  ',
     password: 'password',
-    defaultCurrency: 'RUB',
     birthDate: '1990-01-01',
     notes: 'not submitted by the form',
   }), {
@@ -28,11 +26,10 @@ test('requires trimmed registration identity and keeps only submitted auth field
     lastName: 'Петров',
     email: 'user@example.ru',
     password: 'password',
-    defaultCurrency: 'RUB',
   });
 });
 
-test('maps the registration form currency to the backend wire field', async () => {
+test('omits obsolete registration currency from the backend request', async () => {
   const model = await modelPromise;
 
   assert.deepEqual(model.mapRegisterRequest?.({
@@ -46,18 +43,16 @@ test('maps the registration form currency to the backend wire field', async () =
     lastName: 'Петров',
     email: 'user@example.ru',
     password: 'password',
-    currency: 'USD',
   });
 });
 
-test('enforces auth email, password, name, and currency limits', async () => {
+test('enforces auth email, password and name limits', async () => {
   const model = await modelPromise;
   const validRegistration = {
     firstName: 'Иван',
     lastName: 'Петров',
     email: 'user@example.ru',
     password: 'password',
-    defaultCurrency: 'RUB',
   };
 
   assert.ok(model.loginSchema, 'loginSchema must be exported');
@@ -78,10 +73,6 @@ test('enforces auth email, password, name, and currency limits', async () => {
     ...validRegistration,
     firstName: 'x'.repeat(101),
   }).success, false);
-  assert.equal(model.registerSchema.safeParse({
-    ...validRegistration,
-    defaultCurrency: 'rub',
-  }).success, false);
 });
 
 test('exposes stable validation codes and auth form defaults', async () => {
@@ -96,7 +87,6 @@ test('exposes stable validation codes and auth form defaults', async () => {
     lastName: '',
     email: '',
     password: '',
-    defaultCurrency: 'RUB',
   });
   assert.equal(model.loginSchema.safeParse({
     email: 'invalid',
@@ -111,7 +101,6 @@ test('exposes stable validation codes and auth form defaults', async () => {
     lastName: 'Петров',
     email: 'user@example.ru',
     password: 'password',
-    defaultCurrency: 'RUB',
   }).error?.issues[0]?.message, 'required');
 });
 

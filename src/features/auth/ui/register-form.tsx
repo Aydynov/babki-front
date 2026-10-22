@@ -1,7 +1,6 @@
 import { Link, useRouter } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
-import { currencyCodes } from '@/shared/lib/currency';
 import { getFirstFieldError } from '@/shared/lib/form-errors';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -181,43 +180,6 @@ export function RegisterForm({ redirect }: { redirect?: string }) {
               />
               {error && (
                 <Input.Error id="register-password-error" role="alert">{error}</Input.Error>
-              )}
-            </div>
-          );
-        }}
-      </form.Field>
-
-      <form.Field name="defaultCurrency">
-        {(field) => {
-          const error = getValidationMessage(field.state.meta.errors);
-
-          return (
-            <div>
-              <Input.Label htmlFor="register-currency">{t('auth.fields.currency')}</Input.Label>
-              <select
-                id="register-currency"
-                name={field.name}
-                className={`
-                  flex h-11 w-full rounded-lg border bg-background px-3 py-2 text-body-2 outline-none
-                  transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30
-                  disabled:cursor-not-allowed disabled:opacity-50
-                `}
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={(event) => {
-                  clearMutationError();
-                  field.handleChange(event.target.value);
-                }}
-                aria-invalid={Boolean(error)}
-                aria-describedby={error ? 'register-currency-error' : undefined}
-                disabled={registerMutation.isPending}
-              >
-                {currencyCodes.map((code) => (
-                  <option key={code} value={code}>{code}</option>
-                ))}
-              </select>
-              {error && (
-                <Input.Error id="register-currency-error" role="alert">{error}</Input.Error>
               )}
             </div>
           );

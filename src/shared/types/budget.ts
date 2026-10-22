@@ -1,7 +1,9 @@
-export type BudgetScope = | { kind: 'personal'; userId: string; groupId?: undefined }
-  | { kind: 'group'; userId: string; groupId: string };
+export interface BudgetScope {
+  userId: string;
+  spaceId: string;
+}
 
-export interface BudgetGroup {
+export interface BudgetSpace {
   id: string;
   name: string;
   role: 'owner' | 'member';

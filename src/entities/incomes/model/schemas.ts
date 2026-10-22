@@ -5,18 +5,20 @@ import {
   transactionsRevenueSchema,
 } from '@/entities/transactions/@x/incomes';
 import { z } from 'zod';
-import { entityMetaSchema, paginatedResponseSchema } from '@/shared/api';
+import {
+  entityMetaSchema,
+  objectIdSchema,
+  paginatedResponseSchema,
+} from '@/shared/api';
 
 export const incomeSchema = z
-  .object({
-    source: z.string().max(255).optional(),
-  })
+  .object({})
   .extend(transactionSchema.shape)
-  .extend(entityMetaSchema.shape);
+  .extend({ ...entityMetaSchema.shape, spaceId: objectIdSchema });
 
-export const createIncomeSchema = z.object({
-  source: z.string().max(255).optional(),
-}).extend(createTransactionSchema.shape);
+export const createIncomeSchema = z
+  .object({})
+  .extend(createTransactionSchema.shape);
 
 export const updateIncomeSchema = createIncomeSchema
   .omit({ accountId: true, transactionDate: true })
@@ -33,4 +35,6 @@ export type IncomeRevenue = z.infer<typeof incomeRevenueSchema>;
 export type CreateIncomeDto = z.infer<typeof createIncomeSchema>;
 export type UpdateIncomeDto = z.infer<typeof updateIncomeSchema>;
 export type ListIncomesQuery = z.infer<typeof listIncomesQuerySchema>;
-export type IncomesPaginatedResponse = z.infer<typeof incomesPaginatedResponseSchema>;
+export type IncomesPaginatedResponse = z.infer<
+  typeof incomesPaginatedResponseSchema
+>;

@@ -1,4 +1,6 @@
-import { useBudget, BudgetLabel } from '@/entities/budgets';
+import { BudgetLabel, useBudgetScope, useBudgetPermission } from '@/entities/budgets';
+import { spacesQueryOptions } from '@/entities/spaces';
+import { actorLabel } from '@/shared/lib/actor-label';
 import {
   AccountSelect,
   useAccountsQueryOptions,
@@ -8,7 +10,6 @@ import {
   type ExpenseCategory,
   useExpenseCategoriesQueryOptions,
 } from '@/entities/expense-categories';
-import { usersQueryOptions } from '@/entities/users';
 import { getFirstFieldError } from '@/shared/lib/form-errors';
 import {
   getCurrencyMinorUnits,
@@ -31,7 +32,7 @@ import type {
   FC,
   RefObject,
 } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   applyAmountInput,
@@ -45,7 +46,6 @@ import {
   getExpenseCategoryOptions,
   getExpenseAccountContext,
   getExpenseDescriptionValidationError,
-  getExpenseInitialAccountId,
   getExpenseValidationKey,
   hasValidExpenseMoneyPrecision,
   isExpenseItemValid,
@@ -57,6 +57,8 @@ interface ExpenseFormProps {
   initialAmountOverridden: boolean;
   currentCategory?: ExpenseCategory;
   dateDisabled?: boolean;
+  canAssignParticipant?: boolean;
+  participantActor?: { userId: string; firstName: string | null; lastName: string | null; isAnonymized: boolean };
   immutableCurrency?: CurrencyCode;
   pending: boolean;
   submitError?: string;
@@ -81,6 +83,8 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   initialAmountOverridden,
   currentCategory,
   dateDisabled = false,
+  canAssignParticipant = true,
+  participantActor,
   immutableCurrency,
   pending,
   submitError,
@@ -94,13 +98,14 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const { scope } = useBudget();
   const { t } = useTranslation();
+  const canCreateAccount = useBudgetPermission('manageAccounts');
+  const scope = useBudgetScope();
+  const members = useQuery(spacesQueryOptions.allMembers(scope.userId, scope.spaceId));
   const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
   const accountsQueryOptions = useAccountsQueryOptions();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
-  const userQuery = useQuery(usersQueryOptions.me());
   const [amountOverridden, setAmountOverridden] = useState(initialAmountOverridden);
   const categories = getExpenseCategoryOptions(categoriesQuery.data ?? [], currentCategory);
   const currentCategoryUnavailable = categoriesQuery.isSuccess
@@ -139,39 +144,15 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
     && !hasValidExpenseMoneyPrecision(form.state.values, selectedCurrency);
   const accountsUnavailable = accountEditable && (
     accountsQuery.isLoading
-    || userQuery.isLoading
+
     || accounts.every(({ archivedAt }) => archivedAt !== null)
   );
-
-  useEffect(() => {
-    if (scope.kind === 'group') return;
-    if (
-      !accountEditable
-      || form.state.values.accountId
-      || !accountsQuery.isSuccess
-      || !userQuery.isSuccess
-    ) return;
-
-    const accountId = getExpenseInitialAccountId(
-      accounts,
-      userQuery.data?.defaultAccountId ?? null,
-    );
-    if (accountId) form.setFieldValue('accountId', accountId);
-  }, [
-    accountEditable,
-    scope.kind,
-    accounts,
-    accountsQuery.isSuccess,
-    form,
-    userQuery.data,
-    userQuery.isSuccess,
-  ]);
 
   const syncAutomaticAmount = (
     items: ReturnType<typeof form.getFieldValue<'items'>>,
   ) => {
     if (!amountOverridden) {
-      form.setFieldValue('amount', calculateExpenseItemsTotal(items));
+      form.setFieldValue('amount', calculateExpenseItemsTotal(items, selectedCurrency));
     }
   };
 
@@ -213,8 +194,8 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
           await form.handleSubmit();
         }}
       >
+        <BudgetLabel />
         <Dialog.Header className="shrink-0">
-          <BudgetLabel />
           <Dialog.Title>{title}</Dialog.Title>
           <div className="flex gap-2.5">
             <Button.Base
@@ -238,6 +219,33 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
         </Dialog.Header>
 
         <Dialog.Body className="min-h-0 overflow-y-auto pr-1">
+          {canAssignParticipant && (
+            <form.Field name="participantId">
+              {(field) => (
+                <div className="flex flex-col gap-1.5">
+                  <Input.Label htmlFor={`${idPrefix}-participant`}>Участник расхода</Input.Label>
+                  <select
+                    id={`${idPrefix}-participant`}
+                    className="h-10 rounded-md border bg-background px-3"
+                    value={field.state.value ?? ''}
+                    disabled={pending || members.isLoading || members.isError}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                  >
+                    <option value="">{dateDisabled ? 'Участник не изменяется' : 'Автор расхода (по умолчанию)'}</option>
+                    {participantActor && !members.data?.some((member) => member.userId === participantActor.userId) && (
+                      <option value={participantActor.userId}>{actorLabel(participantActor)}</option>
+                    )}
+                    {members.data?.map((member) => (
+                      <option key={member.userId} value={member.userId}>
+                        {[member.firstName, member.lastName].filter(Boolean).join(' ') || 'Участник'}
+                      </option>
+                    ))}
+                  </select>
+                  {members.isError && <Input.Error>Не удалось загрузить участников</Input.Error>}
+                </div>
+              )}
+            </form.Field>
+          )}
           {accountEditable ? (
             <form.Field
               name="accountId"
@@ -259,12 +267,12 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
                       label={t('expenses.create.fields.account')}
                       placeholder={t('expenses.create.accounts.placeholder')}
                       emptyMessage={t('expenses.create.accounts.empty')}
-                      isLoading={accountsQuery.isLoading || userQuery.isLoading}
-                      error={accountsQuery.isError || userQuery.isError
+                      isLoading={accountsQuery.isLoading}
+                      error={accountsQuery.isError
                         ? t('expenses.create.accounts.error')
                         : undefined}
                       disabled={pending}
-                      offerAccountCreation
+                      offerAccountCreation={canCreateAccount}
                     />
                     {error && <Input.Error>{error}</Input.Error>}
                   </div>
@@ -371,6 +379,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
                         const next = applyAmountInput(
                           event.target.value,
                           form.getFieldValue('items'),
+                          selectedCurrency,
                         );
                         setAmountOverridden(next.amountOverridden);
                         field.handleChange(next.amount);

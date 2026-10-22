@@ -1,206 +1,152 @@
-import { currencyCodes, formatMoney } from '@/shared/lib/currency';
-import { useBudgetScope } from '@/entities/budgets';
-import { Button } from '@/shared/ui/button';
 import { usePlansQueryOptions, type Plan } from '@/entities/plans';
 import { CreatePlanButton } from '@/features/create-plan';
 import { PlanDetailsDialog } from '@/features/manage-plan';
+import { currencyCodes, formatMoney } from '@/shared/lib/currency';
+import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { QueryError } from '@/shared/ui/query-error';
-import { Skeleton } from '@/shared/ui/skeleton';
-import { Table } from '@/shared/ui/table';
+import {
+  CollectionDialog, CollectionFilters, CollectionList, CollectionPagination,
+} from '@/shared/ui/collection';
 import { useQuery } from '@tanstack/react-query';
-import i18next from 'i18next';
-import { type FC, useState } from 'react';
+import { LucideMaximize2 } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-const locale = i18next.language;
-
-const formatDate = new Intl.DateTimeFormat(locale, {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
-
-const rowClassName = `
-  grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1
-  sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-0
-`;
-
-export const Plans: FC = () => {
-  const scope = useBudgetScope();
+function PlansList({ expanded = false }: { expanded?: boolean }) {
+  const archiveId = useId();
+  const { i18n } = useTranslation();
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<'active' | 'closed' | ''>('active');
+  const [status, setStatus] = useState('active');
   const [currency, setCurrency] = useState('');
   const [includeArchived, setIncludeArchived] = useState(false);
-  const plansQuery = useQuery(
-    usePlansQueryOptions().findAll({
-      status: status || undefined, currency: currency || undefined, includeArchived, page, limit: 20,
-    }),
-  );
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const limit = expanded ? 20 : 10;
+  const plansQuery = useQuery(usePlansQueryOptions().findAll({
+    status: status === 'active' || status === 'closed' ? status : undefined,
+    currency: currency || undefined,
+    includeArchived,
+    page,
+    limit,
+  }));
+  const pages = Math.max(1, Math.ceil((plansQuery.data?.total ?? 0) / limit));
+  if (plansQuery.isSuccess && page > pages) setPage(pages);
+  const formatDate = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
-    <Card.Base aria-busy={plansQuery.isLoading} className="min-h-64">
-      {plansQuery.isLoading && <span className="sr-only">Загрузка...</span>}
+    <>
+      {expanded && (
+        <CollectionFilters filters={[
+          {
+            label: 'Статус',
+            value: status,
+            options: [
+              { value: '', label: 'Все статусы' },
+              { value: 'active', label: 'Активные' },
+              { value: 'closed', label: 'Закрытые' },
+            ],
+            onChange: (value) => {
+              setStatus(value);
+              setPage(1);
+            },
+          },
+          {
+            label: 'Валюта',
+            value: currency,
+            options: [
+              { value: '', label: 'Все валюты' },
+              ...currencyCodes.map((code) => ({ value: code, label: code })),
+            ],
+            onChange: (value) => {
+              setCurrency(value);
+              setPage(1);
+            },
+          },
+        ]}
+        >
+          <label
+            htmlFor={archiveId}
+            className="flex min-h-8 cursor-pointer items-center gap-2 px-2 text-body-2 text-muted-foreground"
+          >
+            <input
+              id={archiveId}
+              type="checkbox"
+              className="size-4 accent-primary"
+              checked={includeArchived}
+              onChange={(event) => {
+                setIncludeArchived(event.target.checked);
+                setPage(1);
+              }}
+            />
+            С архивными
+          </label>
+        </CollectionFilters>
+      )}
+      <div className={expanded ? '-mx-4 min-h-0 flex-1 overflow-y-auto sm:-mx-5' : undefined}>
+        <CollectionList
+          compact={!expanded}
+          rows={(plansQuery.data?.items ?? []).map((plan) => ({
+            id: plan._id,
+            title: plan.description,
+            date: formatDate.format(new Date(plan.targetDate)),
+            amount: formatMoney(plan.amount, plan.currency, i18n.language),
+            struckThrough: expanded && plan.status === 'closed',
+            statusLabel: expanded && plan.status === 'closed' ? 'Закрыт' : undefined,
+            badge: expanded && plan.archivedAt && plan.status !== 'closed' ? 'В архиве' : undefined,
+          }))}
+          loading={plansQuery.isLoading}
+          error={plansQuery.isError}
+          empty={expanded ? 'Планы не найдены. Попробуйте изменить фильтры.' : 'Нет активных планов'}
+          onRetry={() => {
+            plansQuery.refetch().catch(() => undefined);
+          }}
+          onSelect={(id) => setSelectedPlan(plansQuery.data?.items.find((plan) => plan._id === id) ?? null)}
+        />
+      </div>
+      {expanded && (
+        <CollectionPagination
+          page={page}
+          total={plansQuery.data?.total}
+          limit={limit}
+          pending={plansQuery.isFetching}
+          onPageChange={setPage}
+        />
+      )}
+      <PlanDetailsDialog plan={selectedPlan} onClose={() => setSelectedPlan(null)} />
+    </>
+  );
+}
+
+export function Plans() {
+  const [expanded, setExpanded] = useState(false);
+  const expandButton = useRef<HTMLButtonElement | null>(null);
+
+  return (
+    <Card.Base className="min-h-64">
       <Card.Header>
         <Card.Title>Планирование</Card.Title>
         <Card.Controls>
+          <Button.Icon
+            ref={expandButton}
+            aria-label="Все планы"
+            title="Все планы"
+            aria-haspopup="dialog"
+            onClick={() => setExpanded(true)}
+          >
+            <LucideMaximize2 />
+          </Button.Icon>
           <CreatePlanButton />
         </Card.Controls>
       </Card.Header>
-      <Card.Content className="px-0">
-        {scope.kind === 'group' && (
-          <div className="flex flex-wrap items-center gap-2 px-5 py-2">
-            <select
-              aria-label="Статус"
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value as 'active' | 'closed' | '');
-                setPage(1);
-              }}
-            >
-              <option value="">Все статусы</option>
-              <option value="active">Активные</option>
-              <option value="closed">Закрытые</option>
-            </select>
-            <select
-              aria-label="Валюта"
-              value={currency}
-              onChange={(event) => {
-                setCurrency(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">Все валюты</option>
-              {currencyCodes.map((code) => <option key={code} value={code}>{code}</option>)}
-            </select>
-            <label htmlFor="plans-include-archived" className="flex items-center gap-1">
-              <input
-                type="checkbox"
-                checked={includeArchived}
-                onChange={(event) => {
-                  setIncludeArchived(event.target.checked);
-                  setPage(1);
-                }}
-              />
-              С архивными
-            </label>
-          </div>
-        )}
-
-        {plansQuery.isLoading && (
-          <Table.Base>
-            <Table.Body>
-              {['first', 'second', 'third'].map((row) => (
-                <Table.Row key={row}>
-                  <div className={rowClassName}>
-                    <Table.Cell className="min-w-0"><Skeleton className="h-4 w-32" /></Table.Cell>
-                    <Table.Cell
-                      className={`
-                        col-start-1 row-start-2 pt-0 text-body-2 text-muted-foreground
-                        sm:col-auto sm:row-auto sm:pt-5
-                      `}
-                    >
-                      <Skeleton className="h-4 w-24" />
-                    </Table.Cell>
-                    <Table.Cell
-                      className={`
-                        col-start-2 row-span-2 row-start-1 text-right
-                        sm:col-auto sm:row-auto sm:row-span-1
-                      `}
-                    >
-                      <Skeleton className="ml-auto h-4 w-20" />
-                    </Table.Cell>
-                  </div>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Base>
-        )}
-        {!plansQuery.isLoading && plansQuery.isError && plansQuery.data === undefined && (
-          <QueryError onRetry={() => {
-            plansQuery.refetch().catch(() => undefined);
-          }}
-          />
-        )}
-        {!plansQuery.isLoading && plansQuery.isError && plansQuery.data !== undefined && (
-          <QueryError
-            compact
-            onRetry={() => {
-              plansQuery.refetch().catch(() => undefined);
-            }}
-          />
-        )}
-        {!plansQuery.isLoading && plansQuery.data !== undefined && !plansQuery.data.items.length && (
-          <div className="flex min-h-36 items-center justify-center px-5 py-3 text-muted-foreground">
-            Нет активных планов
-          </div>
-        )}
-        {!plansQuery.isLoading && !!plansQuery.data?.items.length && (
-          <Table.Base>
-            <Table.Body>
-              {plansQuery.data.items.map((plan) => (
-                <Table.Row
-                  key={plan._id}
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer transition-colors hover:bg-muted"
-                  onClick={() => setSelectedPlan(plan)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setSelectedPlan(plan);
-                    }
-                  }}
-                >
-                  <div className={rowClassName}>
-                    <Table.Cell className="min-w-0 break-words">{plan.description}</Table.Cell>
-                    <Table.Cell
-                      className={`
-                        col-start-1 row-start-2 pt-0 text-body-2 text-muted-foreground
-                        sm:col-auto sm:row-auto sm:pt-5
-                      `}
-                    >
-                      {formatDate.format(new Date(plan.targetDate))}
-                    </Table.Cell>
-                    <Table.Cell
-                      className={`
-                        col-start-2 row-span-2 row-start-1 text-right
-                        sm:col-auto sm:row-auto sm:row-span-1
-                      `}
-                    >
-                      {formatMoney(plan.amount, plan.currency)}
-                    </Table.Cell>
-                  </div>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Base>
-        )}
-        {scope.kind === 'group' && (
-          <div className="flex items-center justify-between gap-2 px-5 py-2">
-            <Button.Base
-              variant="outline"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
-              Назад
-            </Button.Base>
-            <span>
-              Страница
-              {page}
-            </span>
-            <Button.Base
-              variant="outline"
-              disabled={page * 20 >= (plansQuery.data?.total ?? 0)}
-              onClick={() => setPage(page + 1)}
-            >
-              Далее
-            </Button.Base>
-          </div>
-        )}
-      </Card.Content>
-
-      <PlanDetailsDialog plan={selectedPlan} onClose={() => setSelectedPlan(null)} />
+      <Card.Content className="px-0"><PlansList /></Card.Content>
+      {expanded && (
+        <CollectionDialog
+          title="Все планы"
+          finalFocus={expandButton}
+          onClose={() => setExpanded(false)}
+        >
+          <PlansList expanded />
+        </CollectionDialog>
+      )}
     </Card.Base>
   );
-};
+}

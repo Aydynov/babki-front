@@ -26,21 +26,27 @@ export const expenseSchema = z
     categoryUnavailable: z.boolean().optional(),
   })
   .extend(transactionSchema.shape)
-  .extend(entityMetaSchema.shape);
+  .extend({ ...entityMetaSchema.shape, spaceId: objectIdSchema });
 
-export const createExpenseSchema = z.object({
-  categoryId: objectIdSchema,
-  merchant: z.string().max(255).optional(),
-  items: expenseItemSchema.array().optional(),
-}).extend(createTransactionSchema.shape);
+export const createExpenseSchema = z
+  .object({
+    categoryId: objectIdSchema,
+    participantId: objectIdSchema.optional(),
+    merchant: z.string().max(255).optional(),
+    items: expenseItemSchema.array().optional(),
+  })
+  .extend(createTransactionSchema.shape);
 
 export const updateExpenseSchema = createExpenseSchema
   .omit({ accountId: true, transactionDate: true })
   .partial();
 
-export const listExpensesQuerySchema = z.object({
-  categoryId: objectIdSchema.optional(),
-}).extend(listTransactionsQuerySchema.shape);
+export const listExpensesQuerySchema = z
+  .object({
+    categoryId: objectIdSchema.optional(),
+    participantId: objectIdSchema.optional(),
+  })
+  .extend(listTransactionsQuerySchema.shape);
 
 export const expensesPaginatedResponseSchema = paginatedResponseSchema(expenseSchema);
 export const expenseRevenueSchema = transactionsRevenueSchema;
@@ -50,5 +56,7 @@ export type Expense = z.infer<typeof expenseSchema>;
 export type CreateExpenseDto = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseDto = z.infer<typeof updateExpenseSchema>;
 export type ListExpensesQuery = z.infer<typeof listExpensesQuerySchema>;
-export type ExpensesPaginatedResponse = z.infer<typeof expensesPaginatedResponseSchema>;
+export type ExpensesPaginatedResponse = z.infer<
+  typeof expensesPaginatedResponseSchema
+>;
 export type ExpenseRevenue = z.infer<typeof expenseRevenueSchema>;

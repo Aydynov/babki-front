@@ -8,7 +8,7 @@ import {
 export const snapshotSchema = z
   .object({
     accountId: objectIdSchema,
-    amount: z.number().min(0),
+    amount: z.number(),
     date: dateStringSchema,
   })
   .extend(entityMetaSchema.shape);

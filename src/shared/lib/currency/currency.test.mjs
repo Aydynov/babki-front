@@ -46,16 +46,16 @@ test('formats money with the supplied currency rather than locale currency', asy
   );
 });
 
-test('orders default currency first and the remainder by ISO code', async () => {
+test('orders currency codes independently of stale profile preferences', async () => {
   const currency = await currencyPromise;
 
   assert.equal(typeof currency.sortCurrencyCodes, 'function');
   assert.deepEqual(
     currency.sortCurrencyCodes?.(['USD', 'EUR', 'RUB', 'USD'], 'RUB'),
-    ['RUB', 'EUR', 'USD'],
+    ['EUR', 'RUB', 'USD'],
   );
   assert.deepEqual(
     currency.sortCurrencyCodes?.(['RUB', 'USD', 'EUR'], 'USD'),
-    ['USD', 'EUR', 'RUB'],
+    ['EUR', 'RUB', 'USD'],
   );
 });

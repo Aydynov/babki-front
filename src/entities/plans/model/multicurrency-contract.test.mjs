@@ -31,7 +31,11 @@ test('plans require immutable currency and account-scoped closure', async () => 
   });
   assert.equal(schemas.planSchema.safeParse({
     _id: '507f1f77bcf86cd799439013',
-    userId: '507f1f77bcf86cd799439014',
+    spaceId: accountId,
+    createdBy: accountId,
+    createdByActor: {
+      userId: accountId, firstName: null, lastName: null, isAnonymized: true,
+    },
     ...create,
     status: 'active',
     archivedAt: null,

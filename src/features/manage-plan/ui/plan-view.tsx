@@ -1,5 +1,6 @@
+import { actorLabel } from '@/shared/lib/actor-label';
 import { useExpensesQueryOptions } from '@/entities/expenses';
-import { useBudgetScope, useCanManageRecord } from '@/entities/budgets';
+import { useCanManageRecord } from '@/entities/budgets';
 import { useArchivePlanMutation } from '@/entities/plans';
 import { type Plan } from '@/entities/plans';
 import { ExpenseCategoryBadge, useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
@@ -9,7 +10,9 @@ import { Dialog } from '@/shared/ui/dialog';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { LucideCheck, LucidePencil, LucideTrash2 } from 'lucide-react';
+import {
+  LucideArrowRight, LucideCheck, LucidePencil, LucideTrash2,
+} from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConfirmActionButton } from './confirm-action-button';
@@ -40,7 +43,6 @@ export const PlanView: FC<PlanViewProps> = ({
 }) => {
   const { t } = useTranslation();
   const [expenseOpen, setExpenseOpen] = useState(false);
-  const scope = useBudgetScope();
   const canManage = useCanManageRecord('createdBy' in plan ? plan.createdBy : undefined);
   const archive = useArchivePlanMutation();
   const actual = useQuery({
@@ -64,29 +66,13 @@ export const PlanView: FC<PlanViewProps> = ({
           <Typography.Caption1>
             Автор:
             {' '}
-            {plan.createdByActor.isAnonymized ? 'Участник' : [
-              plan.createdByActor.firstName, plan.createdByActor.lastName,
-            ].filter(Boolean).join(' ') || 'Участник'}
+            {actorLabel(plan.createdByActor)}
           </Typography.Caption1>
         )}
         <Typography.Caption1>
           {plan.archivedAt ? 'Архив · Только чтение'
             : (plan.status === 'closed' ? 'Исполнен' : 'Активен')}
         </Typography.Caption1>
-        {plan.expenseId && (
-          <Typography.Caption1>
-            Исполнен. Связанный расход:
-            {' '}
-            {plan.expenseId}
-            .
-            {actual.isLoading && ' Загрузка фактической суммы…'}
-            {actual.data && ` Фактически: ${formatMoney(actual.data.amount, plan.currency)}`}
-            {actual.isError && ' Связанная запись недоступна. План остаётся исполненным.'}
-            {actual.data && (
-              <Button.Base variant="outline" onClick={() => setExpenseOpen(true)}>Открыть расход</Button.Base>
-            )}
-          </Typography.Caption1>
-        )}
         {category?.isArchived && editable && (
           <Typography.Caption1>
             Исполнение недоступно: категория в архиве. Измените категорию плана.
@@ -115,7 +101,31 @@ export const PlanView: FC<PlanViewProps> = ({
           <Typography.Caption1 className="text-muted-foreground">
             {t('plans.details.fields.amount')}
           </Typography.Caption1>
-          <Typography.Body2>{formatMoney(plan.amount, plan.currency)}</Typography.Body2>
+          <div className="flex flex-wrap items-center gap-2 tabular-nums">
+            {plan.status === 'closed' && actual.data && (
+              actual.data.amount !== plan.amount || actual.data.currency !== plan.currency
+            ) ? (
+              <>
+                <Typography.Body2 className="text-muted-foreground">
+                  <span className="sr-only">Запланировано: </span>
+                  <s>{formatMoney(plan.amount, plan.currency)}</s>
+                </Typography.Body2>
+                <LucideArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <Typography.Body2>
+                  <span className="sr-only">Фактически: </span>
+                  {formatMoney(actual.data.amount, actual.data.currency)}
+                </Typography.Body2>
+              </>
+              ) : <Typography.Body2>{formatMoney(plan.amount, plan.currency)}</Typography.Body2>}
+          </div>
+          {plan.expenseId && actual.isLoading && (
+            <Typography.Caption1 className="text-muted-foreground">Загрузка фактической суммы…</Typography.Caption1>
+          )}
+          {plan.expenseId && actual.isError && (
+            <Typography.Caption1 className="text-muted-foreground">
+              Связанный расход недоступен. План остаётся исполненным.
+            </Typography.Caption1>
+          )}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -127,16 +137,17 @@ export const PlanView: FC<PlanViewProps> = ({
       </Dialog.Body>
 
       <Dialog.Footer className="justify-between">
-        <Button.Base
-          variant="destructive"
-          onClick={onDelete}
-          disabled={!editable || Boolean(plan.expenseId)}
-        >
-          <LucideTrash2 />
-          {t('plans.details.actions.delete')}
-        </Button.Base>
+        {editable && !plan.expenseId && (
+          <Button.Base variant="destructive" onClick={onDelete}>
+            <LucideTrash2 />
+            {t('plans.details.actions.delete')}
+          </Button.Base>
+        )}
+        {plan.expenseId && actual.data && (
+          <Button.Base variant="outline" onClick={() => setExpenseOpen(true)}>Связанный расход</Button.Base>
+        )}
         <div className="flex flex-wrap gap-2.5">
-          {scope.kind === 'group' && canManage && !plan.archivedAt && (
+          {canManage && !plan.archivedAt && (
             <ConfirmActionButton
               description="Архивировать план? Изменение, исполнение и отмена станут недоступны. Восстановления нет."
               pending={archive.isPending}
@@ -145,18 +156,18 @@ export const PlanView: FC<PlanViewProps> = ({
               В архив
             </ConfirmActionButton>
           )}
-          <Button.Base
-            variant="outline"
-            onClick={onEdit}
-            disabled={!editable}
-          >
-            <LucidePencil />
-            {t('plans.details.actions.edit')}
-          </Button.Base>
-          <Button.Base onClick={onExecute} disabled={!editable || !category || category.isArchived}>
-            <LucideCheck />
-            {t('plans.details.actions.execute')}
-          </Button.Base>
+          {editable && (
+            <>
+              <Button.Base variant="outline" onClick={onEdit}>
+                <LucidePencil />
+                {t('plans.details.actions.edit')}
+              </Button.Base>
+              <Button.Base onClick={onExecute} disabled={!category || category.isArchived}>
+                <LucideCheck />
+                {t('plans.details.actions.execute')}
+              </Button.Base>
+            </>
+          )}
         </div>
       </Dialog.Footer>
       <Dialog.Base open={expenseOpen} onOpenChange={setExpenseOpen}>
@@ -170,6 +181,7 @@ export const PlanView: FC<PlanViewProps> = ({
                 <Typography.Caption1>{formatDate.format(new Date(actual.data.transactionDate))}</Typography.Caption1>
                 <Typography.Caption1>
                   Создан исполнением плана
+                  {' '}
                   {plan._id}
                 </Typography.Caption1>
               </>

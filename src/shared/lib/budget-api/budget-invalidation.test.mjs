@@ -7,11 +7,11 @@ import { createServer } from 'vite';
 
 const userId = '507f1f77bcf86cd799439011';
 const otherUserId = '507f1f77bcf86cd799439012';
-const groupId = '507f1f77bcf86cd799439013';
-const otherGroupId = '507f1f77bcf86cd799439014';
+const spaceId = '507f1f77bcf86cd799439013';
+const otherSpaceId = '507f1f77bcf86cd799439014';
 const debtId = '507f1f77bcf86cd799439015';
 const repaymentId = '507f1f77bcf86cd799439016';
-const scope = { kind: 'group', userId, groupId };
+const scope = { userId, spaceId };
 
 const createClient = () => new QueryClient({
   defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: 3 } },
@@ -34,15 +34,15 @@ const getMutation = async (server, client, hookName) => {
     mutation = hooks[hookName]();
     return null;
   }
-  const budgetTree = createElement(BudgetProvider, { value: { scope, title: 'Семья' } }, createElement(Probe));
+  const value = { scope, space: { id: spaceId, role: 'owner', permissions: {} }, title: 'Пространство' };
+  const budgetTree = createElement(BudgetProvider, { value }, createElement(Probe));
   renderToString(createElement(QueryClientProvider, { client }, budgetTree));
   return mutation;
 };
 
 const repaymentResult = () => {
   const base = {
-    ownerType: 'group',
-    ownerId: groupId,
+    spaceId,
     createdBy: userId,
     createdByActor: {
       userId, firstName: null, lastName: null, isAnonymized: true,
@@ -100,32 +100,31 @@ const deferredPost = async (server) => {
 
 const repaymentVariables = { debtId, payload: { amount: 60, repaymentDate: '2026-10-01', isIncome: false } };
 
-test('invalidation reaches only the captured user and budget across personal and two groups', async () => withServer(
+test('invalidation reaches only the captured user and budget across two spaces and identities', async () => withServer(
   async (server) => {
     const { invalidateBudget, scopedKey } = await server.ssrLoadModule('/src/shared/lib/budget-api/index.ts');
     const client = createClient();
     try {
       const scopes = [userId, otherUserId].flatMap((identity) => [
-        { kind: 'personal', userId: identity },
-        { kind: 'group', userId: identity, groupId },
-        { kind: 'group', userId: identity, groupId: otherGroupId },
+        { userId: identity, spaceId },
+        { userId: identity, spaceId: otherSpaceId },
       ]);
       const entries = scopes.flatMap((budget) => ['accounts', 'debts', 'reports'].map((entity) => ({
         budget, key: scopedKey(budget, [entity, 'list']),
       })));
       client.setQueryData(['users', 'me'], { _id: userId });
-      client.setQueryData(['groups', 'detail', groupId], { id: groupId });
+      client.setQueryData(['groups', 'detail', spaceId], { id: spaceId });
       await scopes.reduce(async (previous, target) => {
         await previous;
         entries.forEach(({ key }) => client.setQueryData(key, { value: 1 }));
         await invalidateBudget(client, target);
         entries.forEach(({ budget, key }) => {
           const expected = target.userId === userId && budget.userId === target.userId
-            && budget.kind === target.kind && budget.groupId === target.groupId;
+            && budget.spaceId === target.spaceId;
           assert.equal(client.getQueryState(key).isInvalidated, expected, JSON.stringify({ target, key }));
         });
         assert.equal(client.getQueryState(['users', 'me']).isInvalidated, false);
-        assert.equal(client.getQueryState(['groups', 'detail', groupId]).isInvalidated, false);
+        assert.equal(client.getQueryState(['groups', 'detail', spaceId]).isInvalidated, false);
       }, Promise.resolve());
     } finally {
       client.clear();
@@ -142,7 +141,7 @@ test('late cancellation success after logout cannot recreate cleared debt or rep
       const mutation = await getMutation(server, client, 'useCancelDebtRepaymentMutation');
       const pending = mutation.mutateAsync({ debtId, repaymentId });
       const request = await transport.sent.promise;
-      assert.equal(request.url, `/groups/${groupId}/debts/${debtId}/repayments/${repaymentId}/cancel`);
+      assert.equal(request.url, `/spaces/${spaceId}/debts/${debtId}/repayments/${repaymentId}/cancel`);
       client.clear();
       const result = repaymentResult();
       result.repayment.cancelledAt = '2026-10-02';
@@ -167,7 +166,7 @@ test('late repayment success after identity switch leaves the next user cache un
       const pending = mutation.mutateAsync(repaymentVariables);
       await transport.sent.promise;
       client.clear();
-      const nextKey = ['debts', otherUserId, 'group', groupId, 'list'];
+      const nextKey = ['debts', otherUserId, spaceId, 'list'];
       client.setQueryData(['users', 'me'], { _id: otherUserId });
       client.setQueryData(nextKey, { items: [], total: 0 });
       transport.response.resolve(repaymentResult());
@@ -193,7 +192,7 @@ test('failed active refetch preserves successful repayment and never repeats its
       const refetched = Promise.withResolvers();
       let reads = 0;
       const observer = new QueryObserver(client, {
-        queryKey: ['accounts', userId, 'group', groupId, 'list'],
+        queryKey: ['accounts', userId, spaceId, 'list'],
         initialData: [],
         staleTime: Infinity,
         queryFn: async () => {
@@ -224,4 +223,29 @@ test('failed active refetch preserves successful repayment and never repeats its
       client.clear();
     }
   },
+));
+
+test('switching cancels obsolete scoped reads without aborting the next space or another identity', async () => (
+  withServer(async (server) => {
+    const { scopedKey } = await server.ssrLoadModule('/src/shared/lib/budget-api/index.ts');
+    const client = createClient();
+    const scopes = [scope, { userId, spaceId: otherSpaceId }, { userId: otherUserId, spaceId }];
+    const signals = [];
+    const pending = scopes.map((target) => client.fetchQuery({
+      queryKey: scopedKey(target, ['accounts']),
+      queryFn: ({ signal }) => {
+        signals.push(signal);
+        return new Promise(() => {});
+      },
+    }).catch(() => undefined));
+    await client.cancelQueries({
+      predicate: ({ queryKey }) => queryKey[1] === userId && queryKey[2] === spaceId,
+    });
+    assert.equal(signals[0].aborted, true);
+    assert.equal(signals[1].aborted, false);
+    assert.equal(signals[2].aborted, false);
+    await client.cancelQueries();
+    await Promise.all(pending);
+    client.clear();
+  })
 ));

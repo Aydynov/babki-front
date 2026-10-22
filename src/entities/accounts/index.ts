@@ -12,7 +12,6 @@ export {
   createAccountSchema,
   findAccountByQuerySchema,
   renameAccountSchema,
-  upsertAccountSchema,
 } from './model/schemas';
 export type {
   Account,
@@ -20,15 +19,12 @@ export type {
   CreateAccountDto,
   FindAccountByQuery,
   RenameAccountDto,
-  UpsertAccountDto,
 } from './model/schemas';
 export {
   getAccountStatus,
   getActiveAccounts,
   getAccountSelectOptions,
-  getPreferredAccountId,
   hasValidInitialAmount,
-  isDefaultAccountCandidate,
 } from './model/account-eligibility';
 export {
   requestAccountManagement,

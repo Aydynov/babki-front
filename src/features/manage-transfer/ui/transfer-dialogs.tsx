@@ -1,12 +1,11 @@
-import { useBudget, useCanManageRecord, BudgetLabel } from '@/entities/budgets';
-import { AccountSelect, useAccountsQueryOptions, getPreferredAccountId } from '@/entities/accounts';
+import { useCanManageRecord, BudgetLabel } from '@/entities/budgets';
+import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import {
   type Transfer,
   useCreateTransferMutation,
   useDeleteTransferMutation,
   useUpdateTransferMutation,
 } from '@/entities/transfers';
-import { usersQueryOptions } from '@/entities/users';
 import { formatMoney, getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
@@ -53,7 +52,6 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const { scope } = useBudget();
   const { t } = useTranslation();
   const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const [values, setValues] = useState(initialValues);
@@ -69,7 +67,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
     destination,
     transfer?.source.amount,
     Boolean(transfer),
-    !transfer && scope.kind === 'personal',
+    false,
   );
   const schemaValid = transferFormSchema.safeParse(values).success;
   const effectiveRate = getTransferEffectiveRate(values.sourceAmount, values.destinationAmount);
@@ -95,8 +93,8 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
           event.preventDefault();
         }}
         >
+          <BudgetLabel />
           <Dialog.Header>
-            <BudgetLabel />
             <Dialog.Title>
               {transfer ? t('transfers.form.editTitle') : t('transfers.form.createTitle')}
             </Dialog.Title>
@@ -266,14 +264,12 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
 export const CreateTransferButton: FC<{ initialSourceAccountId?: string }> = ({ initialSourceAccountId }) => {
   const { t } = useTranslation();
   const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
-  const userQuery = useQuery(usersQueryOptions.me());
   const mutation = useCreateTransferMutation();
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(0);
-  const defaultSourceId = getPreferredAccountId(
-    accountsQuery.data ?? [],
-    initialSourceAccountId ?? userQuery.data?.defaultAccountId ?? null,
-  ) ?? '';
+  const sourceAccountId = accountsQuery.data?.find((account) => (
+    account._id === initialSourceAccountId && account.archivedAt === null
+  ))?._id ?? '';
 
   return (
     <>
@@ -293,7 +289,7 @@ export const CreateTransferButton: FC<{ initialSourceAccountId?: string }> = ({ 
         <TransferFormDialog
           key={session}
           open
-          initialValues={getDefaultTransferFormValues(defaultSourceId)}
+          initialValues={getDefaultTransferFormValues(sourceAccountId)}
           pending={mutation.isPending}
           error={mutation.isError ? t('transfers.errors.create') : undefined}
           insufficientFundsError={isInsufficientTransferFundsError(mutation.error)}

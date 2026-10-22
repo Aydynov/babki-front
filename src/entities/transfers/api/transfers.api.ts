@@ -17,7 +17,11 @@ import {
 class TransfersApi {
   private readonly client = apiClient;
 
-  create = async (payload: CreateTransferDto, scope?: BudgetScope, _signal?: AbortSignal) => {
+  create = async (
+    payload: CreateTransferDto,
+    scope: BudgetScope,
+    _signal?: AbortSignal,
+  ) => {
     const response = await this.client.post<Transfer>(
       budgetPath(scope, '/transfers'),
       createTransferSchema.parse(payload),
@@ -25,24 +29,34 @@ class TransfersApi {
     return parseRequiredWithSchema(transferSchema, response.data);
   };
 
-  findAll = async (query: ListTransfersQuery = {}, scope?: BudgetScope, signal?: AbortSignal) => {
+  findAll = async (
+    query: ListTransfersQuery,
+    scope: BudgetScope,
+    signal?: AbortSignal,
+  ) => {
     const response = await this.client.get<TransfersPaginatedResponse>(
       budgetPath(scope, '/transfers'),
       {
-        params:
-          scope?.kind === 'group'
-            ? utcPeriod(listTransfersQuerySchema.parse(query))
-            : listTransfersQuerySchema.parse(query),
+        params: utcPeriod(listTransfersQuerySchema.parse(query)),
         signal,
       },
     );
-    return parseRequiredWithSchema(transfersPaginatedResponseSchema, response.data);
+    return parseRequiredWithSchema(
+      transfersPaginatedResponseSchema,
+      response.data,
+    );
   };
 
-  findOne = async (transferId: string, scope?: BudgetScope, signal?: AbortSignal) => {
+  findOne = async (
+    transferId: string,
+    scope: BudgetScope,
+    signal?: AbortSignal,
+  ) => {
     const response = await this.client.get<Transfer>(
       budgetPath(scope, `/transfers/${transferId}`),
-      { signal },
+      {
+        signal,
+      },
     );
     return parseRequiredWithSchema(transferSchema, response.data);
   };
@@ -50,7 +64,7 @@ class TransfersApi {
   update = async (
     transferId: string,
     payload: UpdateTransferDto,
-    scope?: BudgetScope,
+    scope: BudgetScope,
     _signal?: AbortSignal,
   ) => {
     const response = await this.client.patch<Transfer>(
@@ -60,7 +74,11 @@ class TransfersApi {
     return parseRequiredWithSchema(transferSchema, response.data);
   };
 
-  remove = async (transferId: string, scope?: BudgetScope, _signal?: AbortSignal) => {
+  remove = async (
+    transferId: string,
+    scope: BudgetScope,
+    _signal?: AbortSignal,
+  ) => {
     await this.client.delete(budgetPath(scope, `/transfers/${transferId}`));
   };
 }

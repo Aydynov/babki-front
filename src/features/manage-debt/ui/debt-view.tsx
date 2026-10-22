@@ -1,9 +1,11 @@
-import { useBudgetScope, useCanManageRecord } from '@/entities/budgets';
+import { actorLabel } from '@/shared/lib/actor-label';
+import { useCanManageRecord } from '@/entities/budgets';
 import { useArchiveDebtMutation, useCancelDebtRepaymentMutation } from '@/entities/debts';
 import { QueryError } from '@/shared/ui/query-error';
 import { useDebtTransactionsQueryOptions } from '@/entities/debt-transactions';
 import { type Debt } from '@/entities/debts';
 import { formatMoney } from '@/shared/lib/currency';
+import { cn } from '@/shared/lib/shadcn-utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Typography } from '@/shared/ui/typography';
@@ -40,7 +42,6 @@ export const DebtView: FC<DebtViewProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
-  const scope = useBudgetScope();
   const canManage = useCanManageRecord('createdBy' in debt ? debt.createdBy : undefined);
   const mutable = canManage && !debt.archivedAt;
   const archive = useArchiveDebtMutation();
@@ -64,9 +65,7 @@ export const DebtView: FC<DebtViewProps> = ({
           <Typography.Caption1>
             Автор:
             {' '}
-            {debt.createdByActor.isAnonymized ? 'Участник' : [
-              debt.createdByActor.firstName, debt.createdByActor.lastName,
-            ].filter(Boolean).join(' ') || 'Участник'}
+            {actorLabel(debt.createdByActor)}
           </Typography.Caption1>
         )}
         {debt.archivedAt && <Typography.Caption1>Архив · Только чтение</Typography.Caption1>}
@@ -151,8 +150,15 @@ export const DebtView: FC<DebtViewProps> = ({
           {!transactionsLoading && !!transactions.length && (
             <div className="flex flex-col divide-y rounded-lg border">
               {transactions.map((transaction) => (
-                <div key={transaction._id} className="flex items-start justify-between gap-3 px-3 py-2">
-                  <div className="min-w-0">
+                <div
+                  key={transaction._id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-3 py-3"
+                >
+                  <div className={cn(
+                    'min-w-0 break-words',
+                    'cancelledAt' in transaction && transaction.cancelledAt && 'line-through',
+                  )}
+                  >
                     <Typography.Body3>
                       {formatDate.format(new Date(transaction.transactionDate))}
                     </Typography.Body3>
@@ -162,43 +168,38 @@ export const DebtView: FC<DebtViewProps> = ({
                       </Typography.Caption1>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className={cn(
+                    'flex flex-col items-end gap-1 text-right',
+                    'cancelledAt' in transaction && transaction.cancelledAt && 'line-through',
+                  )}
+                  >
                     <Typography.Body3>{formatMoney(transaction.amount, debt.currency)}</Typography.Body3>
                     {'isIncome' in transaction && (
                       <Typography.Caption1>
                         {transaction.isIncome ? 'Зачисление на счёт' : 'Без поступления'}
                       </Typography.Caption1>
                     )}
-                    {'incomeId' in transaction && transaction.incomeId && (
-                      <Typography.Caption1>
-                        Доход:
-                        {transaction.incomeId}
-                      </Typography.Caption1>
-                    )}
                     {'createdByActor' in transaction && (
                       <Typography.Caption1>
-                        {transaction.createdByActor.isAnonymized ? 'Участник' : [
-                          transaction.createdByActor.firstName, transaction.createdByActor.lastName,
-                        ].filter(Boolean).join(' ') || 'Участник'}
+                        {actorLabel(transaction.createdByActor)}
                       </Typography.Caption1>
                     )}
-                    {'cancelledAt' in transaction && (transaction.cancelledAt ? (
-                      <Typography.Caption1>
-                        Отменено
-                        {' '}
-                        {formatDate.format(new Date(transaction.cancelledAt))}
-                        {transaction.cancelledByActor && ` · ${transaction.cancelledByActor.isAnonymized
-                          ? 'Участник' : [transaction.cancelledByActor.firstName,
-                            transaction.cancelledByActor.lastName].filter(Boolean).join(' ') || 'Участник'}`}
-                      </Typography.Caption1>
-                    ) : mutable && (
+                    {'cancelledAt' in transaction && !transaction.cancelledAt && mutable && (
                       <RepaymentCancelButton
                         debtId={debt._id}
                         repayment={transaction}
                         mutation={cancel}
                       />
-                    ))}
+                    )}
                   </div>
+                  {'cancelledAt' in transaction && transaction.cancelledAt && (
+                    <Typography.Caption1 className="col-span-2 text-muted-foreground">
+                      Отменено
+                      {' '}
+                      {formatDate.format(new Date(transaction.cancelledAt))}
+                      {transaction.cancelledByActor && ` · ${actorLabel(transaction.cancelledByActor)}`}
+                    </Typography.Caption1>
+                  )}
                 </div>
               ))}
             </div>
@@ -238,7 +239,7 @@ export const DebtView: FC<DebtViewProps> = ({
           {t('debts.details.actions.delete')}
         </Button.Base>
         <div className="flex flex-wrap gap-2.5">
-          {scope.kind === 'group' && mutable && (
+          {mutable && (
             <ConfirmActionButton
               description="Архивировать долг? Изменение, исполнение и отмена станут недоступны. Восстановления нет."
               pending={archive.isPending}

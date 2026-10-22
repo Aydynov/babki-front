@@ -32,17 +32,17 @@ test('accepts zero-activity currency buckets and rejects scalar legacy reports',
   }).success, false);
 });
 
-test('orders report buckets default-first and preserves independent transfer totals', async () => {
+test('orders report buckets by ISO code and preserves independent transfer totals', async () => {
   const model = await load();
   const currencies = [bucket('EUR'), bucket('RUB'), bucket('USD')];
   currencies[0].transfersIn = 10;
   currencies[0].transfersOut = 7;
 
   assert.deepEqual(
-    model.sortReportCurrencies?.(currencies, 'USD').map(({ currency }) => currency),
-    ['USD', 'EUR', 'RUB'],
+    model.sortReportCurrencies?.(currencies).map(({ currency }) => currency),
+    ['EUR', 'RUB', 'USD'],
   );
-  assert.deepEqual(model.sortReportCurrencies?.(currencies, 'USD')[1], currencies[0]);
+  assert.deepEqual(model.sortReportCurrencies?.(currencies)[0], currencies[0]);
 });
 
 test('builds one zero-filled monthly series per currency', async () => {
@@ -60,12 +60,12 @@ test('builds one zero-filled monthly series per currency', async () => {
     { period: '2026-02-01', currencies: [bucket('RUB', 20)] },
   ].map((report) => model.reportPeriodSchema.parse(report));
 
-  const series = viewModel.getMonthlyCurrencySeries(reports, 'RUB');
+  const series = viewModel.getMonthlyCurrencySeries(reports);
   assert.deepEqual(series.map(({ currency }) => currency), ['RUB', 'USD']);
   assert.equal(series[0].periods[0].expenses, 0);
   assert.equal(series[1].periods[1].expenses, 0);
   assert.deepEqual(
-    viewModel.getMonthlyCurrencySeries([], 'USD'),
-    [{ currency: 'USD', periods: [] }],
+    viewModel.getMonthlyCurrencySeries([]),
+    [],
   );
 });

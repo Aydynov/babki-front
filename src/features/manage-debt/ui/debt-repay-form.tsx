@@ -1,7 +1,6 @@
-import { useBudget, useBudgetScope } from '@/entities/budgets';
+import { useBudget, useBudgetPermission } from '@/entities/budgets';
 import { type Debt, type useRepayDebtMutation } from '@/entities/debts';
-import { AccountSelect, useAccountsQueryOptions, getPreferredAccountId } from '@/entities/accounts';
-import { usersQueryOptions } from '@/entities/users';
+import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
@@ -11,7 +10,7 @@ import { Typography } from '@/shared/ui/typography';
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { LucideCheck } from 'lucide-react';
-import { type FC, useEffect } from 'react';
+import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFirstFieldError, getMutationErrorMessage, mapErrorMessage } from '../model/errors';
 import {
@@ -34,11 +33,10 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
+  const canCreateAccount = useBudgetPermission('manageAccounts');
   const budgetTitle = useBudget().title;
-  const scope = useBudgetScope();
   const mutationError = getMutationErrorMessage(mutation.error);
   const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
-  const userQuery = useQuery(usersQueryOptions.me());
   const eligibleAccounts = getEligibleDebtRepaymentAccounts(accountsQuery.data ?? [], debt.currency);
 
   const form = useForm({
@@ -63,15 +61,6 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
       onSuccess(updated);
     },
   });
-
-  useEffect(() => {
-    if (form.state.values.accountId || !accountsQuery.isSuccess || !userQuery.isSuccess) return;
-    const accountId = getPreferredAccountId(
-      eligibleAccounts,
-      scope.kind === 'personal' ? userQuery.data?.defaultAccountId ?? null : null,
-    );
-    if (accountId) form.setFieldValue('accountId', accountId);
-  }, [accountsQuery.isSuccess, eligibleAccounts, form, scope.kind, userQuery.data, userQuery.isSuccess]);
 
   const clearMutationError = () => {
     if (mutation.isError) mutation.reset();
@@ -220,12 +209,12 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
                   label={`Счёт зачисления в ${debt.currency}`}
                   placeholder="Выберите счёт"
                   emptyMessage={`Нет активного счёта в ${debt.currency}`}
-                  isLoading={accountsQuery.isLoading || userQuery.isLoading}
-                  error={accountsQuery.isError || userQuery.isError
+                  isLoading={accountsQuery.isLoading}
+                  error={accountsQuery.isError
                     ? 'Не удалось загрузить счета'
                     : undefined}
                   disabled={mutation.isPending}
-                  offerAccountCreation
+                  offerAccountCreation={canCreateAccount}
                 />
               )}
             </form.Field>

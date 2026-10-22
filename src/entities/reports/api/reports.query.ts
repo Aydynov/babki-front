@@ -3,20 +3,31 @@ import { useBudgetScope } from '@/entities/budgets/@x/reports';
 import type { BudgetScope } from '@/shared/types';
 import { scopedKey } from '@/shared/lib/budget-api';
 import { reportsApi } from './reports.api';
-import type { FindMonthlyReportsByQuery, FindYearlyReportsByQuery } from '../model/schemas';
+import type {
+  FindMonthlyReportsByQuery,
+  FindYearlyReportsByQuery,
+} from '../model/schemas';
 
 export const reportsQueryKeys = {
   all: ['reports'] as const,
-  monthly: (query?: FindMonthlyReportsByQuery) => [...reportsQueryKeys.all, 'monthly', query],
-  yearly: (query?: FindYearlyReportsByQuery) => [...reportsQueryKeys.all, 'yearly', query],
+  monthly: (query?: FindMonthlyReportsByQuery) => [
+    ...reportsQueryKeys.all,
+    'monthly',
+    query,
+  ],
+  yearly: (query?: FindYearlyReportsByQuery) => [
+    ...reportsQueryKeys.all,
+    'yearly',
+    query,
+  ],
 };
 
 export const reportsQueryOptions = {
-  monthly: (query?: FindMonthlyReportsByQuery, scope?: BudgetScope) => queryOptions({
+  monthly: (query: FindMonthlyReportsByQuery | undefined, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, reportsQueryKeys.monthly(query)),
     queryFn: ({ signal }) => reportsApi.getMonthly(query, scope, signal),
   }),
-  yearly: (query?: FindYearlyReportsByQuery, scope?: BudgetScope) => queryOptions({
+  yearly: (query: FindYearlyReportsByQuery | undefined, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, reportsQueryKeys.yearly(query)),
     queryFn: ({ signal }) => reportsApi.getYearly(query, scope, signal),
   }),

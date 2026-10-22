@@ -1,12 +1,22 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useBudgetScope } from '@/entities/budgets/@x/transactions';
 import type { BudgetScope } from '@/shared/types';
 import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
-import { loadPaginatedHistory, sortHistory } from '@/shared/lib/paginated-history';
+import {
+  loadPaginatedHistory,
+  sortHistory,
+} from '@/shared/lib/paginated-history';
 import { transactionsApi } from './transactions.api';
-import type { ListTransactionsQuery } from '../model/schemas';
+import type { ListTransactionsQuery, Transaction } from '../model/schemas';
 
-type AccountHistoryQuery = Pick<ListTransactionsQuery, 'accountId' | 'fromDate' | 'toDate'>;
+type AccountHistoryQuery = Pick<
+  ListTransactionsQuery,
+  'accountId' | 'fromDate' | 'toDate'
+>;
 
 export const transactionsQueryKeys = {
   all: ['transactions'] as const,
@@ -17,18 +27,22 @@ export const transactionsQueryKeys = {
 };
 
 export const transactionsQueryOptions = {
-  findAll: (query: ListTransactionsQuery = {}, scope?: BudgetScope) => queryOptions({
+  findAll: (query: ListTransactionsQuery, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, transactionsQueryKeys.list(query)),
     queryFn: ({ signal }) => transactionsApi.findAll(query, scope, signal),
   }),
-  findOne: (transactionId: string, scope?: BudgetScope) => queryOptions({
-    queryKey: scopedKey(scope, transactionsQueryKeys.detail(transactionId)),
-    queryFn: ({ signal }) => transactionsApi.findOne(transactionId, scope, signal),
-  }),
-  accountHistory: (
-    query: AccountHistoryQuery,
-    scope?: BudgetScope,
+  findOne: (
+    transactionId: string,
+    transactionType: Transaction['type'],
+    scope: BudgetScope,
   ) => queryOptions({
+    queryKey: scopedKey(scope, [
+      ...transactionsQueryKeys.detail(transactionId),
+      transactionType,
+    ]),
+    queryFn: ({ signal }) => transactionsApi.findOne(transactionId, scope, transactionType, signal),
+  }),
+  accountHistory: (query: AccountHistoryQuery, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, ['transactions', 'account-history', query]),
     queryFn: async ({ signal }) => {
       const lists = await Promise.all(
@@ -40,7 +54,9 @@ export const transactionsQueryOptions = {
           ),
         )),
       );
-      return sortHistory(lists.flat()).filter((item) => item.type !== 'transfer');
+      return sortHistory(lists.flat()).filter(
+        (item) => item.type !== 'transfer',
+      );
     },
   }),
 };
@@ -49,11 +65,10 @@ export const useTransactionsQueryOptions = () => {
   const scope = useBudgetScope();
   return {
     findAll: (query: ListTransactionsQuery = {}) => transactionsQueryOptions.findAll(query, scope),
-    findOne: (transactionId: string) => transactionsQueryOptions.findOne(transactionId, scope),
-    accountHistory: (query: AccountHistoryQuery) => transactionsQueryOptions.accountHistory(
-      query,
-      scope,
+    findOne: (transactionId: string, transactionType: Transaction['type']) => (
+      transactionsQueryOptions.findOne(transactionId, transactionType, scope)
     ),
+    accountHistory: (query: AccountHistoryQuery) => transactionsQueryOptions.accountHistory(query, scope),
   };
 };
 
@@ -67,7 +82,7 @@ export const useDeleteTransactionMutation = () => {
       transactionType,
     }: {
       transactionId: string;
-      transactionType?: 'income' | 'expense';
+      transactionType: Transaction['type'];
     }) => transactionsApi.delete(transactionId, scope, transactionType),
     onSuccess: () => {
       invalidateBudget(client, scope).catch(() => undefined);

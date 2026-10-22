@@ -14,11 +14,11 @@ import { Route as LoginRouteImport } from './app/routes/login'
 import { Route as JoinRouteImport } from './app/routes/join'
 import { Route as AuthenticatedRouteImport } from './app/routes/_authenticated'
 import { Route as IndexRouteImport } from './app/routes/index'
+import { Route as AuthenticatedSpacesRouteImport } from './app/routes/_authenticated.spaces'
 import { Route as AuthenticatedMainRouteImport } from './app/routes/_authenticated.main'
-import { Route as AuthenticatedGroupsRouteImport } from './app/routes/_authenticated.groups'
-import { Route as AuthenticatedGroupsIndexRouteImport } from './app/routes/_authenticated.groups.index'
-import { Route as AuthenticatedGroupsNewRouteImport } from './app/routes/_authenticated.groups.new'
-import { Route as AuthenticatedGroupsGroupIdRouteImport } from './app/routes/_authenticated.groups.$groupId'
+import { Route as AuthenticatedSpacesIndexRouteImport } from './app/routes/_authenticated.spaces.index'
+import { Route as AuthenticatedSpacesNewRouteImport } from './app/routes/_authenticated.spaces.new'
+import { Route as AuthenticatedSpacesSpaceIdRouteImport } from './app/routes/_authenticated.spaces.$spaceId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -44,32 +44,32 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSpacesRoute = AuthenticatedSpacesRouteImport.update({
+  id: '/spaces',
+  path: '/spaces',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedMainRoute = AuthenticatedMainRouteImport.update({
   id: '/main',
   path: '/main',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedGroupsRoute = AuthenticatedGroupsRouteImport.update({
-  id: '/groups',
-  path: '/groups',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedGroupsIndexRoute =
-  AuthenticatedGroupsIndexRouteImport.update({
+const AuthenticatedSpacesIndexRoute =
+  AuthenticatedSpacesIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedGroupsRoute,
+    getParentRoute: () => AuthenticatedSpacesRoute,
   } as any)
-const AuthenticatedGroupsNewRoute = AuthenticatedGroupsNewRouteImport.update({
+const AuthenticatedSpacesNewRoute = AuthenticatedSpacesNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => AuthenticatedGroupsRoute,
+  getParentRoute: () => AuthenticatedSpacesRoute,
 } as any)
-const AuthenticatedGroupsGroupIdRoute =
-  AuthenticatedGroupsGroupIdRouteImport.update({
-    id: '/$groupId',
-    path: '/$groupId',
-    getParentRoute: () => AuthenticatedGroupsRoute,
+const AuthenticatedSpacesSpaceIdRoute =
+  AuthenticatedSpacesSpaceIdRouteImport.update({
+    id: '/$spaceId',
+    path: '/$spaceId',
+    getParentRoute: () => AuthenticatedSpacesRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -77,11 +77,11 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/main': typeof AuthenticatedMainRoute
-  '/groups/$groupId': typeof AuthenticatedGroupsGroupIdRoute
-  '/groups/new': typeof AuthenticatedGroupsNewRoute
-  '/groups/': typeof AuthenticatedGroupsIndexRoute
+  '/spaces': typeof AuthenticatedSpacesRouteWithChildren
+  '/spaces/$spaceId': typeof AuthenticatedSpacesSpaceIdRoute
+  '/spaces/new': typeof AuthenticatedSpacesNewRoute
+  '/spaces/': typeof AuthenticatedSpacesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -89,9 +89,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/main': typeof AuthenticatedMainRoute
-  '/groups/$groupId': typeof AuthenticatedGroupsGroupIdRoute
-  '/groups/new': typeof AuthenticatedGroupsNewRoute
-  '/groups': typeof AuthenticatedGroupsIndexRoute
+  '/spaces/$spaceId': typeof AuthenticatedSpacesSpaceIdRoute
+  '/spaces/new': typeof AuthenticatedSpacesNewRoute
+  '/spaces': typeof AuthenticatedSpacesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -100,11 +100,11 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/_authenticated/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/_authenticated/main': typeof AuthenticatedMainRoute
-  '/_authenticated/groups/$groupId': typeof AuthenticatedGroupsGroupIdRoute
-  '/_authenticated/groups/new': typeof AuthenticatedGroupsNewRoute
-  '/_authenticated/groups/': typeof AuthenticatedGroupsIndexRoute
+  '/_authenticated/spaces': typeof AuthenticatedSpacesRouteWithChildren
+  '/_authenticated/spaces/$spaceId': typeof AuthenticatedSpacesSpaceIdRoute
+  '/_authenticated/spaces/new': typeof AuthenticatedSpacesNewRoute
+  '/_authenticated/spaces/': typeof AuthenticatedSpacesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -113,11 +113,11 @@ export interface FileRouteTypes {
     | '/join'
     | '/login'
     | '/register'
-    | '/groups'
     | '/main'
-    | '/groups/$groupId'
-    | '/groups/new'
-    | '/groups/'
+    | '/spaces'
+    | '/spaces/$spaceId'
+    | '/spaces/new'
+    | '/spaces/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -125,9 +125,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/main'
-    | '/groups/$groupId'
-    | '/groups/new'
-    | '/groups'
+    | '/spaces/$spaceId'
+    | '/spaces/new'
+    | '/spaces'
   id:
     | '__root__'
     | '/'
@@ -135,11 +135,11 @@ export interface FileRouteTypes {
     | '/join'
     | '/login'
     | '/register'
-    | '/_authenticated/groups'
     | '/_authenticated/main'
-    | '/_authenticated/groups/$groupId'
-    | '/_authenticated/groups/new'
-    | '/_authenticated/groups/'
+    | '/_authenticated/spaces'
+    | '/_authenticated/spaces/$spaceId'
+    | '/_authenticated/spaces/new'
+    | '/_authenticated/spaces/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -187,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/spaces': {
+      id: '/_authenticated/spaces'
+      path: '/spaces'
+      fullPath: '/spaces'
+      preLoaderRoute: typeof AuthenticatedSpacesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/main': {
       id: '/_authenticated/main'
       path: '/main'
@@ -194,60 +201,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMainRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/groups': {
-      id: '/_authenticated/groups'
-      path: '/groups'
-      fullPath: '/groups'
-      preLoaderRoute: typeof AuthenticatedGroupsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/groups/': {
-      id: '/_authenticated/groups/'
+    '/_authenticated/spaces/': {
+      id: '/_authenticated/spaces/'
       path: '/'
-      fullPath: '/groups/'
-      preLoaderRoute: typeof AuthenticatedGroupsIndexRouteImport
-      parentRoute: typeof AuthenticatedGroupsRoute
+      fullPath: '/spaces/'
+      preLoaderRoute: typeof AuthenticatedSpacesIndexRouteImport
+      parentRoute: typeof AuthenticatedSpacesRoute
     }
-    '/_authenticated/groups/new': {
-      id: '/_authenticated/groups/new'
+    '/_authenticated/spaces/new': {
+      id: '/_authenticated/spaces/new'
       path: '/new'
-      fullPath: '/groups/new'
-      preLoaderRoute: typeof AuthenticatedGroupsNewRouteImport
-      parentRoute: typeof AuthenticatedGroupsRoute
+      fullPath: '/spaces/new'
+      preLoaderRoute: typeof AuthenticatedSpacesNewRouteImport
+      parentRoute: typeof AuthenticatedSpacesRoute
     }
-    '/_authenticated/groups/$groupId': {
-      id: '/_authenticated/groups/$groupId'
-      path: '/$groupId'
-      fullPath: '/groups/$groupId'
-      preLoaderRoute: typeof AuthenticatedGroupsGroupIdRouteImport
-      parentRoute: typeof AuthenticatedGroupsRoute
+    '/_authenticated/spaces/$spaceId': {
+      id: '/_authenticated/spaces/$spaceId'
+      path: '/$spaceId'
+      fullPath: '/spaces/$spaceId'
+      preLoaderRoute: typeof AuthenticatedSpacesSpaceIdRouteImport
+      parentRoute: typeof AuthenticatedSpacesRoute
     }
   }
 }
 
-interface AuthenticatedGroupsRouteChildren {
-  AuthenticatedGroupsGroupIdRoute: typeof AuthenticatedGroupsGroupIdRoute
-  AuthenticatedGroupsNewRoute: typeof AuthenticatedGroupsNewRoute
-  AuthenticatedGroupsIndexRoute: typeof AuthenticatedGroupsIndexRoute
+interface AuthenticatedSpacesRouteChildren {
+  AuthenticatedSpacesSpaceIdRoute: typeof AuthenticatedSpacesSpaceIdRoute
+  AuthenticatedSpacesNewRoute: typeof AuthenticatedSpacesNewRoute
+  AuthenticatedSpacesIndexRoute: typeof AuthenticatedSpacesIndexRoute
 }
 
-const AuthenticatedGroupsRouteChildren: AuthenticatedGroupsRouteChildren = {
-  AuthenticatedGroupsGroupIdRoute: AuthenticatedGroupsGroupIdRoute,
-  AuthenticatedGroupsNewRoute: AuthenticatedGroupsNewRoute,
-  AuthenticatedGroupsIndexRoute: AuthenticatedGroupsIndexRoute,
+const AuthenticatedSpacesRouteChildren: AuthenticatedSpacesRouteChildren = {
+  AuthenticatedSpacesSpaceIdRoute: AuthenticatedSpacesSpaceIdRoute,
+  AuthenticatedSpacesNewRoute: AuthenticatedSpacesNewRoute,
+  AuthenticatedSpacesIndexRoute: AuthenticatedSpacesIndexRoute,
 }
 
-const AuthenticatedGroupsRouteWithChildren =
-  AuthenticatedGroupsRoute._addFileChildren(AuthenticatedGroupsRouteChildren)
+const AuthenticatedSpacesRouteWithChildren =
+  AuthenticatedSpacesRoute._addFileChildren(AuthenticatedSpacesRouteChildren)
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRouteWithChildren
   AuthenticatedMainRoute: typeof AuthenticatedMainRoute
+  AuthenticatedSpacesRoute: typeof AuthenticatedSpacesRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedGroupsRoute: AuthenticatedGroupsRouteWithChildren,
   AuthenticatedMainRoute: AuthenticatedMainRoute,
+  AuthenticatedSpacesRoute: AuthenticatedSpacesRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

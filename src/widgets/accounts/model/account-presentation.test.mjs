@@ -7,7 +7,7 @@ const account = (_id, type, currency, name, archivedAt = null) => ({
   _id, type, currency, name, archivedAt,
 });
 
-test('groups active accounts by type, default currency, ISO, localized name and id without mutating input', () => {
+test('groups active accounts by type, ISO, localized name and id without mutating input', () => {
   const accounts = [
     account('rub', 'balance', 'RUB', 'А'),
     account('saving', 'saving', 'USD', 'А'),
@@ -18,16 +18,16 @@ test('groups active accounts by type, default currency, ISO, localized name and 
     account('archive', 'balance', 'USD', 'А', '2026-10-01'),
   ];
   const original = [...accounts];
-  assert.deepEqual(groupAccounts(accounts, 'USD', 'ru').map(({ type, accounts: items }) => (
+  assert.deepEqual(groupAccounts(accounts, 'ru').map(({ type, accounts: items }) => (
     [type, items.map(({ _id }) => _id)]
-  )), [['balance', ['a1', 'a2', 'b', 'eur', 'rub']], ['saving', ['saving']]]);
+  )), [['balance', ['eur', 'rub', 'a1', 'a2', 'b']], ['saving', ['saving']]]);
   assert.deepEqual(accounts, original);
 });
 
 test('omits empty groups and returns no groups when every account is archived', () => {
-  assert.deepEqual(groupAccounts([], 'USD', 'ru'), []);
-  assert.deepEqual(groupAccounts([account('a', 'balance', 'USD', 'A', '2026-10-01')], 'USD', 'ru'), []);
-  assert.deepEqual(groupAccounts([account('s', 'saving', 'USD', 'A')], 'USD', 'ru')
+  assert.deepEqual(groupAccounts([], 'ru'), []);
+  assert.deepEqual(groupAccounts([account('a', 'balance', 'USD', 'A', '2026-10-01')], 'ru'), []);
+  assert.deepEqual(groupAccounts([account('s', 'saving', 'USD', 'A')], 'ru')
     .map(({ type }) => type), ['saving']);
 });
 
@@ -80,11 +80,11 @@ test('archive mode excludes active accounts and preserves grouping and ordering 
   ];
   const original = [...accounts];
   assert.deepEqual(
-    groupAccounts(accounts, 'USD', 'ru', 'archived')
+    groupAccounts(accounts, 'ru', 'archived')
       .map(({ type, accounts: items }) => [type, items.map(({ _id }) => _id)]),
-    [['balance', ['a1', 'a2', 'b', 'rub']], ['saving', ['saving']]],
+    [['balance', ['rub', 'a1', 'a2', 'b']], ['saving', ['saving']]],
   );
   assert.deepEqual(accounts, original);
-  assert.deepEqual(groupAccounts([], 'USD', 'ru', 'archived'), []);
-  assert.deepEqual(groupAccounts([accounts[0]], 'USD', 'ru', 'archived'), []);
+  assert.deepEqual(groupAccounts([], 'ru', 'archived'), []);
+  assert.deepEqual(groupAccounts([accounts[0]], 'ru', 'archived'), []);
 });

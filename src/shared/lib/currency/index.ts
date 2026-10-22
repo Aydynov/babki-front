@@ -43,14 +43,9 @@ export const formatMoney = (
   currency: currencyCodeSchema.parse(currency),
 }).format(amount);
 
-export const sortCurrencyCodes = (
-  currencies: CurrencyCode[],
-  defaultCurrency: CurrencyCode,
-) => [...new Set(currencies)].sort((left, right) => {
-  if (left === defaultCurrency) return -1;
-  if (right === defaultCurrency) return 1;
-  return left.localeCompare(right);
-});
+export const sortCurrencyCodes = (currencies: CurrencyCode[]) => (
+  [...new Set(currencies)].sort((left, right) => left.localeCompare(right))
+);
 
 export const getCurrentCurrencyCode = (): CurrencyCode => currencyCodeSchema.parse(
   getCurrency(i18next.language) ?? 'RUB',

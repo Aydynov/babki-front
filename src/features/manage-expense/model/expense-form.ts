@@ -2,9 +2,10 @@ import type { ExpenseCategory } from '@/entities/expense-categories';
 import type { Account } from '@/entities/accounts';
 import type { CreateExpenseDto, Expense, UpdateExpenseDto } from '@/entities/expenses';
 import { z } from 'zod';
+import type { CurrencyCode } from '@/shared/lib/currency';
 // Native node:test executes this module without Vite alias resolution and requires the explicit TypeScript entry point.
 // eslint-disable-next-line import-x/extensions, import-x/no-useless-path-segments
-import { hasValidMoneyPrecision, type CurrencyCode } from '../../../shared/lib/currency/index.ts';
+import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '../../../shared/lib/currency/index.ts';
 
 export interface ExpenseItemDraft {
   id: string;
@@ -14,6 +15,8 @@ export interface ExpenseItemDraft {
 }
 
 export interface ExpenseFormValues {
+  participantId?: string;
+  originalParticipantId?: string;
   accountId: string;
   categoryId: string;
   amount: string;
@@ -115,6 +118,7 @@ export const getDefaultExpenseFormValues = (
   accountId = '',
 ): ExpenseFormValues => ({
   accountId,
+  participantId: '',
   categoryId: '',
   amount: '',
   transactionDate: formatLocalDate(date),
@@ -127,6 +131,8 @@ export const getEditExpenseFormValues = (
   expense: Expense,
 ): ExpenseFormValues => ({
   accountId: expense.accountId,
+  participantId: expense.participantId,
+  originalParticipantId: expense.participantId,
   categoryId: expense.category._id,
   amount: String(expense.amount),
   transactionDate: expense.transactionDate.slice(0, 10),
@@ -153,13 +159,6 @@ export const getExpenseCategoryOptions = (
 };
 
 type ExpenseAccount = Pick<Account, '_id' | 'name' | 'archivedAt' | 'currency'>;
-
-export const getExpenseInitialAccountId = (
-  accounts: ExpenseAccount[],
-  defaultAccountId: string | null,
-) => accounts.find(({ _id, archivedAt }) => (
-  _id === defaultAccountId && archivedAt === null
-))?._id ?? '';
 
 export const getExpenseAccountContext = (
   accounts: ExpenseAccount[],
@@ -197,7 +196,8 @@ export const changeExpenseItemQuantity = (
   return String(Math.max(1, currentQuantity + change));
 };
 
-export const calculateExpenseItemsTotal = (items: ExpenseItemDraft[]) => {
+export const calculateExpenseItemsTotal = (items: ExpenseItemDraft[], currency: CurrencyCode = 'RUB') => {
+  const factor = 10 ** getCurrencyMinorUnits(currency);
   const amountInMinorUnits = items.reduce((total, item) => {
     const price = Number(item.price);
 
@@ -205,32 +205,34 @@ export const calculateExpenseItemsTotal = (items: ExpenseItemDraft[]) => {
       return total;
     }
 
-    const priceInMinorUnits = Math.round((price + Number.EPSILON) * 100);
+    const priceInMinorUnits = Math.round((price + Number.EPSILON) * factor);
     return total + priceInMinorUnits;
   }, 0);
 
-  return amountInMinorUnits > 0 ? String(amountInMinorUnits / 100) : '';
+  return amountInMinorUnits > 0 ? String(amountInMinorUnits / factor) : '';
 };
 
-const toMinorUnits = (value: string) => {
+const toMinorUnits = (value: string, currency: CurrencyCode) => {
   const parsedValue = Number(value);
   return Number.isFinite(parsedValue)
-    ? Math.round((parsedValue + Number.EPSILON) * 100)
+    ? Math.round((parsedValue + Number.EPSILON) * (10 ** getCurrencyMinorUnits(currency)))
     : 0;
 };
 
 export const isExpenseAmountOverridden = (
   amount: string,
   items: ExpenseItemDraft[],
-) => toMinorUnits(amount) !== toMinorUnits(calculateExpenseItemsTotal(items));
+  currency: CurrencyCode = 'RUB',
+) => toMinorUnits(amount, currency) !== toMinorUnits(calculateExpenseItemsTotal(items, currency), currency);
 
 export const applyAmountInput = (
   amount: string,
   items: ExpenseItemDraft[],
+  currency: CurrencyCode = 'RUB',
 ): AmountInputResult => {
   if (!amount.trim() || Number(amount) === 0) {
     return {
-      amount: calculateExpenseItemsTotal(items),
+      amount: calculateExpenseItemsTotal(items, currency),
       amountOverridden: false,
     };
   }
@@ -242,6 +244,7 @@ export const mapCreateExpenseDto = (
   values: ExpenseFormValues,
 ): CreateExpenseDto => ({
   accountId: values.accountId.trim(),
+  ...(values.participantId ? { participantId: values.participantId } : {}),
   categoryId: values.categoryId.trim(),
   amount: Number(values.amount),
   transactionDate: values.transactionDate,
@@ -259,6 +262,8 @@ export const mapCreateExpenseDto = (
 export const mapUpdateExpenseDto = (
   values: ExpenseFormValues,
 ): UpdateExpenseDto => ({
+  ...(values.participantId && values.participantId !== values.originalParticipantId
+    ? { participantId: values.participantId } : {}),
   categoryId: values.categoryId.trim(),
   amount: Number(values.amount),
   merchant: values.merchant.trim(),

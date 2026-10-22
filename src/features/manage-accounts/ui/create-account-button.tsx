@@ -5,13 +5,11 @@ import {
   subscribeAccountManagementRequests,
   useCreateAccountMutation,
 } from '@/entities/accounts';
-import { usersQueryOptions } from '@/entities/users';
 import { currencyCodes } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select } from '@/shared/ui/select';
-import { useQuery } from '@tanstack/react-query';
 import { LucidePlus, LucideX } from 'lucide-react';
 import {
   type FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState,
@@ -23,8 +21,6 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
   const allowed = useBudgetPermission('manageAccounts');
   const { t } = useTranslation();
   const fieldId = useId();
-  const userQuery = useQuery(usersQueryOptions.me());
-  const user = userQuery.data;
   const createMutation = useCreateAccountMutation();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string>();
@@ -38,14 +34,10 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
   const resetCreateForm = useCallback(() => {
     setName('');
     setType('balance');
-    setCurrency(user?.defaultCurrency ?? 'RUB');
+    setCurrency('RUB');
     setAmount('');
     setOpenedAt(getLocalDateString());
-  }, [user?.defaultCurrency]);
-
-  useEffect(() => {
-    if (user?.defaultCurrency) setCurrency(user.defaultCurrency);
-  }, [user?.defaultCurrency]);
+  }, []);
 
   useEffect(() => subscribeAccountManagementRequests(() => {
     finalFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -81,6 +73,8 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
     }
   };
 
+  if (!allowed) return null;
+
   return (
     <>
       {!hidden && (
@@ -103,8 +97,8 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
             : originatingDialog.current?.querySelector<HTMLSelectElement>('select:not(:disabled)') ?? true
         )}
         >
+          <BudgetLabel />
           <Dialog.Header>
-            <BudgetLabel />
             <Dialog.Title>{t('accounts.management.new')}</Dialog.Title>
             <Button.Icon
               aria-label={t('accounts.management.close')}
@@ -115,8 +109,6 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
             </Button.Icon>
           </Dialog.Header>
           <Dialog.Body>
-            {userQuery.isLoading && <p aria-live="polite">{t('accounts.loading')}</p>}
-            {userQuery.isError && <p role="alert">{t('accounts.errors.load')}</p>}
             <form className="flex flex-col gap-4" onSubmit={submitCreate}>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor={`${fieldId}-name`} className="text-body-2 font-medium">

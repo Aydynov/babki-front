@@ -15,6 +15,3 @@ export type {
   DebtTransactionsPaginatedResponse,
   ListDebtTransactionsQuery,
 } from './model/schemas';
-
-export type { GroupRepayment } from './model/schemas';
-export { groupRepaymentSchema, groupRepaymentsPaginatedResponseSchema } from './model/schemas';

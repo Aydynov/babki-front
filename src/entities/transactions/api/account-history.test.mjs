@@ -15,10 +15,16 @@ test('account history merges all income/expense pages and uses invalidatable que
       '/src/entities/transfers/api/transfers.query.ts',
     );
     const id = (n) => n.toString(16).padStart(24, '0');
+    const scope = { userId: id(9), spaceId: id(10) };
     const query = { accountId: id(1), fromDate: '2026-10-01', toDate: '2026-10-31' };
     const calls = [];
     const income = Array.from({ length: 12 }, (_, i) => ({
       _id: id(i + 100),
+      spaceId: id(10),
+      createdBy: id(10),
+      createdByActor: {
+        userId: id(10), firstName: null, lastName: null, isAnonymized: true,
+      },
       accountId: id(1),
       snapshotId: id(2),
       currency: 'RUB',
@@ -43,15 +49,17 @@ test('account history merges all income/expense pages and uses invalidatable que
         config,
       };
     };
-    const options = transactionsQueryOptions.accountHistory(query);
+    const options = transactionsQueryOptions.accountHistory(query, scope);
     const rows = await options.queryFn({});
     assert.equal(rows.length, 13);
     assert.equal(rows[0]._id, id(500));
     assert.equal(rows[1]._id, id(111));
     assert.equal(calls.length, 4);
-    assert.ok(calls.every((call) => call.accountId === query.accountId && call.fromDate === query.fromDate));
+    assert.ok(calls.every((call) => (
+      call.accountId === query.accountId && call.fromDate === `${query.fromDate}T00:00:00.000Z`
+    )));
     assert.deepEqual(options.queryKey.slice(0, 1), transactionsQueryKeys.all);
-    assert.deepEqual(transfersQueryOptions.accountHistory(query).queryKey.slice(0, 1), transfersQueryKeys.all);
+    assert.deepEqual(transfersQueryOptions.accountHistory(query, scope).queryKey.slice(0, 1), transfersQueryKeys.all);
     apiClient.defaults.adapter = async () => {
       throw new Error('offline');
     };

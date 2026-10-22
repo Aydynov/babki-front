@@ -1,3 +1,4 @@
+import { actorLabel } from '@/shared/lib/actor-label';
 import type { Account } from '@/entities/accounts';
 import { useTransactionsQueryOptions } from '@/entities/transactions';
 import { useTransfersQueryOptions } from '@/entities/transfers';
@@ -93,9 +94,7 @@ export function AccountDetailsDialog({
                   {item.createdByActor && (
                   <p className="text-muted-foreground">
                     Добавил(а):
-                    {item.createdByActor.isAnonymized
-                      ? 'Удалённый пользователь' : [item.createdByActor.firstName, item.createdByActor.lastName]
-                        .filter(Boolean).join(' ')}
+                    {actorLabel(item.createdByActor)}
                   </p>
                   )}
                 </td>

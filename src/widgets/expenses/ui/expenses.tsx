@@ -1,3 +1,6 @@
+import { useBudgetScope } from '@/entities/budgets';
+import { spacesQueryOptions } from '@/entities/spaces';
+import { actorLabel } from '@/shared/lib/actor-label';
 import { ExpenseCategoryBadge } from '@/entities/expense-categories';
 import { useExpensesQueryOptions } from '@/entities/expenses';
 import {
@@ -22,7 +25,7 @@ import { Accordion } from '@base-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const mobileTableClassName = `
@@ -47,11 +50,17 @@ const getRowGridClassName = (withActions: boolean) => `
 
 export const Expenses: FC = () => {
   const expensesQueryOptions = useExpensesQueryOptions();
+  const scope = useBudgetScope();
+  const members = useQuery(spacesQueryOptions.allMembers(scope.userId, scope.spaceId));
+  const [participantId, setParticipantId] = useState('');
+  const [page, setPage] = useState(1);
   const selectedPeriod = useSelectedPeriod();
   const isCurrentPeriod = useIsCurrentPeriod();
   const rowGridClassName = getRowGridClassName(isCurrentPeriod);
   const expensesQuery = useQuery(
-    expensesQueryOptions.findAll(selectedPeriod),
+    expensesQueryOptions.findAll({
+      ...selectedPeriod, participantId: participantId || undefined, page, limit: 20,
+    }),
   );
   const { t } = useTranslation();
 
@@ -137,6 +146,35 @@ export const Expenses: FC = () => {
         )}
       </Card.Header>
       <Card.Content className="px-0">
+        <label htmlFor="expenses-participant-filter" className="flex flex-col gap-1 px-3 pb-3">
+          Участник расхода
+          <select
+            id="expenses-participant-filter"
+            className="h-10 rounded-md border bg-background px-3"
+            value={participantId}
+            disabled={members.isLoading}
+            onChange={(event) => {
+              setParticipantId(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Все участники</option>
+            {members.data?.map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {[member.firstName, member.lastName].filter(Boolean).join(' ') || 'Участник'}
+              </option>
+            ))}
+            {expensesQuery.data?.items.filter((expense, index, items) => (
+              !members.data?.some((member) => member.userId === expense.participantId)
+              && items.findIndex((item) => item.participantId === expense.participantId) === index
+            )).map((expense) => (
+              <option key={expense.participantId} value={expense.participantId}>
+                {expense.participantActor ? actorLabel(expense.participantActor) : 'Участник'}
+              </option>
+            ))}
+          </select>
+          {members.isError && <span role="alert">Не удалось загрузить участников</span>}
+        </label>
         {expensesQuery.isError && (
         <QueryError
           compact
@@ -145,6 +183,26 @@ export const Expenses: FC = () => {
           }}
         />
         )}
+        <div className="flex items-center justify-between px-3 pb-3">
+          <Button.Base
+            variant="outline"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            Назад
+          </Button.Base>
+          <span>
+            Страница
+            {page}
+          </span>
+          <Button.Base
+            variant="outline"
+            disabled={page * 20 >= (expensesQuery.data?.total ?? 0)}
+            onClick={() => setPage(page + 1)}
+          >
+            Далее
+          </Button.Base>
+        </div>
         <Table.Base className={mobileTableClassName}>
           <Accordion.Root render={<Table.Body className={mobileBodyClassName} />}>
             {expensesQuery.data?.items.map((expense) => {
@@ -176,9 +234,7 @@ export const Expenses: FC = () => {
                           <Body2 className="text-muted-foreground">
                             Добавил(а):
                             {' '}
-                            {expense.createdByActor.isAnonymized ? 'Удалённый пользователь'
-                              : [expense.createdByActor.firstName, expense.createdByActor.lastName]
-                                .filter(Boolean).join(' ')}
+                            {actorLabel(expense.createdByActor)}
                           </Body2>
                         )}
                         {!!items.length && (

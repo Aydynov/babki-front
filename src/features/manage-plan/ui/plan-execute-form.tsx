@@ -1,4 +1,5 @@
-import { useBudget } from '@/entities/budgets';
+import { useBudget, useBudgetPermission } from '@/entities/budgets';
+import { spacesQueryOptions } from '@/entities/spaces';
 import { type Plan, type useClosePlanMutation } from '@/entities/plans';
 import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { useForm } from '@tanstack/react-form';
@@ -32,7 +33,9 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
-  const budgetTitle = useBudget().title;
+  const canCreateAccount = useBudgetPermission('manageAccounts');
+  const { title: budgetTitle, scope } = useBudget();
+  const members = useQuery(spacesQueryOptions.allMembers(scope.userId, scope.spaceId));
   const mutationError = getMutationErrorMessage(mutation.error);
   const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const eligibleAccounts = getEligiblePlanAccounts(accountsQuery.data ?? [], plan.currency);
@@ -47,6 +50,7 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
         planId: plan._id,
         payload: {
           accountId: value.accountId,
+          ...(value.participantId ? { participantId: value.participantId } : {}),
           closingDate: value.closingDate,
           amount: Number(value.amount),
           description: value.description.trim(),
@@ -97,6 +101,29 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
+        <form.Field name="participantId">
+          {(field) => (
+            <div className="flex flex-col gap-1.5">
+              <Input.Label htmlFor="execute-plan-participant">Участник расхода</Input.Label>
+              <select
+                id="execute-plan-participant"
+                className="h-10 rounded-md border bg-background px-3"
+                value={field.state.value}
+                disabled={mutation.isPending || members.isLoading || members.isError}
+                onChange={(event) => field.handleChange(event.target.value)}
+              >
+                <option value="">Автор расхода (по умолчанию)</option>
+                {members.data?.map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {[member.firstName, member.lastName].filter(Boolean).join(' ') || 'Участник'}
+                  </option>
+                ))}
+              </select>
+              {members.isError && <Input.Error>Не удалось загрузить участников</Input.Error>}
+            </div>
+          )}
+        </form.Field>
+
         <Typography.Caption1 className="text-muted-foreground">
           Бюджет:
           {budgetTitle}
@@ -116,7 +143,7 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
               isLoading={accountsQuery.isLoading}
               error={accountsQuery.isError ? 'Не удалось загрузить счета' : undefined}
               disabled={mutation.isPending}
-              offerAccountCreation
+              offerAccountCreation={canCreateAccount}
             />
           )}
         </form.Field>

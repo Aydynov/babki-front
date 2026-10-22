@@ -1,5 +1,4 @@
 import { useExpensesQueryOptions } from '@/entities/expenses';
-import { usersQueryOptions } from '@/entities/users';
 import { ChartCurrencySelect, getDailyExpenseCurrencies, useChartCurrency } from '@/features/select-chart-currency';
 import { useSelectedPeriod } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
@@ -34,17 +33,16 @@ export const ExpensesByDays: FC = () => {
   const expensesQuery = useQuery(
     expensesQueryOptions.findAll(selectedPeriod),
   );
-  const userQuery = useQuery(usersQueryOptions.me());
   const currencies = useMemo(() => (expensesQuery.data
     ? getDailyExpenseCurrencies(expensesQuery.data.items)
     : undefined), [expensesQuery.data]);
-  const [currency, setCurrency] = useChartCurrency(currencies, userQuery.data?.defaultCurrency ?? 'RUB');
+  const [currency, setCurrency] = useChartCurrency(currencies);
   const items = useMemo(() => expensesQuery.data?.items
     .filter((expense) => expense.currency === currency)
     .map((expense) => ({ date: expense.transactionDate, amount: expense.amount }))
     .sort((a, b) => (isAfter(a.date, b.date) ? 1 : -1)) ?? [], [expensesQuery.data, currency]);
 
-  if (expensesQuery.isLoading || userQuery.isLoading) {
+  if (expensesQuery.isLoading) {
     return (
       <Card.Base aria-busy="true" className="h-fit w-full min-w-0 md:w-200 md:min-w-max">
         <span className="sr-only">Загрузка...</span>
@@ -59,13 +57,11 @@ export const ExpensesByDays: FC = () => {
     );
   }
 
-  if ((expensesQuery.isError && expensesQuery.data === undefined)
-    || (userQuery.isError && userQuery.data === undefined)) {
+  if ((expensesQuery.isError && expensesQuery.data === undefined)) {
     return (
       <Card.Base className="h-fit min-h-64 w-full min-w-0 md:w-200 md:min-w-max">
         <QueryError onRetry={() => {
           expensesQuery.refetch().catch(() => undefined);
-          userQuery.refetch().catch(() => undefined);
         }}
         />
       </Card.Base>
@@ -88,12 +84,11 @@ export const ExpensesByDays: FC = () => {
         )}
       </Card.Header>
       <Card.Content>
-        {(expensesQuery.isError || userQuery.isError) && (
+        {(expensesQuery.isError) && (
           <QueryError
             compact
             onRetry={() => {
               expensesQuery.refetch().catch(() => undefined);
-              userQuery.refetch().catch(() => undefined);
             }}
           />
         )}

@@ -4,6 +4,15 @@ export const objectIdSchema = z
   .string()
   .regex(/^[a-fA-F0-9]{24}$/, 'Invalid ObjectId');
 
+export const financialActorSchema = z.object({
+  userId: objectIdSchema,
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  isAnonymized: z.boolean(),
+});
+
+export type FinancialActor = z.infer<typeof financialActorSchema>;
+
 export const dateStringSchema = z.string().refine(
   (value) => !Number.isNaN(Date.parse(value)),
   { message: 'Invalid date string' },

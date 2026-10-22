@@ -17,6 +17,7 @@ const loadSchemas = async () => {
 
 const account = {
   _id: '507f1f77bcf86cd799439011',
+  spaceId: '507f1f77bcf86cd799439010',
   name: 'Основной счёт',
   type: 'balance',
   currency: 'RUB',

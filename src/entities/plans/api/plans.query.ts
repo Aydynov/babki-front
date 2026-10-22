@@ -1,25 +1,32 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useBudgetScope } from '@/entities/budgets/@x/plans';
 import type { BudgetScope } from '@/shared/types';
 import { invalidateBudget, scopedKey } from '@/shared/lib/budget-api';
 import { plansApi } from './plans.api';
 import type {
-  ClosePlanPayload, CreatePlanPayload, ListPlansQuery, UpdatePlanPayload,
+  ClosePlanPayload,
+  CreatePlanPayload,
+  ListPlansQuery,
+  UpdatePlanPayload,
 } from '../model/schemas';
 
 export const plansQueryKeys = {
   all: ['plans'] as const,
-  listAll: (scope?: BudgetScope) => [...scopedKey(scope, ['plans']), 'list'] as const,
-  list: (query: ListPlansQuery, scope?: BudgetScope) => [...plansQueryKeys.listAll(scope), query] as const,
-  detail: (id: string, scope?: BudgetScope) => [...scopedKey(scope, ['plans']), 'detail', id] as const,
+  listAll: (scope: BudgetScope) => [...scopedKey(scope, ['plans']), 'list'] as const,
+  list: (query: ListPlansQuery, scope: BudgetScope) => [...plansQueryKeys.listAll(scope), query] as const,
+  detail: (id: string, scope: BudgetScope) => [...scopedKey(scope, ['plans']), 'detail', id] as const,
 };
 
 export const plansQueryOptions = {
-  findAll: (query: ListPlansQuery = {}, scope?: BudgetScope) => queryOptions({
+  findAll: (query: ListPlansQuery, scope: BudgetScope) => queryOptions({
     queryKey: plansQueryKeys.list(query, scope),
     queryFn: ({ signal }) => plansApi.findAll(query, signal, scope),
   }),
-  findOne: (id: string, scope?: BudgetScope) => queryOptions({
+  findOne: (id: string, scope: BudgetScope) => queryOptions({
     queryKey: plansQueryKeys.detail(id, scope),
     queryFn: ({ signal }) => plansApi.findOne(id, signal, scope),
   }),
@@ -50,9 +57,13 @@ export const useUpdatePlanMutation = () => {
   const client = useQueryClient();
   return useMutation({
     retry: false,
-    mutationFn: ({ planId, payload }: { planId: string; payload: UpdatePlanPayload }) => (
-      plansApi.update(planId, payload, scope)
-    ),
+    mutationFn: ({
+      planId,
+      payload,
+    }: {
+      planId: string;
+      payload: UpdatePlanPayload;
+    }) => plansApi.update(planId, payload, scope),
     onSuccess: () => {
       invalidateBudget(client, scope).catch(() => undefined);
     },
@@ -88,9 +99,13 @@ export const useClosePlanMutation = () => {
   const client = useQueryClient();
   return useMutation({
     retry: false,
-    mutationFn: ({ planId, payload }: { planId: string; payload: ClosePlanPayload }) => (
-      plansApi.close(planId, payload, scope)
-    ),
+    mutationFn: ({
+      planId,
+      payload,
+    }: {
+      planId: string;
+      payload: ClosePlanPayload;
+    }) => plansApi.close(planId, payload, scope),
     onSuccess: () => {
       invalidateBudget(client, scope).catch(() => undefined);
     },

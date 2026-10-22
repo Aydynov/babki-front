@@ -1,6 +1,5 @@
 import { useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
 import { getMonthlyExpenseCategoryBuckets, useReportsQueryOptions } from '@/entities/reports';
-import { usersQueryOptions } from '@/entities/users';
 import { ManageExpenseCategoriesButton } from '@/features/manage-expense-categories';
 import { ChartCurrencySelect, useChartCurrency } from '@/features/select-chart-currency';
 import { useSelectedPeriod } from '@/features/select-period';
@@ -33,7 +32,6 @@ export const ExpensesByCategories: FC = () => {
   const reportsQuery = useQuery(reportsQueryOptions.monthly(reportQuery));
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
   const categories = categoriesQuery.data;
-  const userQuery = useQuery(usersQueryOptions.me());
   const currencyBuckets = useMemo(() => getMonthlyExpenseCategoryBuckets(
     reportsQuery.data,
     reportPeriod,
@@ -42,22 +40,19 @@ export const ExpensesByCategories: FC = () => {
     ? currencyBuckets.map(({ currency }) => currency)
     : undefined), [reportsQuery.data, currencyBuckets]);
   const [currency, setCurrency] = useChartCurrency(
-    userQuery.data ? currencies : undefined,
-    userQuery.data?.defaultCurrency ?? 'RUB',
+    reportsQuery.data ? currencies : undefined,
   );
   const selectedBucket = currencyBuckets.find((bucket) => bucket.currency === currency);
   const categoryRows = useMemo(() => getSortedMonthlyExpenseCategoryRows(
     categories,
     selectedBucket,
   ), [categories, selectedBucket]);
-  const isLoading = reportsQuery.isLoading || categoriesQuery.isLoading || userQuery.isLoading;
+  const isLoading = reportsQuery.isLoading || categoriesQuery.isLoading;
   const hasUnavailableData = (reportsQuery.isError && reportsQuery.data === undefined)
-    || (categoriesQuery.isError && categoriesQuery.data === undefined)
-    || (userQuery.isError && userQuery.data === undefined);
+    || (categoriesQuery.isError && categoriesQuery.data === undefined);
   const retry = () => {
     reportsQuery.refetch().catch(() => undefined);
     categoriesQuery.refetch().catch(() => undefined);
-    userQuery.refetch().catch(() => undefined);
   };
   const contentClassName = !isLoading && (!categories?.length || !currency)
     ? 'flex grow items-center justify-center'
@@ -86,7 +81,7 @@ export const ExpensesByCategories: FC = () => {
       </Card.Header>
       <Card.Content className={contentClassName}>
         {hasUnavailableData && <QueryError onRetry={retry} />}
-        {!hasUnavailableData && (reportsQuery.isError || categoriesQuery.isError || userQuery.isError) && (
+        {!hasUnavailableData && (reportsQuery.isError || categoriesQuery.isError) && (
           <QueryError compact onRetry={retry} />
         )}
         {isLoading && ['first', 'second', 'third'].map((row) => (

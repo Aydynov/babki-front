@@ -1,4 +1,3 @@
-import { snapshotsQueryKeys } from '@/entities/accounts-snapshots';
 import { accountsQueryKeys } from '@/entities/accounts';
 import { expenseLimitsQueryKeys } from '@/entities/expense-limits';
 import {
@@ -34,14 +33,13 @@ export const removeExpenseFromCachedLists = (
 
 export const refreshExpenseDeletionQueries = (
   queryClient: QueryClient,
-  accountId: string,
+  _accountId: string,
 ) => {
   Promise.all([
     queryClient.invalidateQueries({ queryKey: expensesQueryKeys.all }),
     queryClient.invalidateQueries({ queryKey: reportsQueryKeys.all }),
     queryClient.invalidateQueries({ queryKey: expenseLimitsQueryKeys.all }),
     queryClient.invalidateQueries({ queryKey: accountsQueryKeys.all }),
-    queryClient.invalidateQueries({ queryKey: snapshotsQueryKeys.byAccount(accountId) }),
     queryClient.invalidateQueries({ queryKey: transactionsQueryKeys.all }),
   ]).catch(() => undefined);
 };

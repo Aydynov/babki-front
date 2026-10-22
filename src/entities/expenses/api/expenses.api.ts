@@ -19,17 +19,23 @@ import {
 } from '../model/schemas';
 
 class ExpensesApi {
-  private static normalize = async (value: unknown, scope?: BudgetScope) => {
+  private static normalize = async (value: unknown, scope: BudgetScope, signal?: AbortSignal) => {
     const record = z
       .object({ category: z.string().regex(/^[a-f\d]{24}$/i) })
       .passthrough()
       .parse(value);
-    const category = await expenseCategoriesApi.findOne(record.category, scope).catch(() => null);
+    const category = await expenseCategoriesApi
+      .findOne(record.category, scope, signal)
+      .catch((error: unknown) => {
+        if (signal?.aborted) throw error;
+        return null;
+      });
     return {
       ...record,
       categoryUnavailable: !category,
       category: category ?? {
         _id: record.category,
+        spaceId: scope.spaceId,
         name: 'Категория недоступна',
         isArchived: true,
         createdAt: '1970-01-01',
@@ -40,76 +46,91 @@ class ExpensesApi {
 
   private readonly client = apiClient;
 
-  create = async (payload: CreateExpenseDto, scope?: BudgetScope, _signal?: AbortSignal) => {
-    const body = (
-      scope?.kind === 'group'
-        ? createExpenseSchema.extend({ amount: z.number().positive() })
-        : createExpenseSchema
-    ).parse(payload);
-    const response = await this.client.post<Expense>(budgetPath(scope, '/expenses'), body);
+  create = async (
+    payload: CreateExpenseDto,
+    scope: BudgetScope,
+    _signal?: AbortSignal,
+  ) => {
+    const body = createExpenseSchema
+      .extend({ amount: z.number().positive() })
+      .parse(payload);
+    const response = await this.client.post<Expense>(
+      budgetPath(scope, '/expenses'),
+      body,
+    );
 
     return parseRequiredWithSchema(
       expenseSchema,
-      scope?.kind === 'group' ? await ExpensesApi.normalize(response.data, scope) : response.data,
+      await ExpensesApi.normalize(response.data, scope),
     );
   };
 
-  findAll = async (query: ListExpensesQuery = {}, scope?: BudgetScope, signal?: AbortSignal) => {
+  findAll = async (
+    query: ListExpensesQuery,
+    scope: BudgetScope,
+    signal?: AbortSignal,
+  ) => {
     const params = listExpensesQuerySchema.parse(query);
     const response = await this.client.get<ExpensesPaginatedResponse>(
       budgetPath(scope, '/expenses'),
       {
-        params: scope?.kind === 'group' ? utcPeriod(params) : params,
+        params: utcPeriod(params),
         signal,
       },
     );
 
-    const data = scope?.kind === 'group'
-      ? {
-        ...response.data,
-        items: await Promise.all(
-          response.data.items.map((item) => ExpensesApi.normalize(item, scope)),
-        ),
-      }
-      : response.data;
+    const data = {
+      ...response.data,
+      items: await Promise.all(
+        response.data.items.map((item) => ExpensesApi.normalize(item, scope, signal)),
+      ),
+    };
     return parseRequiredWithSchema(expensesPaginatedResponseSchema, data);
   };
 
   findTotalRevenue = async (
-    query: ListExpensesQuery = {},
-    scope?: BudgetScope,
+    query: ListExpensesQuery,
+    scope: BudgetScope,
     signal?: AbortSignal,
   ) => {
     const params = listExpensesQuerySchema.parse(query);
-    const response = await this.client.get<ExpenseRevenue>(budgetPath(scope, '/expenses/revenue'), {
-      params: scope?.kind === 'group' ? utcPeriod(params) : params,
-      signal,
-    });
+    const response = await this.client.get<ExpenseRevenue>(
+      budgetPath(scope, '/expenses/revenue'),
+      {
+        params: utcPeriod(params),
+        signal,
+      },
+    );
     return parseRequiredWithSchema(expenseRevenueSchema, response.data);
   };
 
-  findOne = async (expenseId: string, scope?: BudgetScope, signal?: AbortSignal) => {
-    const response = await this.client.get<Expense>(budgetPath(scope, `/expenses/${expenseId}`), {
-      signal,
-    });
+  findOne = async (
+    expenseId: string,
+    scope: BudgetScope,
+    signal?: AbortSignal,
+  ) => {
+    const response = await this.client.get<Expense>(
+      budgetPath(scope, `/expenses/${expenseId}`),
+      {
+        signal,
+      },
+    );
 
     return parseRequiredWithSchema(
       expenseSchema,
-      scope?.kind === 'group' ? await ExpensesApi.normalize(response.data, scope) : response.data,
+      await ExpensesApi.normalize(response.data, scope, signal),
     );
   };
 
   update = async (
     expenseId: string,
     payload: UpdateExpenseDto,
-    scope?: BudgetScope,
+    scope: BudgetScope,
     _signal?: AbortSignal,
   ) => {
-    const body = (
-      scope?.kind === 'group'
-        ? updateExpenseSchema.extend({ amount: z.number().positive().optional() })
-        : updateExpenseSchema
-    ).parse(payload);
+    const body = updateExpenseSchema
+      .extend({ amount: z.number().positive().optional() })
+      .parse(payload);
     const response = await this.client.patch<Expense>(
       budgetPath(scope, `/expenses/${expenseId}`),
       body,
@@ -117,7 +138,7 @@ class ExpensesApi {
 
     return parseRequiredWithSchema(
       expenseSchema,
-      scope?.kind === 'group' ? await ExpensesApi.normalize(response.data, scope) : response.data,
+      await ExpensesApi.normalize(response.data, scope),
     );
   };
 }

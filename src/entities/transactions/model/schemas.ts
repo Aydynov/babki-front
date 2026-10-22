@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   dateStringSchema,
+  financialActorSchema,
   entityMetaSchema,
   objectIdSchema,
   paginatedResponseSchema,
@@ -8,38 +9,42 @@ import {
   periodQuerySchema,
 } from '@/shared/api';
 import { currencyCodeSchema } from '@/shared/lib/currency';
-import { effectiveRateSchema, transferEffectSchema } from '@/entities/transfers/@x/transactions';
+import {
+  effectiveRateSchema,
+  transferEffectSchema,
+} from '@/entities/transfers/@x/transactions';
 
 export const transactionTypeEnum = z.enum(['income', 'expense', 'transfer']);
-export const financialActorSchema = z.object({
-  userId: objectIdSchema,
-  firstName: z.string().nullable(),
-  lastName: z.string().nullable(),
-  isAnonymized: z.boolean(),
-});
 
 export const transactionBaseSchema = z
   .object({
-    createdBy: objectIdSchema.optional(),
+    createdBy: objectIdSchema,
     participantId: objectIdSchema.optional(),
-    createdByActor: financialActorSchema.optional(),
+    createdByActor: financialActorSchema,
     participantActor: financialActorSchema.optional(),
-    origin: z.object({ type: z.enum(['plan', 'debt']), id: objectIdSchema }).nullable().optional(),
+    origin: z
+      .object({ type: z.enum(['plan', 'debt']), id: objectIdSchema })
+      .nullable()
+      .optional(),
     transactionDate: dateStringSchema,
     description: z.string().max(1000).optional(),
   })
-  .extend(entityMetaSchema.shape);
+  .extend({ ...entityMetaSchema.shape, spaceId: objectIdSchema });
 
 export const scalarTransactionSchema = transactionBaseSchema.extend({
-  snapshotId: objectIdSchema,
+  snapshotId: objectIdSchema.optional(),
   accountId: objectIdSchema,
   currency: currencyCodeSchema,
   amount: z.number().min(0),
   type: z.enum(['income', 'expense']),
 });
 
-export const incomeTransactionSchema = scalarTransactionSchema.extend({ type: z.literal('income') });
-export const expenseTransactionSchema = scalarTransactionSchema.extend({ type: z.literal('expense') });
+export const incomeTransactionSchema = scalarTransactionSchema.extend({
+  type: z.literal('income'),
+});
+export const expenseTransactionSchema = scalarTransactionSchema.extend({
+  type: z.literal('expense'),
+});
 export const transferTransactionSchema = transactionBaseSchema.extend({
   type: z.literal('transfer'),
   source: transferEffectSchema,
@@ -55,17 +60,18 @@ export const transactionSchema = z.discriminatedUnion('type', [
 
 export const createTransactionSchema = z.object({
   accountId: objectIdSchema,
-  amount: z.number().min(0.01),
+  amount: z.number().positive(),
   transactionDate: dateStringSchema,
   description: z.string().max(1000).optional(),
 });
 
-export const updateTransactionSchema = createTransactionSchema.omit({ transactionDate: true }).partial();
+export const updateTransactionSchema = createTransactionSchema
+  .omit({ transactionDate: true })
+  .partial();
 
 export const listTransactionsQuerySchema = paginationQuerySchema
   .extend(periodQuerySchema.shape)
   .extend({
-    snapshotId: objectIdSchema.optional(),
     accountId: objectIdSchema.optional(),
     currency: currencyCodeSchema.optional(),
     transactionType: transactionTypeEnum.optional(),
@@ -74,10 +80,12 @@ export const listTransactionsQuerySchema = paginationQuerySchema
 export const transactionsRevenueSchema = z
   .object({
     totalRevenue: z.number().min(0).nullable(),
-    currencies: z.array(z.object({
-      currency: currencyCodeSchema,
-      totalRevenue: z.number().min(0),
-    })),
+    currencies: z.array(
+      z.object({
+        currency: currencyCodeSchema,
+        totalRevenue: z.number().min(0),
+      }),
+    ),
   })
   .extend(periodQuerySchema.shape);
 
@@ -85,4 +93,6 @@ export const transactionsPaginatedResponseSchema = paginatedResponseSchema(trans
 
 export type Transaction = z.infer<typeof transactionSchema>;
 export type ListTransactionsQuery = z.infer<typeof listTransactionsQuerySchema>;
-export type TransactionsPaginatedResponse = z.infer<typeof transactionsPaginatedResponseSchema>;
+export type TransactionsPaginatedResponse = z.infer<
+  typeof transactionsPaginatedResponseSchema
+>;

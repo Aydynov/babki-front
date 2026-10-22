@@ -37,6 +37,9 @@ export function CurrencySummary({
         </div>
       )}
       {feedback}
+      {!loading && !feedback && rows.length === 0 && (
+        <Typography.Body2 className="text-muted-foreground">{t('queryState.empty')}</Typography.Body2>
+      )}
       {!loading && rows.length > 0 && (
         <div className="flex flex-col divide-y">
             {rows.map(({ currency, value, diff }) => {

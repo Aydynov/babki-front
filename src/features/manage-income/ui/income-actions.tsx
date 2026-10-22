@@ -29,7 +29,6 @@ export function IncomeActions({ income, onUnavailable }: {
   const [baseline, setBaseline] = useState({ amount: income.amount, description: income.description ?? '' });
   const pending = update.isPending || remove.isPending;
   const valid = Number(amount) > 0 && hasValidMoneyPrecision(Number(amount), income.currency);
-  if (scope.kind !== 'group') return null;
   if (income.origin?.type === 'debt') {
     return (
       <Button.Base

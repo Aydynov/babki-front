@@ -1,6 +1,6 @@
 import type { BudgetScope } from '@/shared/types';
 import { budgetPath } from '@/shared/lib/budget-api';
-import { apiClient, parseWithSchema } from '@/shared/api';
+import { apiClient, parseRequiredWithSchema } from '@/shared/api';
 import {
   createExpenseCategorySchema,
   type CreateExpenseCategoryDto,
@@ -12,31 +12,47 @@ import {
 class ExpenseCategoriesApi {
   private readonly client = apiClient;
 
-  async create(payload: CreateExpenseCategoryDto, scope?: BudgetScope, _signal?: AbortSignal) {
+  async create(
+    payload: CreateExpenseCategoryDto,
+    scope: BudgetScope,
+    _signal?: AbortSignal,
+  ) {
     const body = createExpenseCategorySchema.parse(payload);
-    const response = await this.client.post(budgetPath(scope, '/expense-categories'), body);
+    const response = await this.client.post(
+      budgetPath(scope, '/expense-categories'),
+      body,
+    );
 
-    return parseWithSchema(expenseCategorySchema, response.data);
+    return parseRequiredWithSchema(expenseCategorySchema, response.data);
   }
 
-  async findAll(scope?: BudgetScope, signal?: AbortSignal) {
-    const response = await this.client.get(budgetPath(scope, '/expense-categories'), { signal });
+  async findAll(scope: BudgetScope, signal?: AbortSignal) {
+    const response = await this.client.get(
+      budgetPath(scope, '/expense-categories'),
+      { signal },
+    );
 
-    return parseWithSchema(expenseCategorySchema.array(), response.data);
+    return parseRequiredWithSchema(
+      expenseCategorySchema.array(),
+      response.data,
+    );
   }
 
-  async findOne(categoryId: string, scope?: BudgetScope, signal?: AbortSignal) {
-    const response = await this.client.get(budgetPath(scope, `/expense-categories/${categoryId}`), {
-      signal,
-    });
+  async findOne(categoryId: string, scope: BudgetScope, signal?: AbortSignal) {
+    const response = await this.client.get(
+      budgetPath(scope, `/expense-categories/${categoryId}`),
+      {
+        signal,
+      },
+    );
 
-    return parseWithSchema(expenseCategorySchema, response.data);
+    return parseRequiredWithSchema(expenseCategorySchema, response.data);
   }
 
   async update(
     categoryId: string,
     payload: UpdateExpenseCategoryDto,
-    scope?: BudgetScope,
+    scope: BudgetScope,
     _signal?: AbortSignal,
   ) {
     const body = updateExpenseCategorySchema.parse(payload);
@@ -45,11 +61,13 @@ class ExpenseCategoriesApi {
       body,
     );
 
-    return parseWithSchema(expenseCategorySchema, response.data);
+    return parseRequiredWithSchema(expenseCategorySchema, response.data);
   }
 
-  async remove(categoryId: string, scope?: BudgetScope, _signal?: AbortSignal) {
-    await this.client.delete(budgetPath(scope, `/expense-categories/${categoryId}`));
+  async remove(categoryId: string, scope: BudgetScope, _signal?: AbortSignal) {
+    await this.client.delete(
+      budgetPath(scope, `/expense-categories/${categoryId}`),
+    );
   }
 }
 

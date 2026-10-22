@@ -1,7 +1,4 @@
 import { z } from 'zod';
-// Native node:test executes this module without Vite alias resolution and requires the explicit TypeScript entry point.
-// eslint-disable-next-line import-x/extensions, import-x/no-useless-path-segments
-import { currencyCodeSchema } from '../../../shared/lib/currency/index.ts';
 
 const emailSchema = z.string()
   .trim()
@@ -130,7 +127,6 @@ export const registerSchema = z.object({
   lastName: z.string().trim().min(1, 'required').max(100, 'nameMax'),
   email: emailSchema,
   password: passwordSchema,
-  defaultCurrency: currencyCodeSchema,
 });
 
 export const registerRequestSchema = z.object({
@@ -138,7 +134,6 @@ export const registerRequestSchema = z.object({
   lastName: z.string().trim().min(1, 'required').max(100, 'nameMax'),
   email: emailSchema,
   password: passwordSchema,
-  currency: currencyCodeSchema,
 });
 
 export type LoginDto = z.infer<typeof loginSchema>;
@@ -162,7 +157,6 @@ export const defaultRegisterFormValues: RegisterDto = {
   lastName: '',
   email: '',
   password: '',
-  defaultCurrency: 'RUB',
 };
 
 export const mapRegisterRequest = (values: RegisterDto): RegisterRequestDto => {
@@ -172,7 +166,6 @@ export const mapRegisterRequest = (values: RegisterDto): RegisterRequestDto => {
     lastName: parsed.lastName,
     email: parsed.email,
     password: parsed.password,
-    currency: parsed.defaultCurrency,
   });
 };
 

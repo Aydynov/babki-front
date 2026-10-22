@@ -9,12 +9,17 @@ test('currency history loads every page over HTTP and rejects incomplete history
   const id = (n) => n.toString(16).padStart(24, '0');
   const rows = Array.from({ length: 12 }, (_, index) => ({
     _id: id(index + 100),
+    spaceId: id(10),
+    createdBy: id(10),
+    createdByActor: {
+      userId: id(10), firstName: null, lastName: null, isAnonymized: true,
+    },
     accountId: id(1),
     snapshotId: id(2),
     type: 'income',
     currency: 'USD',
     amount: index + 1,
-    source: `Income ${index}`,
+    description: `Income ${index}`,
     transactionDate: `2026-10-${String(index + 1).padStart(2, '0')}`,
   }));
   const calls = [];
@@ -44,20 +49,24 @@ test('currency history loads every page over HTTP and rejects incomplete history
       '/src/entities/incomes/api/incomes.query.ts',
     );
     assert.equal(typeof incomesQueryOptions.currencyHistory, 'function');
+    const scope = { userId: id(9), spaceId: id(10) };
     const query = { fromDate: '2026-10-01', toDate: '2026-10-31', currency: 'USD' };
-    const options = incomesQueryOptions.currencyHistory(query);
+    const options = incomesQueryOptions.currencyHistory(query, scope);
     const result = await options.queryFn({});
     assert.deepEqual(result.map((row) => row._id), [...rows].reverse().map((row) => row._id));
     assert.deepEqual(result.slice(0, 5).map((row) => row.amount), [12, 11, 10, 9, 8]);
     assert.ok(calls.every((call) => (
-      call.currency === 'USD' && call.fromDate === query.fromDate && call.toDate === query.toDate
+      call.currency === 'USD'
+      && call.fromDate === `${query.fromDate}T00:00:00.000Z`
+      && call.toDate === `${query.toDate}T23:59:59.999Z`
     )));
     assert.deepEqual(calls.map((call) => call.page), ['1', '2', '3']);
-    assert.deepEqual(options.queryKey.slice(0, 2), incomesQueryKeys.listAll());
-    assert.notDeepEqual(options.queryKey, incomesQueryOptions.currencyHistory({ ...query, currency: 'RUB' }).queryKey);
+    assert.deepEqual(options.queryKey.slice(3, 4), incomesQueryKeys.listAll().slice(1));
+    const rubOptions = incomesQueryOptions.currencyHistory({ ...query, currency: 'RUB' }, scope);
+    assert.notDeepEqual(options.queryKey, rubOptions.queryKey);
     assert.notDeepEqual(options.queryKey, incomesQueryOptions.currencyHistory({
       ...query, fromDate: '2026-09-01',
-    }).queryKey);
+    }, scope).queryKey);
     fail = true;
     await assert.rejects(options.queryFn({}));
   } finally {

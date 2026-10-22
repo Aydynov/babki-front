@@ -20,66 +20,88 @@ import {
 class IncomesApi {
   private readonly client = apiClient;
 
-  create = async (payload: CreateIncomeDto, scope?: BudgetScope, _signal?: AbortSignal) => {
-    const body = (
-      scope?.kind === 'group'
-        ? createIncomeSchema.omit({ source: true }).extend({ amount: z.number().positive() })
-        : createIncomeSchema
-    ).parse(payload);
-    const response = await this.client.post<Income>(budgetPath(scope, '/incomes'), body);
+  create = async (
+    payload: CreateIncomeDto,
+    scope: BudgetScope,
+    _signal?: AbortSignal,
+  ) => {
+    const body = createIncomeSchema
+      .extend({ amount: z.number().positive() })
+      .parse(payload);
+    const response = await this.client.post<Income>(
+      budgetPath(scope, '/incomes'),
+      body,
+    );
 
     return parseRequiredWithSchema(incomeSchema, response.data);
   };
 
-  findAll = async (query: ListIncomesQuery = {}, scope?: BudgetScope, signal?: AbortSignal) => {
+  findAll = async (
+    query: ListIncomesQuery,
+    scope: BudgetScope,
+    signal?: AbortSignal,
+  ) => {
     const params = listIncomesQuerySchema.parse(query);
     const response = await this.client.get<IncomesPaginatedResponse>(
       budgetPath(scope, '/incomes'),
       {
-        params: scope?.kind === 'group' ? utcPeriod(params) : params,
+        params: utcPeriod(params),
         signal,
       },
     );
 
-    return parseRequiredWithSchema(incomesPaginatedResponseSchema, response.data);
+    return parseRequiredWithSchema(
+      incomesPaginatedResponseSchema,
+      response.data,
+    );
   };
 
   findTotalRevenue = async (
-    query: ListIncomesQuery = {},
-    scope?: BudgetScope,
+    query: ListIncomesQuery,
+    scope: BudgetScope,
     signal?: AbortSignal,
   ) => {
-    if (scope?.kind === 'group') {
-      const response = await this.client.get(budgetPath(scope, '/reports/months'), {
+    const response = await this.client.get(
+      budgetPath(scope, '/reports/months'),
+      {
         params: utcPeriod({ fromDate: query.fromDate, toDate: query.toDate }),
         signal,
+      },
+    );
+    const reports = reportPeriodSchema.array().parse(response.data);
+    const totals = new Map<string, number>();
+    reports.forEach((report) => {
+      report.currencies.forEach((bucket) => {
+        if (!query.currency || query.currency === bucket.currency) {
+          totals.set(
+            bucket.currency,
+            (totals.get(bucket.currency) ?? 0) + bucket.incomes,
+          );
+        }
       });
-      const reports = reportPeriodSchema.array().parse(response.data);
-      const totals = new Map<string, number>();
-      reports.forEach((report) => {
-        report.currencies.forEach((bucket) => {
-          if (!query.currency || query.currency === bucket.currency) {
-            totals.set(bucket.currency, (totals.get(bucket.currency) ?? 0) + bucket.incomes);
-          }
-        });
-      });
-      const currencies = [...totals].map(([currency, totalRevenue]) => ({
-        currency,
-        totalRevenue,
-      }));
-      return incomeRevenueSchema.parse({
-        currencies,
-        totalRevenue: currencies.length > 1 ? null : (currencies[0]?.totalRevenue ?? 0),
-      });
-    }
-    const response = await this.client.get('/incomes/revenue', { params: query, signal });
-    return parseRequiredWithSchema(incomeRevenueSchema, response.data);
+    });
+    const currencies = [...totals].map(([currency, totalRevenue]) => ({
+      currency,
+      totalRevenue,
+    }));
+    return incomeRevenueSchema.parse({
+      currencies,
+      totalRevenue:
+        currencies.length > 1 ? null : (currencies[0]?.totalRevenue ?? 0),
+    });
   };
 
-  findOne = async (incomeId: string, scope?: BudgetScope, signal?: AbortSignal) => {
-    const response = await this.client.get<Income>(budgetPath(scope, `/incomes/${incomeId}`), {
-      signal,
-    });
+  findOne = async (
+    incomeId: string,
+    scope: BudgetScope,
+    signal?: AbortSignal,
+  ) => {
+    const response = await this.client.get<Income>(
+      budgetPath(scope, `/incomes/${incomeId}`),
+      {
+        signal,
+      },
+    );
 
     return parseRequiredWithSchema(incomeSchema, response.data);
   };
@@ -87,16 +109,12 @@ class IncomesApi {
   update = async (
     incomeId: string,
     payload: UpdateIncomeDto,
-    scope?: BudgetScope,
+    scope: BudgetScope,
     _signal?: AbortSignal,
   ) => {
-    const body = (
-      scope?.kind === 'group'
-        ? updateIncomeSchema
-          .omit({ source: true })
-          .extend({ amount: z.number().positive().optional() })
-        : updateIncomeSchema
-    ).parse(payload);
+    const body = updateIncomeSchema
+      .extend({ amount: z.number().positive().optional() })
+      .parse(payload);
     const response = await this.client.patch<Income>(
       budgetPath(scope, `/incomes/${incomeId}`),
       body,

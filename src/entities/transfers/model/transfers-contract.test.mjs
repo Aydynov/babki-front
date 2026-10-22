@@ -25,6 +25,11 @@ const effect = (last, currency, amount) => ({
 
 const transferFixture = {
   _id: objectId(11),
+  spaceId: objectId(10),
+  createdBy: objectId(10),
+  createdByActor: {
+    userId: objectId(10), firstName: null, lastName: null, isAnonymized: true,
+  },
   type: 'transfer',
   transactionDate: '2026-09-23T12:00:00.000Z',
   description: 'Обмен',

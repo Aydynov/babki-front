@@ -104,7 +104,7 @@ export function IncomeCurrencyRow({
                   <Typography.Body1
                     className="table-cell min-w-0 break-words pb-2.5 font-semibold [&+.date]:text-right"
                   >
-                    {item.source || item.description || t('incomes.details.unknownSource')}
+                    {item.description || t('incomes.details.unknownSource')}
                   </Typography.Body1>
                   <Typography.Body2 className="date table-cell pb-2.5 text-right text-muted-foreground">
                     {format(item.transactionDate, 'LLL d, y', { locale: ru })}

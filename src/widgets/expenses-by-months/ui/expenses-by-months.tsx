@@ -1,6 +1,4 @@
-import { useBudgetScope } from '@/entities/budgets';
 import { getMonthlyCurrencySeries, useReportsQueryOptions } from '@/entities/reports';
-import { usersQueryOptions } from '@/entities/users';
 import { ChartCurrencySelect, getMonthlyMetricCurrencies, useChartCurrency } from '@/features/select-chart-currency';
 import { usePeriodStore } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
@@ -38,7 +36,6 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export const ExpensesByMonths: FC = () => {
-  const includeDefault = useBudgetScope().kind === 'personal';
   const reportsQueryOptions = useReportsQueryOptions();
   const selectedYear = usePeriodStore((s) => s.selectedYear);
 
@@ -50,23 +47,20 @@ export const ExpensesByMonths: FC = () => {
   const reportsQuery = useQuery(
     reportsQueryOptions.monthly(periodQuery),
   );
-  const userQuery = useQuery(usersQueryOptions.me());
 
   const currencySeries = useMemo(
     () => getMonthlyCurrencySeries(
       reportsQuery.data,
-      userQuery.data?.defaultCurrency ?? 'RUB',
-      includeDefault,
     ),
-    [reportsQuery.data, userQuery.data?.defaultCurrency, includeDefault],
+    [reportsQuery.data],
   );
   const currencies = useMemo(() => (reportsQuery.data
     ? getMonthlyMetricCurrencies(currencySeries)
     : undefined), [reportsQuery.data, currencySeries]);
-  const [currency, setCurrency] = useChartCurrency(currencies, userQuery.data?.defaultCurrency ?? 'RUB');
+  const [currency, setCurrency] = useChartCurrency(currencies);
   const periods = currencySeries.find((series) => series.currency === currency)?.periods ?? [];
 
-  if (reportsQuery.isLoading || userQuery.isLoading) {
+  if (reportsQuery.isLoading) {
     return (
       <Card.Base aria-busy="true" className="h-fit w-full min-w-0 md:w-auto md:min-w-max">
         <span className="sr-only">Загрузка...</span>
@@ -81,13 +75,11 @@ export const ExpensesByMonths: FC = () => {
     );
   }
 
-  if ((reportsQuery.isError && reportsQuery.data === undefined)
-    || (userQuery.isError && userQuery.data === undefined)) {
+  if ((reportsQuery.isError && reportsQuery.data === undefined)) {
     return (
       <Card.Base className="h-fit min-h-96 w-full min-w-0 md:w-auto md:min-w-max">
         <QueryError onRetry={() => {
           reportsQuery.refetch().catch(() => undefined);
-          userQuery.refetch().catch(() => undefined);
         }}
         />
       </Card.Base>
@@ -110,12 +102,11 @@ export const ExpensesByMonths: FC = () => {
         )}
       </Card.Header>
       <Card.Content className="overflow-x-auto">
-        {(reportsQuery.isError || userQuery.isError) && (
+        {(reportsQuery.isError) && (
           <QueryError
             compact
             onRetry={() => {
               reportsQuery.refetch().catch(() => undefined);
-              userQuery.refetch().catch(() => undefined);
             }}
           />
         )}

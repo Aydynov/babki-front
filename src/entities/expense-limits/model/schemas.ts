@@ -13,25 +13,33 @@ export const expenseLimitSchema = z
     currency: currencyCodeSchema,
     startDate: dateStringSchema,
     endDate: dateStringSchema,
-    total: z.number().positive(),
+    total: z.number().nonnegative(),
     rest: z.number(),
   })
-  .extend(entityMetaSchema.shape);
+  .extend({ ...entityMetaSchema.shape, spaceId: objectIdSchema });
 
-export const groupExpenseLimitSchema = expenseLimitSchema.extend({ total: z.number().min(0) });
+export const createExpenseLimitSchema = z
+  .object({
+    categoryId: objectIdSchema,
+    currency: currencyCodeSchema,
+    total: z.number().nonnegative(),
+  })
+  .extend(
+    expenseLimitSchema
+      .pick({
+        startDate: true,
+        endDate: true,
+      })
+      .partial().shape,
+  );
 
-export const createExpenseLimitSchema = z.object({
-  categoryId: objectIdSchema,
-  currency: currencyCodeSchema,
-  total: z.number().positive(),
-}).extend(expenseLimitSchema.pick({
-  startDate: true,
-  endDate: true,
-}).partial().shape);
-
-export const updateExpenseLimitSchema = createExpenseLimitSchema.pick({
-  total: true,
-});
+export const updateExpenseLimitSchema = createExpenseLimitSchema
+  .pick({
+    total: true,
+    startDate: true,
+    endDate: true,
+  })
+  .partial();
 
 export const findExpenseLimitQuerySchema = z.object({
   periodDate: dateStringSchema,

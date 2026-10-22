@@ -1,7 +1,5 @@
-import { useBudgetScope } from '@/entities/budgets';
 import { useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
 import { getReportCurrencySections, useReportsQueryOptions } from '@/entities/reports';
-import { usersQueryOptions } from '@/entities/users';
 import { ChartCurrencySelect, getAnnualCategoryCurrencies, useChartCurrency } from '@/features/select-chart-currency';
 import { usePeriodStore } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
@@ -29,25 +27,21 @@ const CHART_COLORS = [
 
 export const ExpensesByAnnualCategories: FC = () => {
   const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
-  const includeDefault = useBudgetScope().kind === 'personal';
   const reportsQueryOptions = useReportsQueryOptions();
   const selectedYear = usePeriodStore((s) => s.selectedYear);
 
   const reportsQuery = useQuery(reportsQueryOptions.yearly());
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
   const categories = categoriesQuery.data;
-  const userQuery = useQuery(usersQueryOptions.me());
 
   const reportSections = useMemo(() => getReportCurrencySections(
     reportsQuery.data,
     selectedYear,
-    userQuery.data?.defaultCurrency ?? 'RUB',
-    includeDefault,
-  ), [reportsQuery.data, selectedYear, userQuery.data?.defaultCurrency, includeDefault]);
+  ), [reportsQuery.data, selectedYear]);
   const currencies = useMemo(() => (reportsQuery.data
     ? getAnnualCategoryCurrencies(reportSections)
     : undefined), [reportsQuery.data, reportSections]);
-  const [currency, setCurrency] = useChartCurrency(currencies, userQuery.data?.defaultCurrency ?? 'RUB');
+  const [currency, setCurrency] = useChartCurrency(currencies);
   const chartSections = useMemo(() => reportSections.map((bucket) => {
     const data = bucket.expensesByCategory
       .filter((item) => item.total > 0)
@@ -72,7 +66,7 @@ export const ExpensesByAnnualCategories: FC = () => {
   }), [categories, reportSections]);
   const selectedSection = chartSections.find((section) => section.currency === currency);
 
-  if (reportsQuery.isLoading || categoriesQuery.isLoading || userQuery.isLoading) {
+  if (reportsQuery.isLoading || categoriesQuery.isLoading) {
     return (
       <Card.Base aria-busy="true" className="h-fit w-full min-w-0 md:w-auto md:min-w-min">
         <span className="sr-only">Загрузка...</span>
@@ -90,14 +84,12 @@ export const ExpensesByAnnualCategories: FC = () => {
   }
 
   if ((reportsQuery.isError && reportsQuery.data === undefined)
-    || (categoriesQuery.isError && categoriesQuery.data === undefined)
-    || (userQuery.isError && userQuery.data === undefined)) {
+    || (categoriesQuery.isError && categoriesQuery.data === undefined)) {
     return (
       <Card.Base className="h-fit min-h-72 w-full min-w-0 md:w-auto md:min-w-min">
         <QueryError onRetry={() => {
           reportsQuery.refetch().catch(() => undefined);
           categoriesQuery.refetch().catch(() => undefined);
-          userQuery.refetch().catch(() => undefined);
         }}
         />
       </Card.Base>
@@ -135,13 +127,12 @@ export const ExpensesByAnnualCategories: FC = () => {
         )}
       </Card.Header>
       <Card.Content>
-        {(reportsQuery.isError || categoriesQuery.isError || userQuery.isError) && (
+        {(reportsQuery.isError || categoriesQuery.isError) && (
           <QueryError
             compact
             onRetry={() => {
               reportsQuery.refetch().catch(() => undefined);
               categoriesQuery.refetch().catch(() => undefined);
-              userQuery.refetch().catch(() => undefined);
             }}
           />
         )}

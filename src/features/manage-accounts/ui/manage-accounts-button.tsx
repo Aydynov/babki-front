@@ -1,13 +1,11 @@
-import { useBudget, useBudgetPermission } from '@/entities/budgets';
+import { useBudgetPermission } from '@/entities/budgets';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import {
   useAccountsQueryOptions,
-  isDefaultAccountCandidate,
   useArchiveAccountMutation,
   useDeleteAccountMutation,
   useRenameAccountMutation,
 } from '@/entities/accounts';
-import { usersQueryOptions, useUpdateCurrentUserMutation } from '@/entities/users';
 import { formatMoney } from '@/shared/lib/currency';
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
@@ -33,15 +31,12 @@ interface ManageAccountsButtonProps {
 
 export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccountsButtonProps) {
   const accountsQueryOptions = useAccountsQueryOptions();
-  const { scope } = useBudget();
   const allowed = useBudgetPermission('manageAccounts');
   const { t } = useTranslation();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
-  const userQuery = useQuery(usersQueryOptions.me());
   const renameMutation = useRenameAccountMutation();
   const archiveMutation = useArchiveAccountMutation();
   const deleteMutation = useDeleteAccountMutation();
-  const updateUserMutation = useUpdateCurrentUserMutation();
   const [open, setOpen] = useState(false);
   const [draftNames, setDraftNames] = useState<Record<string, string>>({});
   const [action, setAction] = useState<LifecycleAction>();
@@ -53,11 +48,10 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
     setConfirmationOpen(true);
   };
   const accounts = accountsQuery.data ?? [];
-  const user = userQuery.data;
   const visibleAccounts = accounts.filter((account) => account._id === accountId);
 
   const isPending = renameMutation.isPending || archiveMutation.isPending
-    || deleteMutation.isPending || updateUserMutation.isPending;
+    || deleteMutation.isPending;
 
   const rename = async (targetAccountId: string, currentName: string) => {
     const nextName = draftNames[targetAccountId]?.trim();
@@ -80,15 +74,6 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
       setConfirmationOpen(false);
       setOpen(false);
       onUnavailable?.();
-    } catch (mutationError) {
-      setError(getAccountMutationErrorKey(mutationError));
-    }
-  };
-
-  const selectDefaultAccount = async (targetAccountId: string) => {
-    setError(undefined);
-    try {
-      await updateUserMutation.mutateAsync({ defaultAccountId: targetAccountId });
     } catch (mutationError) {
       setError(getAccountMutationErrorKey(mutationError));
     }
@@ -128,10 +113,10 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
             </Button.Icon>
           </Dialog.Header>
           <Dialog.Body className="min-h-0 overflow-y-auto">
-            {(accountsQuery.isLoading || userQuery.isLoading) && (
+            {(accountsQuery.isLoading) && (
               <p aria-live="polite">{t('accounts.loading')}</p>
             )}
-            {(accountsQuery.isError || userQuery.isError) && (
+            {(accountsQuery.isError) && (
               <p role="alert">{t('accounts.errors.load')}</p>
             )}
             {visibleAccounts.map((account) => (
@@ -143,7 +128,6 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
                       {account.type === 'balance' ? t('accounts.types.balance') : t('accounts.types.saving')}
                       {' · '}
                       {account.archivedAt ? t('accounts.status.archived') : t('accounts.status.active')}
-                      {user?.defaultAccountId === account._id ? ` · ${t('accounts.status.default')}` : ''}
                     </Typography.Caption1>
                     <Typography.Caption1 className="block text-muted-foreground">
                       {t('accounts.status.initialAmount')}
@@ -156,16 +140,6 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
                     </Typography.Caption1>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {scope.kind === 'personal' && user && isDefaultAccountCandidate(account, user.defaultCurrency) && (
-                      <Button.Base
-                        type="button"
-                        variant="outline"
-                        disabled={isPending || user.defaultAccountId === account._id}
-                        onClick={() => selectDefaultAccount(account._id)}
-                      >
-                        {t('accounts.management.makeDefault')}
-                      </Button.Base>
-                    )}
                     {account.archivedAt === null && (
                       <Button.Base
                         type="button"

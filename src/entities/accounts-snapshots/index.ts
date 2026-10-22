@@ -1,8 +1,4 @@
 export {
-  snapshotsQueryKeys,
-  snapshotsQueryOptions,
-} from './api/snapshots.query';
-export {
   SnapshotFindByQuerySchema,
   snapshotResponseSchema,
   snapshotSchema,

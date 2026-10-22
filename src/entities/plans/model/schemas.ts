@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   dateStringSchema,
+  financialActorSchema,
   entityMetaSchema,
   objectIdSchema,
   paginatedResponseSchema,
@@ -12,20 +13,22 @@ export const planStatusSchema = z.enum(['active', 'closed']);
 
 export const planSchema = z
   .object({
-    userId: objectIdSchema,
+    spaceId: objectIdSchema,
+    createdBy: objectIdSchema,
+    createdByActor: financialActorSchema,
+    createdAt: dateStringSchema,
+    updatedAt: dateStringSchema,
     description: z.string().max(500),
     targetDate: dateStringSchema,
-    amount: z.number().min(0.01),
+    amount: z.number().positive(),
     currency: currencyCodeSchema,
     categoryId: objectIdSchema,
     status: planStatusSchema,
     archivedAt: dateStringSchema.nullable(),
     closedAt: dateStringSchema.optional(),
     expenseId: objectIdSchema.optional(),
-    createdAt: dateStringSchema,
-    updatedAt: dateStringSchema,
   })
-  .extend(entityMetaSchema.shape);
+  .extend({ ...entityMetaSchema.shape, spaceId: objectIdSchema });
 
 export const listPlansQuerySchema = paginationQuerySchema.extend({
   currency: currencyCodeSchema.optional(),
@@ -36,15 +39,17 @@ export const listPlansQuerySchema = paginationQuerySchema.extend({
 export const plansPaginatedResponseSchema = paginatedResponseSchema(planSchema);
 
 export type PlanStatus = z.infer<typeof planStatusSchema>;
-export type Plan = z.infer<typeof planSchema> | GroupPlan;
+export type Plan = z.infer<typeof planSchema>;
 export type ListPlansQuery = z.infer<typeof listPlansQuerySchema>;
-export type PlansPaginatedResponse = z.infer<typeof plansPaginatedResponseSchema>;
+export type PlansPaginatedResponse = z.infer<
+  typeof plansPaginatedResponseSchema
+>;
 
 export const createPlanPayloadSchema = z.object({
   currency: currencyCodeSchema,
   description: z.string().max(500),
   targetDate: dateStringSchema,
-  amount: z.number().min(0.01),
+  amount: z.number().positive(),
   categoryId: objectIdSchema,
 });
 
@@ -53,7 +58,7 @@ export type CreatePlanPayload = z.infer<typeof createPlanPayloadSchema>;
 export const updatePlanPayloadSchema = z.object({
   description: z.string().max(500).optional(),
   targetDate: dateStringSchema.optional(),
-  amount: z.number().min(0.01).optional(),
+  amount: z.number().positive().optional(),
   categoryId: objectIdSchema.optional(),
 });
 
@@ -61,40 +66,10 @@ export type UpdatePlanPayload = z.infer<typeof updatePlanPayloadSchema>;
 
 export const closePlanPayloadSchema = z.object({
   accountId: objectIdSchema,
+  participantId: objectIdSchema.optional(),
   closingDate: dateStringSchema.optional(),
-  amount: z.number().min(0.01).optional(),
+  amount: z.number().positive().optional(),
   description: z.string().max(500).optional(),
 });
 
 export type ClosePlanPayload = z.infer<typeof closePlanPayloadSchema>;
-
-const groupActorSchema = z.object({
-  userId: objectIdSchema.nullable(),
-  firstName: z.string().nullable(),
-  lastName: z.string().nullable(),
-  isAnonymized: z.boolean(),
-});
-
-const groupOwnershipSchema = z.object({
-  _id: objectIdSchema,
-  ownerType: z.literal('group'),
-  ownerId: objectIdSchema,
-  createdBy: objectIdSchema,
-  createdByActor: groupActorSchema,
-  createdAt: dateStringSchema,
-  updatedAt: dateStringSchema,
-});
-
-export const groupPlanSchema = planSchema.omit({ userId: true }).extend({
-  ...groupOwnershipSchema.shape,
-  amount: z.number().finite().positive(),
-});
-export const groupPlansPaginatedResponseSchema = paginatedResponseSchema(groupPlanSchema);
-export const createGroupPlanPayloadSchema = createPlanPayloadSchema.extend({ amount: z.number().finite().positive() });
-export const updateGroupPlanPayloadSchema = updatePlanPayloadSchema.extend({
-  amount: z.number().finite().positive().optional(),
-});
-export const closeGroupPlanPayloadSchema = closePlanPayloadSchema.extend({
-  amount: z.number().finite().positive().optional(),
-});
-export type GroupPlan = z.infer<typeof groupPlanSchema>;

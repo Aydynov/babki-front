@@ -69,7 +69,7 @@ export const DebtDetailsDialog: FC<DebtDetailsDialogProps> = ({ debt, onClose })
   return (
     <>
       <Dialog.Base open={open} onOpenChange={handleOpenChange}>
-        <Dialog.Content>
+        <Dialog.Content className="max-w-lg">
           {activeDebt && mode === 'view' && (
             <DebtView
               debt={activeDebt}

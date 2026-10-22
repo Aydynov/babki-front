@@ -23,31 +23,6 @@ test('filters archived accounts from operation choices', async () => {
   assert.equal(eligibility.getAccountStatus?.(archived), 'archived');
 });
 
-test('allows only active matching balance accounts as default', async () => {
-  const eligibility = await eligibilityPromise;
-
-  assert.equal(eligibility.isDefaultAccountCandidate?.(account(), 'RUB'), true);
-  assert.equal(eligibility.isDefaultAccountCandidate?.(account({ type: 'saving' }), 'RUB'), false);
-  assert.equal(eligibility.isDefaultAccountCandidate?.(account({ currency: 'USD' }), 'RUB'), false);
-  assert.equal(eligibility.isDefaultAccountCandidate?.(
-    account({ archivedAt: '2026-09-23T00:00:00.000Z' }),
-    'RUB',
-  ), false);
-});
-
-test('selects the current default only when it remains eligible', async () => {
-  const eligibility = await eligibilityPromise;
-  const accounts = [account(), account({ _id: 'usd', currency: 'USD' })];
-
-  assert.equal(eligibility.getPreferredAccountId?.(accounts, 'rub-balance'), 'rub-balance');
-  assert.equal(eligibility.getPreferredAccountId?.(accounts, 'missing'), null);
-  assert.equal(eligibility.getPreferredAccountId?.(
-    accounts,
-    'usd',
-    (item) => item.currency === 'RUB',
-  ), null);
-});
-
 test('validates non-negative initial amount with currency precision', async () => {
   const eligibility = await eligibilityPromise;
 

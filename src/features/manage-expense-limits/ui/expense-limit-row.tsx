@@ -1,4 +1,3 @@
-import { useBudgetScope } from '@/entities/budgets';
 import {
   CategorySelect,
   type CategorySelectOption,
@@ -83,7 +82,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
   const genericMutationError = mutationError?.field
     ? undefined
     : mutationError?.message;
-  const isValid = getExpenseLimitDraftValuesSchema(useBudgetScope().kind === 'group').safeParse(draft.values).success
+  const isValid = getExpenseLimitDraftValuesSchema().safeParse(draft.values).success
     && !errors.categoryId
     && !errors.total
     && categoryAvailable

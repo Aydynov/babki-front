@@ -15,7 +15,16 @@ const id = (suffix) => `507f1f77bcf86cd7994390${suffix}`;
 
 test('parses income, expense, and paired transfer transactions', async () => {
   const schemas = await load('/src/entities/transactions/model/schemas.ts');
-  const base = { _id: id(11), transactionDate: '2026-09-23', description: 'Операция' };
+  const base = {
+    _id: id(11),
+    spaceId: id(10),
+    createdBy: id(10),
+    createdByActor: {
+      userId: id(10), firstName: null, lastName: null, isAnonymized: true,
+    },
+    transactionDate: '2026-09-23',
+    description: 'Операция',
+  };
   const scalar = {
     ...base, accountId: id(12), snapshotId: id(13), currency: 'USD', amount: 10,
   };

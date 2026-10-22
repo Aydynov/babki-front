@@ -5,7 +5,6 @@ type AccountListMode = 'active' | 'archived';
 
 export const groupAccounts = (
   accounts: Account[],
-  defaultCurrency: string,
   locale: string,
   mode: AccountListMode = 'active',
 ) => (
@@ -15,8 +14,7 @@ export const groupAccounts = (
       account.type === type && (mode === 'active' ? account.archivedAt === null : account.archivedAt !== null)
     ))
       .sort((left, right) => (
-        Number(right.currency === defaultCurrency) - Number(left.currency === defaultCurrency)
-        || left.currency.localeCompare(right.currency)
+        left.currency.localeCompare(right.currency)
         || left.name.localeCompare(right.name, locale)
         || left._id.localeCompare(right._id)
       )),

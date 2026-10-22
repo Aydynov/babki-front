@@ -1,9 +1,16 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useBudgetScope } from '@/entities/budgets/@x/expense-categories';
 import type { BudgetScope } from '@/shared/types';
 import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { expenseCategoriesApi } from './expense-categories.api';
-import type { CreateExpenseCategoryDto, UpdateExpenseCategoryDto } from '../model/schemas';
+import type {
+  CreateExpenseCategoryDto,
+  UpdateExpenseCategoryDto,
+} from '../model/schemas';
 
 export const expenseCategoriesQueryKeys = {
   all: ['expense-categories'] as const,
@@ -13,11 +20,11 @@ export const expenseCategoriesQueryKeys = {
 };
 
 export const expenseCategoriesQueryOptions = {
-  findAll: (scope?: BudgetScope) => queryOptions({
+  findAll: (scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, expenseCategoriesQueryKeys.lists()),
     queryFn: ({ signal }) => expenseCategoriesApi.findAll(scope, signal),
   }),
-  findOne: (categoryId: string, scope?: BudgetScope) => queryOptions({
+  findOne: (categoryId: string, scope: BudgetScope) => queryOptions({
     queryKey: scopedKey(scope, expenseCategoriesQueryKeys.detail(categoryId)),
     queryFn: ({ signal }) => expenseCategoriesApi.findOne(categoryId, scope, signal),
   }),

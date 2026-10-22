@@ -19,7 +19,7 @@ test('income create requires account while update keeps account and date immutab
     accountId,
     amount: 100.25,
     transactionDate: '2026-09-23',
-    source: 'Зарплата',
+    description: 'Зарплата',
   };
 
   assert.deepEqual(schemas.createIncomeSchema.parse(create), create);
@@ -35,6 +35,11 @@ test('income response and revenue preserve currency', async () => {
   const schemas = await load('/src/entities/incomes/model/schemas.ts');
   assert.equal(schemas.incomeSchema.safeParse({
     _id: '507f191e810c19729de860ea',
+    spaceId: accountId,
+    createdBy: accountId,
+    createdByActor: {
+      userId: accountId, firstName: null, lastName: null, isAnonymized: true,
+    },
     type: 'income',
     accountId,
     snapshotId: '507f191e810c19729de860eb',

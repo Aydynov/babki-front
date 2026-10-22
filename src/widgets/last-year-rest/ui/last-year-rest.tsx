@@ -1,6 +1,4 @@
-import { useBudgetScope } from '@/entities/budgets';
 import { getReportCurrencySections, useReportsQueryOptions } from '@/entities/reports';
-import { usersQueryOptions } from '@/entities/users';
 import { usePeriodStore } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
@@ -11,21 +9,16 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 export function LastYearRest() {
-  const includeDefault = useBudgetScope().kind === 'personal';
   const reportsQueryOptions = useReportsQueryOptions();
   const { t, i18n } = useTranslation();
   const reportsQuery = useQuery(reportsQueryOptions.yearly());
-  const userQuery = useQuery(usersQueryOptions.me());
   const currentYear = usePeriodStore((state) => state.selectedYear);
-  const loading = reportsQuery.isLoading || userQuery.isLoading;
-  const user = userQuery.data;
-  const available = reportsQuery.data !== undefined && user != null;
+  const loading = reportsQuery.isLoading;
+  const available = reportsQuery.data !== undefined;
   const prevYearReport = reportsQuery.data?.find((report) => Number(report.period) === currentYear - 1);
   const sections = available ? getReportCurrencySections(
     reportsQuery.data,
     currentYear - 1,
-    user.defaultCurrency,
-    includeDefault,
   ) : [];
 
   return (
@@ -44,12 +37,11 @@ export function LastYearRest() {
           <Skeleton className="h-5 w-full" />
         </div>
       )}
-      {(reportsQuery.isError || userQuery.isError) && (
+      {(reportsQuery.isError) && (
         <QueryError
           compact={available}
           onRetry={() => {
             reportsQuery.refetch().catch(() => undefined);
-            userQuery.refetch().catch(() => undefined);
           }}
         />
       )}

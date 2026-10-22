@@ -21,10 +21,10 @@ test('debts carry immutable currency and enforce conditional repayment account',
     currency: 'USD',
   };
 
-  assert.deepEqual(schemas.createDebtSchema.parse(create), create);
-  assert.deepEqual(schemas.updateDebtSchema.parse({ remainingAmount: 50, currency: 'RUB' }), {
-    remainingAmount: 50,
+  assert.deepEqual(schemas.createDebtSchema.parse(create), {
+    debtor: 'Иван', principalAmount: 100, currency: 'USD',
   });
+  assert.deepEqual(schemas.updateDebtSchema.parse({ remainingAmount: 50, currency: 'RUB' }), {});
   assert.deepEqual(schemas.listDebtsQuerySchema.parse({ status: 'active', currency: 'USD' }), {
     status: 'active',
     currency: 'USD',

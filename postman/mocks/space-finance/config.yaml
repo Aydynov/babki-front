@@ -1,0 +1,10 @@
+version: 1
+name: space-finance
+slug: space-finance
+protocol: http
+port: 4917
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.cjs
+    default: true
