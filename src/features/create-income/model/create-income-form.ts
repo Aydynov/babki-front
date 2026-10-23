@@ -32,8 +32,11 @@ export const createIncomeFormSchema = z
 
 export type CreateIncomeFormValues = z.infer<typeof createIncomeFormSchema>;
 
-export const getDefaultCreateIncomeFormValues = (): CreateIncomeFormValues => ({
-  accountId: '',
+export const getDefaultCreateIncomeFormValues = (
+  accounts: IncomeAccount[] = [],
+  currency?: CurrencyCode,
+): CreateIncomeFormValues => ({
+  accountId: getIncomeAccounts(accounts, currency).find((account) => account.type === 'balance')?._id ?? '',
   description: '',
   amount: '',
   transactionDate: '',

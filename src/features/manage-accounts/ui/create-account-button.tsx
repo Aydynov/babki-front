@@ -7,10 +7,10 @@ import {
 } from '@/entities/accounts';
 import { currencyCodes } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Input } from '@/shared/ui/input';
 import { Select } from '@/shared/ui/select';
-import { LucidePlus, LucideX } from 'lucide-react';
+import { LucidePlus } from 'lucide-react';
 import {
   type FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState,
 } from 'react';
@@ -91,28 +91,29 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
           <LucidePlus />
         </Button.Icon>
       )}
-      <Dialog.Base open={open} onOpenChange={(next) => !isPending && setOpen(next)}>
-        <Dialog.Content finalFocus={() => (
+      <ScrollDialog.Base open={open} onOpenChange={(next) => !isPending && setOpen(next)}>
+        <ScrollDialog.Content finalFocus={() => (
           finalFocus.current?.isConnected ? finalFocus.current
             : originatingDialog.current?.querySelector<HTMLSelectElement>('select:not(:disabled)') ?? true
         )}
         >
-          <Dialog.Header>
-            <Dialog.Title>{t('accounts.management.new')}</Dialog.Title>
-            <Button.Icon
-              aria-label={t('accounts.management.close')}
-              disabled={isPending}
-              onClick={() => setOpen(false)}
+          <form className="flex min-h-0 flex-1 flex-col" onSubmit={submitCreate}>
+            <ScrollDialog.Layout
+              title={t('accounts.management.new')}
+              closeLabel={t('accounts.management.close')}
+              onClose={() => setOpen(false)}
+              closeDisabled={isPending}
+              actions={(
+                <Button.Base type="submit" disabled={isPending || !canCreate}>
+                  <LucidePlus />
+                  {t('accounts.management.add')}
+                </Button.Base>
+              )}
             >
-              <LucideX />
-            </Button.Icon>
-          </Dialog.Header>
-          <Dialog.Body>
-            <form className="flex flex-col gap-4" onSubmit={submitCreate}>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor={`${fieldId}-name`} className="text-body-2 font-medium">
+              <div>
+                <Input.Label htmlFor={`${fieldId}-name`}>
                   {t('accounts.management.name')}
-                </label>
+                </Input.Label>
                 <Input.Base
                   id={`${fieldId}-name`}
                   maxLength={100}
@@ -123,10 +124,10 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor={`${fieldId}-type`} className="text-body-2 font-medium">
+                <div>
+                  <Input.Label htmlFor={`${fieldId}-type`}>
                     {t('accounts.details.type')}
-                  </label>
+                  </Input.Label>
                   <Select.Root
                     disabled={isPending}
                     value={type}
@@ -134,8 +135,10 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
                       if (value === 'balance' || value === 'saving') setType(value);
                     }}
                   >
-                    <Select.Trigger id={`${fieldId}-type`} className="w-full data-[size=default]:h-11">
-                      <Select.Value>{t(`accounts.types.${type}`)}</Select.Value>
+                    <Select.Trigger id={`${fieldId}-type`} size="form">
+                      <Select.Value placeholder={t('accounts.management.typePlaceholder')}>
+                        {t(`accounts.types.${type}`)}
+                      </Select.Value>
                     </Select.Trigger>
                     <Select.Content>
                       <Select.Item value="balance">{t('accounts.types.balance')}</Select.Item>
@@ -143,10 +146,10 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
                     </Select.Content>
                   </Select.Root>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor={`${fieldId}-currency`} className="text-body-2 font-medium">
+                <div>
+                  <Input.Label htmlFor={`${fieldId}-currency`}>
                     {t('accounts.details.currency')}
-                  </label>
+                  </Input.Label>
                   <Select.Root
                     disabled={isPending}
                     value={currency}
@@ -154,8 +157,8 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
                       if (value) setCurrency(value);
                     }}
                   >
-                    <Select.Trigger id={`${fieldId}-currency`} className="w-full data-[size=default]:h-11">
-                      <Select.Value>{currency}</Select.Value>
+                    <Select.Trigger id={`${fieldId}-currency`} size="form">
+                      <Select.Value placeholder={t('accounts.management.currencyPlaceholder')}>{currency}</Select.Value>
                     </Select.Trigger>
                     <Select.Content>
                       {currencyCodes.map((code) => <Select.Item key={code} value={code}>{code}</Select.Item>)}
@@ -163,10 +166,10 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
                   </Select.Root>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor={`${fieldId}-amount`} className="text-body-2 font-medium">
+              <div>
+                <Input.Label htmlFor={`${fieldId}-amount`}>
                   {t('accounts.status.initialAmount')}
-                </label>
+                </Input.Label>
                 <Input.Base
                   id={`${fieldId}-amount`}
                   aria-invalid={hasAmountPrecisionError || undefined}
@@ -175,6 +178,7 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
                   type="number"
                   min="0"
                   step="any"
+                  placeholder="0.00"
                   value={amount}
                   hasError={hasAmountPrecisionError}
                   onChange={(event) => setAmount(event.target.value)}
@@ -183,27 +187,24 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
                   <Input.Error id={`${fieldId}-precision`}>{t('accounts.errors.precision')}</Input.Error>
                 )}
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor={`${fieldId}-opened-at`} className="text-body-2 font-medium">
+              <div>
+                <Input.Label htmlFor={`${fieldId}-opened-at`}>
                   {t('accounts.management.openingDate')}
-                </label>
+                </Input.Label>
                 <Input.Base
                   id={`${fieldId}-opened-at`}
                   disabled={isPending}
                   type="date"
+                  placeholder={t('accounts.management.openingDatePlaceholder')}
                   value={openedAt}
                   onChange={(event) => setOpenedAt(event.target.value)}
                 />
               </div>
-              <Button.Base type="submit" disabled={isPending || !canCreate}>
-                <LucidePlus />
-                {t('accounts.management.add')}
-              </Button.Base>
-            </form>
-            {error && <p role="alert">{t('accounts.errors.action')}</p>}
-          </Dialog.Body>
-        </Dialog.Content>
-      </Dialog.Base>
+              {error && <p role="alert">{t('accounts.errors.action')}</p>}
+            </ScrollDialog.Layout>
+          </form>
+        </ScrollDialog.Content>
+      </ScrollDialog.Base>
     </>
   );
 }

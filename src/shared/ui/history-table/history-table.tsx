@@ -1,5 +1,6 @@
 import { paginateHistory } from '@/shared/lib/paginated-history';
 import { Button } from '@/shared/ui/button';
+import { CollectionPagination } from '@/shared/ui/collection';
 import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { LucideChevronLeft, LucideChevronRight } from 'lucide-react';
@@ -8,6 +9,7 @@ import { useState, type ReactNode } from 'react';
 interface HistoryTableProps<T extends { _id: string }> {
   title: string;
   hideTitle?: boolean;
+  paginationVariant?: 'history' | 'collection';
   action?: ReactNode;
   items: T[];
   loading: boolean;
@@ -27,7 +29,8 @@ interface HistoryTableProps<T extends { _id: string }> {
 }
 
 export function HistoryTable<T extends { _id: string }>({
-  title, hideTitle = false, action, items, loading, error, empty, onRetry, headers, renderRow, labels,
+  title, hideTitle = false, paginationVariant = 'history', action, items, loading, error, empty,
+  onRetry, headers, renderRow, labels,
 }: HistoryTableProps<T>) {
   const [requestedPage, setPage] = useState(1);
   const {
@@ -81,30 +84,40 @@ export function HistoryTable<T extends { _id: string }>({
             </thead>
             <tbody>{visibleItems.map(renderRow)}</tbody>
           </table>
-          <nav
-            aria-label={labels.pagination}
-            className="flex flex-wrap items-center justify-end gap-2"
-          >
-            <Button.Icon
-              variant="outline"
-              aria-label={labels.previous}
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
+          {paginationVariant === 'collection' ? (
+            <CollectionPagination
+              page={page}
+              total={total}
+              limit={10}
+              pending={loading}
+              onPageChange={setPage}
+            />
+          ) : (
+            <nav
+              aria-label={labels.pagination}
+              className="flex flex-wrap items-center justify-end gap-2"
             >
-              <LucideChevronLeft />
-            </Button.Icon>
-            <span className="text-body-2" aria-live="polite">
-              {labels.page(page, pages, total)}
-            </span>
-            <Button.Icon
-              variant="outline"
-              aria-label={labels.next}
-              disabled={page === pages}
-              onClick={() => setPage(page + 1)}
-            >
-              <LucideChevronRight />
-            </Button.Icon>
-          </nav>
+              <Button.Icon
+                variant="outline"
+                aria-label={labels.previous}
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
+                <LucideChevronLeft />
+              </Button.Icon>
+              <span className="text-body-2" aria-live="polite">
+                {labels.page(page, pages, total)}
+              </span>
+              <Button.Icon
+                variant="outline"
+                aria-label={labels.next}
+                disabled={page === pages}
+                onClick={() => setPage(page + 1)}
+              >
+                <LucideChevronRight />
+              </Button.Icon>
+            </nav>
+          )}
         </>
       )}
     </section>

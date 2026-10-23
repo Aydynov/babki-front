@@ -8,14 +8,13 @@ import { getFirstFieldError, getMutationErrorMessage } from '@/shared/lib/form-e
 import { getCurrencyMinorUnits, type CurrencyCode } from '@/shared/lib/currency';
 import { cn } from '@/shared/lib/shadcn-utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import i18next from 'i18next';
 import {
   LucideCheck,
   LucidePlus,
-  LucideX,
 } from 'lucide-react';
 import {
   type FC,
@@ -27,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import {
   createIncomeFormSchema,
   defaultCreateIncomeFormValues,
+  getDefaultCreateIncomeFormValues,
   getIncomeAccounts,
   hasValidIncomeAmountPrecision,
   mapCreateIncomeDto,
@@ -89,8 +89,10 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
   const values = useStore(form.store, (state) => state.values);
   const selectedAccount = accounts.find(({ _id }) => _id === values.accountId);
   useEffect(() => {
-    if (accountsQuery.isSuccess && values.accountId && !selectedAccount) form.setFieldValue('accountId', '');
-  }, [accountsQuery.isSuccess, form, selectedAccount, values.accountId]);
+    if (open && accountsQuery.isSuccess && !selectedAccount) {
+      form.setFieldValue('accountId', getDefaultCreateIncomeFormValues(accounts, currency).accountId);
+    }
+  }, [open, accountsQuery.isSuccess, accounts, currency, form, selectedAccount]);
   const amountPrecisionInvalid = selectedAccount !== undefined
     && values.amount.trim() !== ''
     && !hasValidIncomeAmountPrecision(values.amount, selectedAccount.currency);
@@ -124,7 +126,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
   };
 
   return (
-    <Dialog.Base open={open} onOpenChange={handleOpenChange}>
+    <ScrollDialog.Base open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Trigger
         className={cn(
           `
@@ -138,18 +140,21 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
         <LucidePlus className="size-5" />
       </DialogPrimitive.Trigger>
 
-      <Dialog.Content>
+      <ScrollDialog.Content>
         <form
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={async (event) => {
             event.preventDefault();
             event.stopPropagation();
             await form.handleSubmit();
           }}
         >
-          <Dialog.Header>
-            <Dialog.Title>{t('incomes.create.title')}</Dialog.Title>
-
-            <div className="flex gap-2.5">
+          <ScrollDialog.Layout
+            title={t('incomes.create.title')}
+            closeLabel={t('incomes.create.close')}
+            onClose={() => handleOpenChange(false)}
+            closeDisabled={createIncomeMutation.isPending}
+            actions={(
               <Button.Base
                 type="submit"
                 disabled={
@@ -161,25 +166,8 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                 <LucideCheck />
                 {createIncomeMutation.isPending ? t('incomes.create.saving') : t('incomes.create.save')}
               </Button.Base>
-              <button
-                type="button"
-                className={cn(
-                  `
-                  inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground
-                  transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50
-                `,
-                )}
-                onClick={() => handleOpenChange(false)}
-                aria-label={t('incomes.create.close')}
-                disabled={createIncomeMutation.isPending}
-              >
-                <LucideX className="size-4" />
-              </button>
-            </div>
-          </Dialog.Header>
-
-          <Dialog.Body>
-            <Dialog.Description>{t('incomes.create.currency', { currency })}</Dialog.Description>
+            )}
+          >
             <form.Field name="accountId">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
@@ -278,7 +266,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
 
                 return (
-                  <>
+                  <div>
                     <Input.Label htmlFor="create-income-date">{t('incomes.create.fields.date')}</Input.Label>
                     <Input.Base
                       id="create-income-date"
@@ -295,7 +283,7 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                       disabled={createIncomeMutation.isPending}
                     />
                     {fieldError && <Input.Error>{fieldError}</Input.Error>}
-                  </>
+                  </div>
                 );
               }}
             </form.Field>
@@ -305,9 +293,9 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
                 {mutationError}
               </Typography.Caption1>
             )}
-          </Dialog.Body>
+          </ScrollDialog.Layout>
         </form>
-      </Dialog.Content>
-    </Dialog.Base>
+      </ScrollDialog.Content>
+    </ScrollDialog.Base>
   );
 };

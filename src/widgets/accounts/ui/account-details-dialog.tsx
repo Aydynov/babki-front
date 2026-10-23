@@ -5,10 +5,9 @@ import { useTransfersQueryOptions } from '@/entities/transfers';
 import { ManageAccountsButton } from '@/features/manage-accounts';
 import { CreateTransferButton, DeleteTransferButton, EditTransferButton } from '@/features/manage-transfer';
 import { formatMoney } from '@/shared/lib/currency';
-import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { useQuery } from '@tanstack/react-query';
-import { LucideX } from 'lucide-react';
 import type { RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HistoryTable } from '@/shared/ui/history-table';
@@ -53,19 +52,15 @@ export function AccountDetailsDialog({
   ];
 
   return (
-    <Dialog.Base open onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content className="max-w-3xl" finalFocus={finalFocus}>
-        <Dialog.Header>
-          <div className="min-w-0 break-words">
-            <Dialog.Title>{account.name}</Dialog.Title>
-            <Dialog.Description>{month}</Dialog.Description>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <ManageAccountsButton accountId={account._id} onUnavailable={onUnavailable} />
-            <Button.Icon aria-label={t('accounts.management.close')} onClick={onClose}><LucideX /></Button.Icon>
-          </div>
-        </Dialog.Header>
-        <Dialog.Body>
+    <ScrollDialog.Base open onOpenChange={(open) => !open && onClose()}>
+      <ScrollDialog.Content className="max-w-3xl" finalFocus={finalFocus}>
+        <ScrollDialog.Layout
+          title={account.name}
+          closeLabel={t('accounts.management.close')}
+          onClose={onClose}
+          headerActions={<ManageAccountsButton accountId={account._id} onUnavailable={onUnavailable} />}
+        >
+          <Dialog.Description>{month}</Dialog.Description>
           <dl className="grid min-w-0 grid-cols-1 gap-3 rounded-lg border p-3 sm:grid-cols-2">
             {facts.map(([label, value]) => (
               <div key={label} className="min-w-0 break-words">
@@ -74,76 +69,93 @@ export function AccountDetailsDialog({
               </div>
             ))}
           </dl>
-          <HistoryTable
-            title={t('accounts.details.transactions')}
-            labels={historyLabels(t('accounts.details.transactions'))}
-            items={transactions.data ?? []}
-            loading={transactions.isLoading}
-            error={transactions.isError}
-            empty={t('accounts.details.emptyTransactions')}
-            onRetry={() => {
-              transactions.refetch().catch(() => undefined);
-            }}
-            headers={[t('accounts.details.date'), t('accounts.details.operation'), t('accounts.details.amount')]}
-            renderRow={(item) => (
-              <tr key={item._id}>
-                <td className={cellClass}>{formatDate(item.transactionDate)}</td>
-                <td className={cellClass}>
-                  <span>{t(item.type === 'income' ? 'accounts.details.income' : 'accounts.details.expense')}</span>
-                  {item.description && <p className="text-muted-foreground">{item.description}</p>}
-                  {item.createdByActor && (
-                  <p className="text-muted-foreground">
-                    Добавил(а):
-                    {actorLabel(item.createdByActor)}
-                  </p>
-                  )}
-                </td>
-                <td className={`${cellClass}
-                    tabular-nums ${item.type === 'income' ? 'text-success' : 'text-destructive'}`}
-                >
-                  {item.type === 'income' ? '+' : '−'}
-                  {formatMoney(item.amount, item.currency, i18n.language)}
-                </td>
-              </tr>
-            )}
-          />
-          <HistoryTable
-            title={t('transfers.title')}
-            labels={historyLabels(t('transfers.title'))}
-            action={account.archivedAt === null
-              ? <CreateTransferButton initialSourceAccountId={account._id} /> : undefined}
-            items={transfers.data ?? []}
-            loading={transfers.isLoading}
-            error={transfers.isError}
-            empty={t('accounts.history.empty')}
-            onRetry={() => {
-              transfers.refetch().catch(() => undefined);
-            }}
-            headers={[t('accounts.details.date'), t('accounts.details.counterparty'), t('accounts.details.amount')]}
-            renderRow={(item) => {
-              const effect = effects.get(item._id)!;
-              return (
+          <div className="
+            [&_section>div:first-child]:sticky [&_section>div:first-child]:-top-4
+            [&_section>div:first-child]:z-10 [&_section>div:first-child]:backdrop-blur-[2px]
+            [&_tbody>tr:last-child>td]:border-b-0
+          "
+          >
+            <HistoryTable
+              paginationVariant="collection"
+              title={t('accounts.details.transactions')}
+              labels={historyLabels(t('accounts.details.transactions'))}
+              items={transactions.data ?? []}
+              loading={transactions.isLoading}
+              error={transactions.isError}
+              empty={t('accounts.details.emptyTransactions')}
+              onRetry={() => {
+                transactions.refetch().catch(() => undefined);
+              }}
+              headers={[t('accounts.details.date'), t('accounts.details.operation'), t('accounts.details.amount')]}
+              renderRow={(item) => (
                 <tr key={item._id}>
                   <td className={cellClass}>{formatDate(item.transactionDate)}</td>
                   <td className={cellClass}>
-                    {accountNames.get(effect.counterpartyId) ?? t('accounts.history.otherAccount')}
+                    <span>{t(item.type === 'income' ? 'accounts.details.income' : 'accounts.details.expense')}</span>
+                    {item.description && <p className="text-muted-foreground">{item.description}</p>}
+                    {item.createdByActor && (
+                    <p className="text-muted-foreground">
+                      Добавил(а):
+                      {' '}
+                      {actorLabel(item.createdByActor)}
+                    </p>
+                    )}
                   </td>
-                  <td className={cellClass}>
-                    <span className={`tabular-nums ${effect.amount > 0 ? 'text-success' : 'text-destructive'}`}>
-                      {effect.amount > 0 ? '+' : ''}
-                      {formatMoney(effect.amount, effect.currency, i18n.language)}
-                    </span>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      <EditTransferButton transfer={item} />
-                      <DeleteTransferButton transfer={item} />
-                    </div>
+                  <td className={`${cellClass}
+                    tabular-nums ${item.type === 'income' ? 'text-success' : 'text-destructive'}`}
+                  >
+                    {item.type === 'income' ? '+' : '−'}
+                    {formatMoney(item.amount, item.currency, i18n.language)}
                   </td>
                 </tr>
-              );
-            }}
-          />
-        </Dialog.Body>
-      </Dialog.Content>
-    </Dialog.Base>
+              )}
+            />
+          </div>
+          <div className="
+            [&_section>div:first-child]:sticky [&_section>div:first-child]:-top-4
+            [&_section>div:first-child]:z-10 [&_section>div:first-child]:backdrop-blur-[2px]
+            [&_tbody>tr:last-child>td]:border-b-0
+          "
+          >
+            <HistoryTable
+              paginationVariant="collection"
+              title={t('transfers.title')}
+              labels={historyLabels(t('transfers.title'))}
+              action={account.archivedAt === null
+                ? <CreateTransferButton initialSourceAccountId={account._id} /> : undefined}
+              items={transfers.data ?? []}
+              loading={transfers.isLoading}
+              error={transfers.isError}
+              empty={t('accounts.history.empty')}
+              onRetry={() => {
+                transfers.refetch().catch(() => undefined);
+              }}
+              headers={[t('accounts.details.date'), t('accounts.details.counterparty'), t('accounts.details.amount')]}
+              renderRow={(item) => {
+                const effect = effects.get(item._id)!;
+                return (
+                  <tr key={item._id}>
+                    <td className={cellClass}>{formatDate(item.transactionDate)}</td>
+                    <td className={cellClass}>
+                      {accountNames.get(effect.counterpartyId) ?? t('accounts.history.otherAccount')}
+                    </td>
+                    <td className={cellClass}>
+                      <span className={`tabular-nums ${effect.amount > 0 ? 'text-success' : 'text-destructive'}`}>
+                        {effect.amount > 0 ? '+' : ''}
+                        {formatMoney(effect.amount, effect.currency, i18n.language)}
+                      </span>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        <EditTransferButton transfer={item} />
+                        <DeleteTransferButton transfer={item} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }}
+            />
+          </div>
+        </ScrollDialog.Layout>
+      </ScrollDialog.Content>
+    </ScrollDialog.Base>
   );
 }
