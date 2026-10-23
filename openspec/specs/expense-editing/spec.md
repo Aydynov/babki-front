@@ -57,11 +57,12 @@ archived category as an eligible unchanged value.
 #### Scenario: Preserve a current archived category
 - **WHEN** the selected expense references an archived category
 - **THEN** that archived category remains selected and the form can be saved without changing it
-- **THEN** no other archived category is offered
+- **THEN** the dropdown offers active categories only and does not contain the selected archived category as a selectable item
 
 #### Scenario: Replace an archived category
 - **WHEN** the user replaces the current archived category
 - **THEN** the available replacements contain active categories only
+- **THEN** the previous archived category cannot be selected again from the dropdown during that session
 
 #### Scenario: Categories are loading
 - **WHEN** the category request has not completed
@@ -197,6 +198,15 @@ The system MUST expose localized accessible edit controls and predictable keyboa
 #### Scenario: Restore row-action focus
 - **WHEN** editing is closed or succeeds while the originating expense row remains available
 - **THEN** focus returns to that row's ellipsis trigger
+
+#### Scenario: Focus a newly appended edit item
+- **WHEN** the user adds the first item or another item in an idle expense edit form
+- **THEN** focus moves to the new item name and the field becomes visible for immediate input
+- **THEN** later field changes do not return focus to that name field
+
+#### Scenario: Preserve the complete focus indication
+- **WHEN** a form control near an edge of the scrollable edit form receives focus
+- **THEN** the focus indication remains visible without clipping by that container
 
 ### Requirement: Preserve expense account and currency during editing
 The system SHALL present an expense's account and currency as immutable context while editing its permitted fields.
