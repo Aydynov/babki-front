@@ -1,4 +1,4 @@
-import { BudgetLabel, useBudgetPermission } from '@/entities/budgets';
+import { useBudgetPermission } from '@/entities/budgets';
 import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { useCreateIncomeMutation } from '@/entities/incomes';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
@@ -146,7 +146,6 @@ export const CreateIncomeButton: FC<CreateIncomeButtonProps> = ({
             await form.handleSubmit();
           }}
         >
-          <BudgetLabel />
           <Dialog.Header>
             <Dialog.Title>{t('incomes.create.title')}</Dialog.Title>
 

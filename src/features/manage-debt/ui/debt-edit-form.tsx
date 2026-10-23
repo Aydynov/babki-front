@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDebtTransactionsQueryOptions } from '@/entities/debt-transactions';
 import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
-import { useBudget } from '@/entities/budgets';
 import { type Debt, type useUpdateDebtMutation } from '@/entities/debts';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
@@ -28,7 +27,6 @@ export const DebtEditForm: FC<DebtEditFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
-  const budgetTitle = useBudget().title;
   const history = useQuery({
     ...useDebtTransactionsQueryOptions().findAll(debt._id, { limit: 1 }),
     enabled: true,
@@ -89,10 +87,6 @@ export const DebtEditForm: FC<DebtEditFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
-        <Typography.Caption1 className="text-muted-foreground">
-          Бюджет:
-          {budgetTitle}
-        </Typography.Caption1>
         <form.Field name="principalAmount">
           {(field) => (
             <div>

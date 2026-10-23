@@ -1,4 +1,3 @@
-import { useBudget } from '@/entities/budgets';
 import { type Plan, type useUpdatePlanMutation } from '@/entities/plans';
 import { CategorySelect, useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
 import { useForm } from '@tanstack/react-form';
@@ -28,7 +27,6 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
-  const budgetTitle = useBudget().title;
   const { data: categoriesData } = useQuery(useExpenseCategoriesQueryOptions().findAll());
   const categories = (categoriesData ?? []).filter(
     (category) => !category.isArchived || category._id === plan.categoryId,
@@ -86,10 +84,6 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
-        <Typography.Caption1 className="text-muted-foreground">
-          Бюджет:
-          {budgetTitle}
-        </Typography.Caption1>
         <Typography.Caption1 className="text-muted-foreground">
           Валюта плана:
           {' '}

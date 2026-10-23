@@ -118,7 +118,7 @@ const SelectTrigger = ({
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
-  size?: 'sm' | 'default';
+  size?: 'sm' | 'default' | 'form';
 }) => (
   <SelectPrimitive.Trigger
     data-slot="select-trigger"
@@ -136,6 +136,10 @@ const SelectTrigger = ({
       'dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50',
       'dark:aria-invalid:ring-destructive/40',
       '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4',
+      size === 'form' && [
+        'h-11 w-full min-w-0 border-border bg-background px-3 text-body-2',
+        'focus-visible:ring-ring/30 dark:bg-background dark:hover:bg-background',
+      ],
       className,
     )}
     {...props}

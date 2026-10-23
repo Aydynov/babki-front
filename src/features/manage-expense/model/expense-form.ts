@@ -113,6 +113,10 @@ export const formatLocalDate = (date: Date) => [
   padDatePart(date.getDate()),
 ].join('-');
 
+export const getDefaultExpenseAccountId = (
+  accounts: Pick<Account, '_id' | 'type' | 'archivedAt'>[],
+) => accounts.find((account) => account.type === 'balance' && account.archivedAt === null)?._id ?? '';
+
 export const getDefaultExpenseFormValues = (
   date = new Date(),
   accountId = '',

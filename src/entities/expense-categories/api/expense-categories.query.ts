@@ -6,6 +6,7 @@ import {
 import { useBudgetScope } from '@/entities/budgets/@x/expense-categories';
 import type { BudgetScope } from '@/shared/types';
 import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
+import { queryClient } from '@/shared/lib/query-client';
 import { expenseCategoriesApi } from './expense-categories.api';
 import type {
   CreateExpenseCategoryDto,
@@ -28,6 +29,23 @@ export const expenseCategoriesQueryOptions = {
     queryKey: scopedKey(scope, expenseCategoriesQueryKeys.detail(categoryId)),
     queryFn: ({ signal }) => expenseCategoriesApi.findOne(categoryId, scope, signal),
   }),
+};
+
+export const resolveExpenseCategory = async (categoryId: string, scope: BudgetScope, signal?: AbortSignal) => {
+  signal?.throwIfAborted();
+  // Category requests share their query signal; cancelling one expense must not cancel other consumers.
+  const categories = await queryClient.fetchQuery({
+    ...expenseCategoriesQueryOptions.findAll(scope),
+    retry: false,
+  }).catch(() => []);
+  signal?.throwIfAborted();
+  const category = categories.find(({ _id }) => _id === categoryId)
+    ?? await queryClient.fetchQuery({
+      ...expenseCategoriesQueryOptions.findOne(categoryId, scope),
+      retry: false,
+    });
+  signal?.throwIfAborted();
+  return category;
 };
 
 export const useExpenseCategoriesQueryOptions = () => {

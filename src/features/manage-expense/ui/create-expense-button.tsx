@@ -1,3 +1,5 @@
+import { useAccountsQueryOptions } from '@/entities/accounts';
+import { useQuery } from '@tanstack/react-query';
 import { useCreateExpenseMutation } from '@/entities/expenses';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
@@ -9,6 +11,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  getDefaultExpenseAccountId,
   getDefaultExpenseFormValues,
   mapCreateExpenseDto,
 } from '../model/expense-form';
@@ -20,6 +23,7 @@ interface CreateExpenseButtonProps {
 
 export const CreateExpenseButton: FC<CreateExpenseButtonProps> = ({ className }) => {
   const { t } = useTranslation();
+  const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const createExpenseMutation = useCreateExpenseMutation();
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState(0);
@@ -59,7 +63,10 @@ export const CreateExpenseButton: FC<CreateExpenseButtonProps> = ({ className })
 
       <ExpenseForm
         key={session}
-        defaultValues={defaultValues}
+        defaultValues={{
+          ...defaultValues,
+          accountId: getDefaultExpenseAccountId(accountsQuery.data ?? []),
+        }}
         initialAmountOverridden={false}
         pending={createExpenseMutation.isPending}
         submitError={createExpenseMutation.isError

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { expenseCategoriesApi } from '@/entities/expense-categories/@x/expenses';
+import { resolveExpenseCategory } from '@/entities/expense-categories/@x/expenses';
 import type { BudgetScope } from '@/shared/types';
 import { budgetPath, utcPeriod } from '@/shared/lib/budget-api';
 import { apiClient, parseRequiredWithSchema } from '@/shared/api';
@@ -24,8 +24,7 @@ class ExpensesApi {
       .object({ category: z.string().regex(/^[a-f\d]{24}$/i) })
       .passthrough()
       .parse(value);
-    const category = await expenseCategoriesApi
-      .findOne(record.category, scope, signal)
+    const category = await resolveExpenseCategory(record.category, scope, signal)
       .catch((error: unknown) => {
         if (signal?.aborted) throw error;
         return null;

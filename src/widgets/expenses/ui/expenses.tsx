@@ -13,6 +13,7 @@ import {
 } from '@/features/select-period';
 import { formatMoney } from '@/shared/lib/currency';
 import { Card } from '@/shared/ui/card';
+import { CollectionFilters, CollectionPagination } from '@/shared/ui/collection';
 import { Button } from '@/shared/ui/button';
 import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -37,7 +38,7 @@ const mobileBodyClassName = 'block space-y-3 px-3 pb-3 md:table-row-group md:spa
 
 const mobileRowClassName = `
   block overflow-hidden rounded-lg border last-of-type:border
-  md:table-row md:overflow-visible md:rounded-none md:border-x-0 md:border-t-0 md:last-of-type:border-b-0
+  md:table-row md:overflow-visible md:rounded-none md:border-x-0 md:border-t-0 md:last-of-type:border-0
 `;
 
 const getRowGridClassName = (withActions: boolean) => `
@@ -146,35 +147,39 @@ export const Expenses: FC = () => {
         )}
       </Card.Header>
       <Card.Content className="px-0">
-        <label htmlFor="expenses-participant-filter" className="flex flex-col gap-1 px-3 pb-3">
-          Участник расхода
-          <select
-            id="expenses-participant-filter"
-            className="h-10 rounded-md border bg-background px-3"
-            value={participantId}
-            disabled={members.isLoading}
-            onChange={(event) => {
-              setParticipantId(event.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">Все участники</option>
-            {members.data?.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {[member.firstName, member.lastName].filter(Boolean).join(' ') || 'Участник'}
-              </option>
-            ))}
-            {expensesQuery.data?.items.filter((expense, index, items) => (
-              !members.data?.some((member) => member.userId === expense.participantId)
-              && items.findIndex((item) => item.participantId === expense.participantId) === index
-            )).map((expense) => (
-              <option key={expense.participantId} value={expense.participantId}>
-                {expense.participantActor ? actorLabel(expense.participantActor) : 'Участник'}
-              </option>
-            ))}
-          </select>
-          {members.isError && <span role="alert">Не удалось загрузить участников</span>}
-        </label>
+        <div className="pb-3">
+          <CollectionFilters
+            className="border-y-0 px-3 md:border-y md:px-5"
+            filters={[{
+              label: 'Участник расхода',
+              value: participantId,
+              disabled: members.isLoading,
+              options: [
+                { value: '', label: 'Все участники' },
+                ...(members.data ?? []).map((member) => ({
+                  value: member.userId,
+                  label: [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Участник',
+                })),
+                ...(expensesQuery.data?.items ?? []).filter((expense, index, items) => (
+                  !members.data?.some((member) => member.userId === expense.participantId)
+                && items.findIndex((item) => item.participantId === expense.participantId) === index
+                )).flatMap((expense) => (expense.participantId ? [{
+                  value: expense.participantId,
+                  label: expense.participantActor ? actorLabel(expense.participantActor) : 'Участник',
+                }] : [])),
+              ],
+              onChange: (value) => {
+                setParticipantId(value);
+                setPage(1);
+              },
+            }]}
+          />
+          {members.isError && (
+            <p role="alert" className="px-3 pt-2 text-body-2 text-destructive md:px-5">
+              Не удалось загрузить участников
+            </p>
+          )}
+        </div>
         {expensesQuery.isError && (
         <QueryError
           compact
@@ -183,26 +188,6 @@ export const Expenses: FC = () => {
           }}
         />
         )}
-        <div className="flex items-center justify-between px-3 pb-3">
-          <Button.Base
-            variant="outline"
-            disabled={page === 1}
-            onClick={() => setPage(page - 1)}
-          >
-            Назад
-          </Button.Base>
-          <span>
-            Страница
-            {page}
-          </span>
-          <Button.Base
-            variant="outline"
-            disabled={page * 20 >= (expensesQuery.data?.total ?? 0)}
-            onClick={() => setPage(page + 1)}
-          >
-            Далее
-          </Button.Base>
-        </div>
         <Table.Base className={mobileTableClassName}>
           <Accordion.Root render={<Table.Body className={mobileBodyClassName} />}>
             {expensesQuery.data?.items.map((expense) => {
@@ -308,6 +293,14 @@ export const Expenses: FC = () => {
             )}
           </Accordion.Root>
         </Table.Base>
+        <CollectionPagination
+          className="border-t-0 px-3 md:border-t md:px-5"
+          page={page}
+          total={expensesQuery.data?.total}
+          limit={20}
+          pending={expensesQuery.isFetching}
+          onPageChange={setPage}
+        />
       </Card.Content>
     </Card.Base>
   );

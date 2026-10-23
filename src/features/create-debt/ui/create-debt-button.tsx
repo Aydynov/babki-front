@@ -1,4 +1,3 @@
-import { useBudget } from '@/entities/budgets';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import { useForm } from '@tanstack/react-form';
 import { useCreateDebtMutation } from '@/entities/debts';
@@ -50,7 +49,6 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
   className,
 }) => {
   const { t } = useTranslation();
-  const budgetTitle = useBudget().title;
   const createDebtMutation = useCreateDebtMutation();
   const [open, setOpen] = useState(false);
 
@@ -152,10 +150,6 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
           </Dialog.Header>
 
           <Dialog.Body>
-            <Typography.Caption1 className="text-muted-foreground">
-              Бюджет:
-              {budgetTitle}
-            </Typography.Caption1>
             <form.Field name="currency">
               {(field) => (
                 <div>

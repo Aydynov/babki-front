@@ -37,3 +37,5 @@ These controls are fixture-only and are never part of frontend production code.
 Postman workspace discovery was unavailable because the installed CLI failed to
 read its macOS keychain session. No workspace was rebound or published. This
 fixture is maintained locally alongside the migration evidence.
+
+Expense-entry edge cases and responsive browser checks: [expense-entry.md](expense-entry.md).

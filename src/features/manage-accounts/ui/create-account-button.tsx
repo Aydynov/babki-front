@@ -1,4 +1,4 @@
-import { BudgetLabel, useBudgetPermission } from '@/entities/budgets';
+import { useBudgetPermission } from '@/entities/budgets';
 import {
   createAccountSchema,
   hasValidInitialAmount,
@@ -97,7 +97,6 @@ export function CreateAccountButton({ hidden = false }: { hidden?: boolean }) {
             : originatingDialog.current?.querySelector<HTMLSelectElement>('select:not(:disabled)') ?? true
         )}
         >
-          <BudgetLabel />
           <Dialog.Header>
             <Dialog.Title>{t('accounts.management.new')}</Dialog.Title>
             <Button.Icon

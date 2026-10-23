@@ -11,6 +11,7 @@ import type { ExpenseItemDraft } from '../model/expense-form';
 
 interface ExpenseItemRowProps {
   item: ExpenseItemDraft;
+  onNameMount?: (input: HTMLInputElement | null) => void;
   index: number;
   disabled: boolean;
   errors: {
@@ -32,6 +33,7 @@ interface ExpenseItemRowProps {
 
 export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
   item,
+  onNameMount,
   index,
   disabled,
   errors,
@@ -54,12 +56,13 @@ export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
   return (
     <div
       className="
-        grid min-w-0 gap-3 rounded-lg border p-3
-        sm:grid-cols-[minmax(0,1fr)_11rem_9rem_auto] sm:items-start
+        grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-3 p-3
+        sm:grid-cols-[minmax(0,1fr)_8rem_8rem_auto]
       "
     >
-      <div>
+      <div className="col-span-3 min-w-0 sm:col-span-1">
         <Input.Base
+          ref={onNameMount}
           value={item.name}
           onChange={(event) => onNameChange(event.target.value)}
           onBlur={onNameBlur}
@@ -72,11 +75,11 @@ export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
       </div>
 
       <div className="min-w-0">
-        <div className="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)_2rem] gap-1">
+        <div className="relative min-w-0">
           <Button.Icon
             type="button"
-            variant="outline"
-            className="size-8"
+            variant="ghost"
+            className="absolute top-1.5 left-1.5 size-8"
             onClick={onDecrement}
             disabled={decrementDisabled}
             aria-label={t('expenses.create.accessibility.decrement', { number: itemNumber })}
@@ -84,7 +87,10 @@ export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
             <LucideMinus />
           </Button.Icon>
           <Input.Base
-            className="h-8 min-w-0 px-2 text-center"
+            className="
+              min-w-0 px-10 text-center [appearance:textfield]
+              [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
+            "
             type="number"
             inputMode="numeric"
             step="1"
@@ -98,8 +104,8 @@ export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
           />
           <Button.Icon
             type="button"
-            variant="outline"
-            className="size-8"
+            variant="ghost"
+            className="absolute top-1.5 right-1.5 size-8"
             onClick={onIncrement}
             disabled={disabled}
             aria-label={t('expenses.create.accessibility.increment', { number: itemNumber })}
@@ -131,7 +137,7 @@ export const ExpenseItemRow: FC<ExpenseItemRowProps> = ({
       <Button.Icon
         type="button"
         variant="ghost"
-        className="size-8 justify-self-end text-muted-foreground hover:text-destructive"
+        className="h-11 w-8 justify-self-end text-muted-foreground hover:text-destructive"
         onClick={onRemove}
         disabled={disabled}
         aria-label={t('expenses.create.accessibility.removeItem', { number: itemNumber })}

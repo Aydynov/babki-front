@@ -1,4 +1,4 @@
-import { useBudget, useBudgetPermission } from '@/entities/budgets';
+import { useBudgetPermission } from '@/entities/budgets';
 import { type Debt, type useRepayDebtMutation } from '@/entities/debts';
 import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
@@ -34,7 +34,6 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const canCreateAccount = useBudgetPermission('manageAccounts');
-  const budgetTitle = useBudget().title;
   const mutationError = getMutationErrorMessage(mutation.error);
   const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const eligibleAccounts = getEligibleDebtRepaymentAccounts(accountsQuery.data ?? [], debt.currency);
@@ -105,10 +104,6 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
       </Dialog.Header>
 
       <Dialog.Body>
-        <Typography.Caption1 className="text-muted-foreground">
-          Бюджет:
-          {budgetTitle}
-        </Typography.Caption1>
         <Dialog.Description>{t('debts.repay.description')}</Dialog.Description>
 
         <form.Field name="repaymentDate">

@@ -86,7 +86,7 @@ export const ExpenseActions: FC<ExpenseActionsProps> = ({
                 "
                 onClick={handleEditRequest}
               >
-                <LucidePencil size={24} />
+                <LucidePencil size={16} />
                 <span>{t('expenses.actions.editLabel')}</span>
               </Menu.Item>
               <Menu.Item
@@ -98,7 +98,7 @@ export const ExpenseActions: FC<ExpenseActionsProps> = ({
                 "
                 onClick={handleDeleteRequest}
               >
-                <LucideX size={24} />
+                <LucideX size={16} />
                 <span>{t('expenses.actions.deleteLabel')}</span>
               </Menu.Item>
             </Menu.Popup>

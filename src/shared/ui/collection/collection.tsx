@@ -34,21 +34,24 @@ export function CollectionDialog({
   );
 }
 
-export function CollectionFilters({ filters, children }: {
+export function CollectionFilters({ filters, children, className }: {
   filters: {
     label: string;
+    disabled?: boolean;
     value: string;
     options: { value: string; label: string }[];
     onChange: (value: string) => void;
   }[];
   children?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-y bg-muted/30 px-1 py-3">
+    <div className={cn('flex shrink-0 flex-wrap items-center gap-2 border-y bg-muted/30 px-1 py-3', className)}>
       <LucideListFilter className="mx-1 hidden size-4 text-muted-foreground sm:block" aria-hidden="true" />
       {filters.map((filter) => (
         <Select.Root
           key={filter.label}
+          disabled={filter.disabled}
           items={filter.options}
           value={filter.value}
           onValueChange={(value) => {
@@ -169,19 +172,20 @@ export function CollectionList({
 }
 
 export function CollectionPagination({
-  page, total, limit, pending, onPageChange,
+  page, total, limit, pending, onPageChange, className,
 }: {
   page: number;
   total: number | undefined;
   limit: number;
   pending: boolean;
   onPageChange: (page: number) => void;
+  className?: string;
 }) {
   const pages = Math.max(1, Math.ceil((total ?? 0) / limit));
   return (
     <nav
       aria-label="Страницы списка"
-      className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-4"
+      className={cn('flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-4', className)}
     >
       <span className="text-body-2 text-muted-foreground" aria-live="polite">
         {total !== undefined && `Всего записей: ${total}`}

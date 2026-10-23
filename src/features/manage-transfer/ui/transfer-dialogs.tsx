@@ -1,4 +1,4 @@
-import { useCanManageRecord, BudgetLabel } from '@/entities/budgets';
+import { useCanManageRecord } from '@/entities/budgets';
 import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import {
   type Transfer,
@@ -93,7 +93,6 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
           event.preventDefault();
         }}
         >
-          <BudgetLabel />
           <Dialog.Header>
             <Dialog.Title>
               {transfer ? t('transfers.form.editTitle') : t('transfers.form.createTitle')}

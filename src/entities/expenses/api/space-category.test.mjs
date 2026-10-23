@@ -7,6 +7,7 @@ test('a missing category preserves the space expense and can be resolved by refr
   try {
     const { apiClient } = await server.ssrLoadModule('/src/shared/api/index.ts');
     const { expensesApi } = await server.ssrLoadModule('/src/entities/expenses/api/expenses.api.ts');
+    const { queryClient } = await server.ssrLoadModule('/src/shared/lib/query-client.ts');
     const originalGet = apiClient.get;
     const spaceId = 'a'.repeat(24);
     const categoryId = 'b'.repeat(24);
@@ -29,6 +30,7 @@ test('a missing category preserves the space expense and can be resolved by refr
     let unavailable = true;
     apiClient.get = async (url) => {
       assert.ok(url.startsWith(`/spaces/${spaceId}/`));
+      if (url.endsWith('/expense-categories')) return { data: [] };
       if (url.endsWith(`/expense-categories/${categoryId}`)) {
         if (unavailable) throw new Error('Category unavailable');
         return {
@@ -59,6 +61,7 @@ test('a missing category preserves the space expense and can be resolved by refr
       assert.equal(refreshed.categoryUnavailable, false);
       assert.equal(refreshed.category.name, 'Покупки');
     } finally {
+      queryClient.clear();
       apiClient.get = originalGet;
     }
   } finally {

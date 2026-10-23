@@ -1,4 +1,4 @@
-import { BudgetLabel, useBudgetPermission } from '@/entities/budgets';
+import { useBudgetPermission } from '@/entities/budgets';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import {
   useExpenseCategoriesQueryOptions,
@@ -263,7 +263,6 @@ export const ManageExpenseCategoriesButton: FC = () => {
           "
         >
           <Dialog.Header className="shrink-0">
-            <BudgetLabel />
             <Dialog.Title>{t('expenseCategories.management.title')}</Dialog.Title>
             <Button.Icon
               type="button"

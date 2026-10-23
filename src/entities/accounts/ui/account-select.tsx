@@ -1,6 +1,8 @@
 import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
-import type { ChangeEvent, FC } from 'react';
+import type { FC } from 'react';
+import { Input } from '@/shared/ui/input';
+import { Select } from '@/shared/ui/select';
 import { useTranslation } from 'react-i18next';
 import type { Account } from '../model/schemas';
 import { getAccountSelectOptions } from '../model/account-eligibility';
@@ -36,7 +38,8 @@ export const AccountSelect: FC<AccountSelectProps> = ({
   offerAccountCreation = false,
 }) => {
   const { t } = useTranslation();
-  const options = getAccountSelectOptions(accounts, isEligible);
+  const options = getAccountSelectOptions(accounts, isEligible)
+    .filter(({ disabledReason }) => disabledReason !== 'archived');
   const hasEligibleAccount = options.some(({ disabledReason }) => disabledReason === null);
 
   if (isLoading) {
@@ -64,31 +67,40 @@ export const AccountSelect: FC<AccountSelectProps> = ({
     );
   }
 
+  const items = options.map(({ account, disabledReason }) => ({
+    value: account._id,
+    label: `${account.name} · ${formatMoney(account.amount, account.currency)}${
+      disabledReason === 'incompatible' ? ` · ${t('accounts.status.unavailable')}` : ''
+    }`,
+    disabled: disabledReason !== null,
+  }));
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id}>{label}</label>
-      <select
-        id={id}
-        className="h-11 w-full rounded-lg border bg-background px-3 py-2 text-body-2"
-        value={value}
-        onChange={(event: ChangeEvent<HTMLSelectElement>) => onValueChange(event.target.value)}
+    <div>
+      <Input.Label htmlFor={id}>{label}</Input.Label>
+      <Select.Root
+        items={items}
+        value={value || null}
+        onValueChange={(next) => {
+          if (next !== null) onValueChange(next);
+        }}
         disabled={disabled}
       >
-        <option value="">{placeholder}</option>
-        {options.map(({ account, disabledReason }) => (
-          <option
-            key={account._id}
-            value={account._id}
-            disabled={disabledReason !== null}
-          >
-            {account.name}
-            {' · '}
-            {formatMoney(account.amount, account.currency)}
-            {disabledReason === 'archived' ? ` · ${t('accounts.status.archivedShort')}` : ''}
-            {disabledReason === 'incompatible' ? ` · ${t('accounts.status.unavailable')}` : ''}
-          </option>
-        ))}
-      </select>
+        <Select.Trigger id={id} size="form">
+          <Select.Value placeholder={placeholder} />
+        </Select.Trigger>
+        <Select.Content>
+          {items.map((item) => (
+            <Select.Item
+              key={item.value}
+              value={item.value}
+              disabled={item.disabled}
+            >
+              {item.label}
+            </Select.Item>
+          ))}
+        </Select.Content>
+      </Select.Root>
     </div>
   );
 };

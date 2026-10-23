@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAccountsQueryOptions } from '@/entities/accounts';
-import { useBudget, useCanManageRecord, BudgetLabel } from '@/entities/budgets';
+import { useBudget, useCanManageRecord } from '@/entities/budgets';
 import { type Income, useUpdateIncomeMutation } from '@/entities/incomes';
 import { useDeleteTransactionMutation } from '@/entities/transactions';
 import { invalidateBudget, isActiveBudgetIdentity } from '@/shared/lib/budget-api';
@@ -71,7 +71,6 @@ export function IncomeActions({ income, onUnavailable }: {
             <Dialog.Title>{mode === 'delete' ? 'Удалить доход?' : 'Изменить доход'}</Dialog.Title>
           </Dialog.Header>
           <Dialog.Body>
-            <BudgetLabel />
             <form
               onSubmit={async (event) => {
                 event.preventDefault();

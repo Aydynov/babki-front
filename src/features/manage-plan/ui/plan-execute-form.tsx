@@ -34,7 +34,7 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const canCreateAccount = useBudgetPermission('manageAccounts');
-  const { title: budgetTitle, scope } = useBudget();
+  const { scope } = useBudget();
   const members = useQuery(spacesQueryOptions.allMembers(scope.userId, scope.spaceId));
   const mutationError = getMutationErrorMessage(mutation.error);
   const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
@@ -124,10 +124,6 @@ export const PlanExecuteForm: FC<PlanExecuteFormProps> = ({
           )}
         </form.Field>
 
-        <Typography.Caption1 className="text-muted-foreground">
-          Бюджет:
-          {budgetTitle}
-        </Typography.Caption1>
         <Dialog.Description>{t('plans.execute.description')}</Dialog.Description>
 
         <form.Field name="accountId">

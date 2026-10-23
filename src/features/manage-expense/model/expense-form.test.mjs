@@ -418,7 +418,7 @@ const accountFixture = {
   archivedAt: null,
 };
 
-test('new expenses require explicit account selection', async () => {
+test('new expenses require account selection when no default is supplied', async () => {
   const model = await modelPromise;
   assert.equal(model.getDefaultExpenseFormValues().accountId, '');
   assert.equal(model.expenseFormSchema.safeParse(model.getDefaultExpenseFormValues()).success, false);
@@ -485,4 +485,17 @@ test('automatic item totals and overrides respect currency minor units', async (
   assert.equal(model.isExpenseAmountOverridden('0.002', items, 'KWD'), true);
   assert.deepEqual(model.applyAmountInput('', items, 'KWD'), { amount: '0.001', amountOverridden: false });
   assert.equal(model.calculateExpenseItemsTotal([{ ...validItem, price: '12' }], 'JPY'), '12');
+});
+
+test('defaults to the first active checking account and skips archived and savings accounts', async () => {
+  const model = await modelPromise;
+  const accounts = [
+    { ...accountFixture, _id: 'archived', archivedAt: '2026-08-09T00:00:00.000Z' },
+    { ...accountFixture, _id: 'saving', type: 'saving' },
+    { ...accountFixture, _id: 'checking' },
+    { ...accountFixture, _id: 'other-checking' },
+  ];
+  assert.equal(model.getDefaultExpenseAccountId?.(accounts), 'checking');
+  assert.equal(model.getDefaultExpenseAccountId?.(accounts.slice(0, 2)), '');
+  assert.equal(model.getDefaultExpenseAccountId?.([]), '');
 });

@@ -1,4 +1,4 @@
-import { BudgetLabel, useBudgetScope, useBudgetPermission } from '@/entities/budgets';
+import { useBudgetScope, useBudgetPermission } from '@/entities/budgets';
 import { spacesQueryOptions } from '@/entities/spaces';
 import { actorLabel } from '@/shared/lib/actor-label';
 import {
@@ -19,6 +19,7 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Select } from '@/shared/ui/select';
 import { Typography } from '@/shared/ui/typography';
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
@@ -32,7 +33,7 @@ import type {
   FC,
   RefObject,
 } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   applyAmountInput,
@@ -102,11 +103,25 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   const canCreateAccount = useBudgetPermission('manageAccounts');
   const scope = useBudgetScope();
   const members = useQuery(spacesQueryOptions.allMembers(scope.userId, scope.spaceId));
+  const historicalParticipantId = participantActor?.userId ?? defaultValues.participantId;
+  const participantOptions = [
+    { value: scope.userId, label: 'Вы (по умолчанию)' },
+    ...(historicalParticipantId && historicalParticipantId !== scope.userId
+      && !members.data?.some((member) => member.userId === historicalParticipantId)
+      ? [{ value: historicalParticipantId, label: participantActor ? actorLabel(participantActor) : 'Участник' }]
+      : []),
+    ...(members.data ?? []).filter((member) => member.userId !== scope.userId).map((member) => ({
+      value: member.userId,
+      label: [member.firstName, member.lastName].filter(Boolean).join(' ') || 'Участник',
+    })),
+  ];
+  const participantReadOnly = members.isSuccess && participantOptions.length === 1;
   const expenseCategoriesQueryOptions = useExpenseCategoriesQueryOptions();
   const categoriesQuery = useQuery(expenseCategoriesQueryOptions.findAll());
   const accountsQueryOptions = useAccountsQueryOptions();
   const accountsQuery = useQuery(accountsQueryOptions.findAll());
   const [amountOverridden, setAmountOverridden] = useState(initialAmountOverridden);
+  const addedItemId = useRef<string | null>(null);
   const categories = getExpenseCategoryOptions(categoriesQuery.data ?? [], currentCategory);
   const currentCategoryUnavailable = categoriesQuery.isSuccess
     && Boolean(defaultValues.categoryId)
@@ -170,8 +185,10 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
   };
 
   const addItem = () => {
-    const nextItems = [...form.getFieldValue('items'), createExpenseItemDraft()];
-    form.pushFieldValue('items', nextItems[nextItems.length - 1]);
+    const item = createExpenseItemDraft();
+    const nextItems = [...form.getFieldValue('items'), item];
+    addedItemId.current = item.id;
+    form.pushFieldValue('items', item);
     syncAutomaticAmount(nextItems);
   };
 
@@ -194,8 +211,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
           await form.handleSubmit();
         }}
       >
-        <BudgetLabel />
-        <Dialog.Header className="shrink-0">
+        <Dialog.Header className="shrink-0 flex-wrap sm:flex-nowrap">
           <Dialog.Title>{title}</Dialog.Title>
           <div className="flex gap-2.5">
             <Button.Base
@@ -218,29 +234,41 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
           </div>
         </Dialog.Header>
 
-        <Dialog.Body className="min-h-0 overflow-y-auto pr-1">
+        <Dialog.Body className="-mx-1 -mb-1 mt-4 min-h-0 scroll-py-1 overflow-y-auto p-1">
           {canAssignParticipant && (
             <form.Field name="participantId">
               {(field) => (
-                <div className="flex flex-col gap-1.5">
+                <div>
                   <Input.Label htmlFor={`${idPrefix}-participant`}>Участник расхода</Input.Label>
-                  <select
-                    id={`${idPrefix}-participant`}
-                    className="h-10 rounded-md border bg-background px-3"
-                    value={field.state.value ?? ''}
-                    disabled={pending || members.isLoading || members.isError}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                  >
-                    <option value="">{dateDisabled ? 'Участник не изменяется' : 'Автор расхода (по умолчанию)'}</option>
-                    {participantActor && !members.data?.some((member) => member.userId === participantActor.userId) && (
-                      <option value={participantActor.userId}>{actorLabel(participantActor)}</option>
-                    )}
-                    {members.data?.map((member) => (
-                      <option key={member.userId} value={member.userId}>
-                        {[member.firstName, member.lastName].filter(Boolean).join(' ') || 'Участник'}
-                      </option>
-                    ))}
-                  </select>
+                  {participantReadOnly ? (
+                    <Input.Base
+                      id={`${idPrefix}-participant`}
+                      value="Вы (по умолчанию)"
+                      readOnly
+                    />
+                  ) : (
+                    <Select.Root
+                      items={participantOptions}
+                      value={field.state.value || scope.userId}
+                      disabled={pending || members.isLoading || members.isError}
+                      onValueChange={(value) => {
+                        if (value !== null) field.handleChange(value);
+                      }}
+                    >
+                      <Select.Trigger
+                        id={`${idPrefix}-participant`}
+                        size="form"
+                        onBlur={field.handleBlur}
+                      >
+                        <Select.Value />
+                      </Select.Trigger>
+                      <Select.Content>
+                        {participantOptions.map((option) => (
+                          <Select.Item key={option.value} value={option.value}>{option.label}</Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Root>
+                  )}
                   {members.isError && <Input.Error>Не удалось загрузить участников</Input.Error>}
                 </div>
               )}
@@ -501,78 +529,88 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
 
               return (
                 <div className="flex flex-col gap-3">
-                  {items.map((item, index) => (
-                    <form.Field
-                      key={`${item.id}-name`}
-                      name={`items[${index}].name`}
-                      validators={{ onBlur: expenseFieldSchemas.itemName }}
-                    >
-                      {(nameField) => (
-                        <form.Field
-                          name={`items[${index}].quantity`}
-                          validators={{ onBlur: expenseFieldSchemas.itemQuantity }}
-                        >
-                          {(quantityField) => (
-                            <form.Field
-                              name={`items[${index}].price`}
-                              validators={{ onBlur: expenseFieldSchemas.itemPrice }}
-                            >
-                              {(priceField) => (
-                                <ExpenseItemRow
-                                  item={item}
-                                  index={index}
-                                  disabled={pending}
-                                  errors={{
-                                    name: getValidationMessage(
-                                      getFirstFieldError(nameField.state.meta.errors),
-                                    ),
-                                    quantity: getValidationMessage(
-                                      getFirstFieldError(quantityField.state.meta.errors),
-                                    ),
-                                    price: getValidationMessage(
-                                      getFirstFieldError(priceField.state.meta.errors),
-                                    ) ?? (selectedCurrency
+                  {items.length > 0 && (
+                  <div className="divide-y rounded-lg border">
+                    {items.map((item, index) => (
+                      <form.Field
+                        key={`${item.id}-name`}
+                        name={`items[${index}].name`}
+                        validators={{ onBlur: expenseFieldSchemas.itemName }}
+                      >
+                        {(nameField) => (
+                          <form.Field
+                            name={`items[${index}].quantity`}
+                            validators={{ onBlur: expenseFieldSchemas.itemQuantity }}
+                          >
+                            {(quantityField) => (
+                              <form.Field
+                                name={`items[${index}].price`}
+                                validators={{ onBlur: expenseFieldSchemas.itemPrice }}
+                              >
+                                {(priceField) => (
+                                  <ExpenseItemRow
+                                    item={item}
+                                    onNameMount={(input) => {
+                                      if (input && addedItemId.current === item.id) {
+                                        addedItemId.current = null;
+                                        input.focus();
+                                      }
+                                    }}
+                                    index={index}
+                                    disabled={pending}
+                                    errors={{
+                                      name: getValidationMessage(
+                                        getFirstFieldError(nameField.state.meta.errors),
+                                      ),
+                                      quantity: getValidationMessage(
+                                        getFirstFieldError(quantityField.state.meta.errors),
+                                      ),
+                                      price: getValidationMessage(
+                                        getFirstFieldError(priceField.state.meta.errors),
+                                      ) ?? (selectedCurrency
                                       && Number.isFinite(Number(priceField.state.value))
                                       && !hasValidMoneyPrecision(
                                         Number(priceField.state.value),
                                         selectedCurrency,
                                       )
-                                      ? t('expenses.create.validation.precision', {
-                                        currency: selectedCurrency,
-                                      })
-                                      : undefined),
-                                  }}
-                                  moneyStep={moneyStep}
-                                  onNameChange={(value) => updateItem(index, 'name', value)}
-                                  onNameBlur={nameField.handleBlur}
-                                  onQuantityChange={(value) => updateItem(index, 'quantity', value)}
-                                  onQuantityBlur={quantityField.handleBlur}
-                                  onPriceChange={(value) => updateItem(index, 'price', value)}
-                                  onPriceBlur={priceField.handleBlur}
-                                  onIncrement={() => updateItem(
-                                    index,
-                                    'quantity',
-                                    changeExpenseItemQuantity(item.quantity, 1),
-                                  )}
-                                  onDecrement={() => updateItem(
-                                    index,
-                                    'quantity',
-                                    changeExpenseItemQuantity(item.quantity, -1),
-                                  )}
-                                  onRemove={() => removeItem(index)}
-                                />
-                              )}
-                            </form.Field>
-                          )}
-                        </form.Field>
-                      )}
-                    </form.Field>
-                  ))}
+                                        ? t('expenses.create.validation.precision', {
+                                          currency: selectedCurrency,
+                                        })
+                                        : undefined),
+                                    }}
+                                    moneyStep={moneyStep}
+                                    onNameChange={(value) => updateItem(index, 'name', value)}
+                                    onNameBlur={nameField.handleBlur}
+                                    onQuantityChange={(value) => updateItem(index, 'quantity', value)}
+                                    onQuantityBlur={quantityField.handleBlur}
+                                    onPriceChange={(value) => updateItem(index, 'price', value)}
+                                    onPriceBlur={priceField.handleBlur}
+                                    onIncrement={() => updateItem(
+                                      index,
+                                      'quantity',
+                                      changeExpenseItemQuantity(item.quantity, 1),
+                                    )}
+                                    onDecrement={() => updateItem(
+                                      index,
+                                      'quantity',
+                                      changeExpenseItemQuantity(item.quantity, -1),
+                                    )}
+                                    onRemove={() => removeItem(index)}
+                                  />
+                                )}
+                              </form.Field>
+                            )}
+                          </form.Field>
+                        )}
+                      </form.Field>
+                    ))}
+                  </div>
+                  )}
 
                   <Button.Base
                     type="button"
-                    variant="outline"
-                    className="w-full"
+                    variant="ghost"
+                    className="self-start"
                     onClick={addItem}
                     disabled={addDisabled}
                   >

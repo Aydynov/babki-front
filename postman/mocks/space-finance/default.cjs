@@ -2,6 +2,8 @@
 // Local-only synthetic scenario derived from babki-back space DTOs and OpenAPI (2026-10-22).
 // It verifies frontend HTTP behavior, not backend accounting or authorization correctness.
 const http = require('node:http');
+// eslint-disable-next-line import-x/extensions -- Node requires the explicit CommonJS extension.
+const expenseEntryFixtures = require('./expense-entry-fixtures.cjs');
 
 const identity = '000000000000000000000001';
 const actor = {
@@ -113,6 +115,13 @@ http
       Object.assign(state, seed());
       return send({});
     }
+    if (path === '/__test/expense-entry') {
+      if (!['saving', 'empty', 'historical', 'other', 'restricted', 'archived', 'narrow'].includes(body.scenario)) {
+        return fail(400, 'Unknown expense entry fixture');
+      }
+      Object.assign(state, expenseEntryFixtures(body.scenario));
+      return send({ spaceId: state.spaces[0].id });
+    }
     if (path === '/__test/state') return send(state);
     if (path === '/__test/config') {
       Object.assign(state.flags, body);
@@ -202,6 +211,7 @@ http
       return send(null, 204);
     }
     if (rest === 'members') {
+      if (state.flags.fixtureMembers) return send(page(state.flags.fixtureMembers, q));
       return send(
         page(
           [
@@ -419,6 +429,20 @@ http
     if (req.method === 'PATCH') {
       if (record.origin?.type === 'debt') return fail(409, 'Cancel the repayment');
       Object.assign(record, body);
+      if (collection === 'expenses') {
+        if (body.categoryId) record.category = body.categoryId;
+        if (body.participantId) {
+          const participant = state.flags.fixtureMembers?.find((member) => member.userId === body.participantId);
+          if (participant) {
+            record.participantActor = {
+              userId: participant.userId,
+              firstName: participant.firstName,
+              lastName: participant.lastName,
+              isAnonymized: false,
+            };
+          }
+        }
+      }
       return send(record);
     }
     const row = { ...meta(state, spaceId), ...body };

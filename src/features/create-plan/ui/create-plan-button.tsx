@@ -1,4 +1,3 @@
-import { useBudget } from '@/entities/budgets';
 import { CategorySelect, useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
 import { useCreatePlanMutation } from '@/entities/plans';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
@@ -48,7 +47,6 @@ const mapErrorMessage = (code: string | undefined) => {
 
 export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
   const { t } = useTranslation();
-  const budgetTitle = useBudget().title;
   const { data: categoriesData } = useQuery(useExpenseCategoriesQueryOptions().findAll());
   const categories = (categoriesData ?? []).filter((category) => !category.isArchived);
   const createPlanMutation = useCreatePlanMutation();
@@ -138,10 +136,6 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
           </Dialog.Header>
 
           <Dialog.Body>
-            <Typography.Caption1 className="text-muted-foreground">
-              Бюджет:
-              {budgetTitle}
-            </Typography.Caption1>
             <form.Field name="currency">
               {(field) => (
                 <div>

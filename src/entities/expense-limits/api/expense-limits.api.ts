@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { expenseCategoriesApi } from '@/entities/expense-categories/@x/expense-limits';
+import { resolveExpenseCategory } from '@/entities/expense-categories/@x/expense-limits';
 import type { BudgetScope } from '@/shared/types';
 import { budgetPath } from '@/shared/lib/budget-api';
 import type { ExpensesPaginatedResponse } from '@/entities/expenses/@x/expense-limits';
@@ -21,7 +21,7 @@ class ExpenseLimitsApi {
       .object({ category: z.string().regex(/^[a-f\d]{24}$/i) })
       .passthrough()
       .parse(value);
-    const category = await expenseCategoriesApi.findOne(raw.category, scope, signal);
+    const category = await resolveExpenseCategory(raw.category, scope, signal);
     if (!category) throw new Error('Категория лимита недоступна');
     return expenseLimitSchema.parse({ ...raw, category });
   };

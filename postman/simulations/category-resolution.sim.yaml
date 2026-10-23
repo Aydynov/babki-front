@@ -1,0 +1,5 @@
+simulation: category-resolution
+routing: path
+mocks:
+  - routeKey: budget
+    path: ../mocks/category-resolution/default.cjs
