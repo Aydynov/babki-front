@@ -17,7 +17,7 @@ import {
   type CurrencyCode,
 } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Input } from '@/shared/ui/input';
 import { Select } from '@/shared/ui/select';
 import { Typography } from '@/shared/ui/typography';
@@ -25,9 +25,9 @@ import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import i18next from 'i18next';
 import {
+  LucideArrowLeft,
   LucideCheck,
   LucidePlus,
-  LucideX,
 } from 'lucide-react';
 import type {
   FC,
@@ -204,12 +204,36 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
     syncAutomaticAmount(nextItems);
   };
 
-  const Content = embedded ? Fragment : Dialog.Content;
+  const actions = (
+    <div className="flex gap-2.5">
+      {onCancel && (
+      <Button.Icon
+        type="button"
+        disabled={pending}
+        onClick={onCancel}
+        aria-label={t('expenses.details.backToView')}
+        title={t('expenses.details.backToView')}
+      >
+        <LucideArrowLeft />
+      </Button.Icon>
+      )}
+      <Button.Base
+        type="submit"
+        disabled={pending || categoriesUnavailable || accountsUnavailable || moneyPrecisionInvalid}
+      >
+        <LucideCheck />
+        {pending
+          ? savingLabel
+          : saveLabel}
+      </Button.Base>
+    </div>
+  );
+
+  const Content = embedded ? Fragment : ScrollDialog.Content;
 
   return (
     <Content
       {...(embedded ? {} : {
-        className: 'flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden',
         finalFocus,
       })}
     >
@@ -221,40 +245,13 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
           await form.handleSubmit();
         }}
       >
-        <Dialog.Header className="shrink-0 flex-wrap sm:flex-nowrap">
-          <Dialog.Title>{title}</Dialog.Title>
-          <div className="flex flex-wrap gap-2.5">
-            <Button.Base
-              type="submit"
-              disabled={pending || categoriesUnavailable || accountsUnavailable || moneyPrecisionInvalid}
-            >
-              <LucideCheck />
-              {pending
-                ? savingLabel
-                : saveLabel}
-            </Button.Base>
-            {onCancel && (
-            <Button.Base
-              type="button"
-              variant="ghost"
-              disabled={pending}
-              onClick={onCancel}
-            >
-              {t('expenses.details.cancelLabel')}
-            </Button.Base>
-            )}
-            <Button.Icon
-              type="button"
-              onClick={() => onClose()}
-              aria-label={closeLabel}
-              disabled={pending}
-            >
-              <LucideX />
-            </Button.Icon>
-          </div>
-        </Dialog.Header>
-
-        <Dialog.Body className="-mx-1 -mb-1 mt-4 min-h-0 scroll-py-1 overflow-y-auto p-1">
+        <ScrollDialog.Layout
+          title={title}
+          closeLabel={closeLabel}
+          onClose={onClose}
+          closeDisabled={pending}
+          actions={actions}
+        >
           {canAssignParticipant && (
           <form.Field name="participantId">
             {(field) => (
@@ -649,7 +646,7 @@ export const ExpenseForm: FC<ExpenseFormProps> = ({
             {submitError}
           </Typography.Caption1>
           )}
-        </Dialog.Body>
+        </ScrollDialog.Layout>
       </form>
     </Content>
   );

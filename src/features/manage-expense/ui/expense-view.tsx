@@ -6,10 +6,10 @@ import { spacesQueryOptions } from '@/entities/spaces';
 import { actorLabel } from '@/shared/lib/actor-label';
 import { formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
-import { LucidePencil, LucideX } from 'lucide-react';
+import { LucidePencil } from 'lucide-react';
 import type { FC, RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -46,47 +46,39 @@ export const ExpenseView: FC<ExpenseViewProps> = ({
   ];
 
   return (
-    <>
-      <Dialog.Header className="shrink-0 flex-wrap">
-        <Dialog.Title>{t('expenses.details.title')}</Dialog.Title>
-        <div className="flex gap-2">
-          {canEdit && (
-            <Button.Base variant="ghost" onClick={onEdit}>
-              <LucidePencil />
-              {t('expenses.actions.editLabel')}
-            </Button.Base>
-          )}
-          <Button.Icon
-            ref={actionRef}
-            onClick={onClose}
-            aria-label={t('expenses.details.close')}
-          >
-            <LucideX />
-          </Button.Icon>
-        </div>
-      </Dialog.Header>
-      <Dialog.Body className="min-h-0 overflow-y-auto break-words">
-        {account?.archivedAt && (
-          <Typography.Caption1>{t('expenses.edit.accountArchived')}</Typography.Caption1>
+    <ScrollDialog.Layout
+      title={t('expenses.details.title')}
+      closeLabel={t('expenses.details.close')}
+      closeRef={actionRef}
+      onClose={onClose}
+      actions={canEdit ? (
+        <Button.Base variant="ghost" onClick={onEdit}>
+          <LucidePencil />
+          {t('expenses.actions.editLabel')}
+        </Button.Base>
+      ) : undefined}
+    >
+      {account?.archivedAt && (
+      <Typography.Caption1>{t('expenses.edit.accountArchived')}</Typography.Caption1>
+      )}
+      <div className="flex flex-col items-start gap-1">
+        <Typography.Caption1 className="text-muted-foreground">
+          {t('expenses.create.fields.category')}
+        </Typography.Caption1>
+        <ExpenseCategoryBadge color={expense.category.color}>{expense.category.name}</ExpenseCategoryBadge>
+        {expense.categoryUnavailable && (
+        <Button.Base variant="outline" onClick={onRetryCategory}>{t('expenses.details.retryCategory')}</Button.Base>
         )}
-        <div className="flex flex-col items-start gap-1">
-          <Typography.Caption1 className="text-muted-foreground">
-            {t('expenses.create.fields.category')}
-          </Typography.Caption1>
-          <ExpenseCategoryBadge color={expense.category.color}>{expense.category.name}</ExpenseCategoryBadge>
-          {expense.categoryUnavailable && (
-            <Button.Base variant="outline" onClick={onRetryCategory}>{t('expenses.details.retryCategory')}</Button.Base>
-          )}
-        </div>
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {fields.map(([label, value]) => (
-            <div key={label} className="min-w-0">
-              <dt className="text-caption-1 text-muted-foreground">{label}</dt>
-              <dd className="whitespace-pre-wrap text-body-2">{value}</dd>
-            </div>
-          ))}
-        </dl>
-        {expense.items.length > 0 && (
+      </div>
+      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {fields.map(([label, value]) => (
+          <div key={label} className="min-w-0">
+            <dt className="text-caption-1 text-muted-foreground">{label}</dt>
+            <dd className="whitespace-pre-wrap text-body-2">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {expense.items.length > 0 && (
         <div className="flex flex-col gap-3">
           <Typography.Caption1 className="text-muted-foreground">{t('expenses.details.items')}</Typography.Caption1>
           <div className="flex flex-col divide-y rounded-lg border">
@@ -107,8 +99,7 @@ export const ExpenseView: FC<ExpenseViewProps> = ({
             ))}
           </div>
         </div>
-        )}
-      </Dialog.Body>
-    </>
+      )}
+    </ScrollDialog.Layout>
   );
 };

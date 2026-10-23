@@ -26,7 +26,7 @@ matches the user's current local calendar month and year.
 #### Scenario: Open editing from details
 - **WHEN** the user activates `Редактировать` in current-period details with mutation permission and an active account
 - **THEN** the same dialog switches to a prefilled edit form for that expense
-- **THEN** the read-only edit button has no resting background
+- **THEN** the read-only edit button has no resting background and appears in a fixed translucent footer over the scrollable content, with backdrop blur and no separator
 
 #### Scenario: Read-only details when editing is unavailable
 - **WHEN** the period is historical, mutation permission is absent or the expense account is archived
@@ -49,7 +49,7 @@ the expense update contract editable.
 #### Scenario: Discard an idle edit
 - **WHEN** the user cancels editing with unsaved changes while no update is pending
 - **THEN** the system discards those changes without requesting confirmation and returns to read-only saved details
-- **THEN** a separate «Отмена» button is available beside Save
+- **THEN** a separate back-arrow icon button with the accessible name and hint «К просмотру» appears to the left of Save in a fixed translucent footer over the editable content, with backdrop blur and no separator
 
 #### Scenario: Escape from editing
 - **WHEN** the user presses Escape while editing and no update is pending
@@ -59,6 +59,7 @@ the expense update contract editable.
 #### Scenario: Close editing with the cross
 - **WHEN** the user clicks the close cross while editing and no update is pending
 - **THEN** the entire dialog closes and unsaved changes are discarded
+- **THEN** the close cross stays in the top-right corner on mobile even when the other header actions wrap
 
 #### Scenario: Reopen from current expense data
 - **WHEN** the same expense edit dialog is opened again after cancellation, an idle close or a completed update

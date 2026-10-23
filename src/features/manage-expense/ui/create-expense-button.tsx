@@ -2,7 +2,7 @@ import { useAccountsQueryOptions } from '@/entities/accounts';
 import { useQuery } from '@tanstack/react-query';
 import { useCreateExpenseMutation } from '@/entities/expenses';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
 import { LucidePlus } from 'lucide-react';
 import {
@@ -42,7 +42,7 @@ export const CreateExpenseButton: FC<CreateExpenseButtonProps> = ({ className })
   };
 
   return (
-    <Dialog.Base
+    <ScrollDialog.Base
       open={open}
       onOpenChange={handleOpenChange}
       onOpenChangeComplete={(nextOpen) => {
@@ -86,6 +86,6 @@ export const CreateExpenseButton: FC<CreateExpenseButtonProps> = ({ className })
           setOpen(false);
         }}
       />
-    </Dialog.Base>
+    </ScrollDialog.Base>
   );
 };

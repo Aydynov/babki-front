@@ -348,7 +348,7 @@
       "unavailable": "Не указан",
       "items": "Позиции расхода",
       "retryCategory": "Загрузить категорию повторно",
-      "cancelLabel": "Отмена"
+      "backToView": "К просмотру"
     },
     "create": {
       "open": "Добавить расход",

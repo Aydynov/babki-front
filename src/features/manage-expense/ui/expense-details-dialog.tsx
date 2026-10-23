@@ -1,7 +1,7 @@
 import { useAccountsQueryOptions } from '@/entities/accounts';
 import { useCanManageRecord } from '@/entities/budgets';
 import { type Expense, useUpdateExpenseMutation } from '@/entities/expenses';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { useQuery } from '@tanstack/react-query';
 import {
   type FC, type RefObject, useEffect, useRef, useState,
@@ -57,7 +57,7 @@ export const ExpenseDetailsDialog: FC<ExpenseDetailsDialogProps> = ({
   };
 
   return (
-    <Dialog.Base
+    <ScrollDialog.Base
       open
       onOpenChange={(open, details) => {
         if (open) return;
@@ -73,9 +73,8 @@ export const ExpenseDetailsDialog: FC<ExpenseDetailsDialogProps> = ({
         onClose();
       }}
     >
-      <Dialog.Content
+      <ScrollDialog.Content
         ref={contentRef}
-        className="flex max-w-2xl flex-col overflow-hidden"
         finalFocus={finalFocus}
       >
         {editing ? (
@@ -125,7 +124,7 @@ export const ExpenseDetailsDialog: FC<ExpenseDetailsDialogProps> = ({
             onRetryCategory={onRetryCategory}
           />
         )}
-      </Dialog.Content>
-    </Dialog.Base>
+      </ScrollDialog.Content>
+    </ScrollDialog.Base>
   );
 };
