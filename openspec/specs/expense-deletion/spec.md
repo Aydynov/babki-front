@@ -8,8 +8,7 @@ TBD: Define the expected behavior for deleting expenses and refreshing dependent
 
 ### Requirement: Expense row actions menu
 The system SHALL provide an actions menu with an icon-only trigger at the right edge of loaded expense rows only when
-the selected dashboard period is the user's current local calendar month, without changing the row's expense-item
-expansion behavior.
+the selected dashboard period is the user's current local calendar month, without activating the row details dialog.
 
 #### Scenario: Display row action trigger in the current period
 - **WHEN** an expense row is rendered while the selected month and year match the current local month and year
@@ -25,13 +24,14 @@ expansion behavior.
 
 #### Scenario: Open row actions
 - **WHEN** the user activates an available horizontal-ellipsis button in the current period
-- **THEN** a popup menu opens for that expense without expanding or collapsing its item details
+- **THEN** a popup menu opens for that expense without opening expense details
 
 #### Scenario: Leave the current period during an action
-- **WHEN** the selected period changes away from the current local month while an expense action menu, edit dialog, or
+- **WHEN** the selected period changes away from the current local month while an expense action menu, edit mode, or
   confirmation is open
 - **THEN** the unavailable action interaction is removed and no update or delete request is sent unless submission
   already started it
+- **THEN** any expense dialog that remains open shows read-only saved details
 
 #### Scenario: Present the available operations
 - **WHEN** the expense actions menu is open
@@ -55,9 +55,12 @@ The system MUST expose meaningful localized accessible names and keyboard behavi
 - **THEN** the user can reach and activate edit or delete using standard menu keyboard interaction
 
 #### Scenario: Restore action focus
-- **WHEN** editing or deletion is cancelled, fails and is dismissed, or completes successfully while the row remains
-  available
+- **WHEN** the expense dialog opened from the menu is dismissed, or deletion is cancelled, dismissed after failure, or completes successfully while the row remains available
 - **THEN** focus returns to the originating ellipsis trigger when that trigger still exists
+
+#### Scenario: Return from editing inside the dialog
+- **WHEN** editing succeeds or is cancelled
+- **THEN** read-only details appear and focus stays within the expense dialog
 
 ### Requirement: Confirm expense deletion
 The system MUST require explicit confirmation before deleting the transaction represented by an expense row.
