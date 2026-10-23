@@ -17,28 +17,26 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeleteConfirmDialog } from './delete-confirm-dialog';
-import { EditExpenseDialog } from './edit-expense-dialog';
 
 interface ExpenseActionsProps {
   expense: Expense;
+  onEdit: (trigger: HTMLButtonElement | null) => void;
 }
 
 export const ExpenseActions: FC<ExpenseActionsProps> = ({
   expense,
+  onEdit,
 }) => {
   const allowed = useCanManageRecord(expense.createdBy, expense.participantId);
   const accounts = useQuery(useAccountsQueryOptions().findAll());
-  const archived = accounts.data?.find((a) => a._id === expense.accountId)?.archivedAt;
+  const account = accounts.data?.find((a) => a._id === expense.accountId);
   const { t } = useTranslation();
   const deleteMutation = useDeleteTransactionMutation();
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editSession, setEditSession] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const handleEditRequest = () => {
-    setEditSession((value) => value + 1);
-    setEditOpen(true);
+    onEdit(triggerRef.current);
   };
 
   const handleDeleteRequest = () => {
@@ -57,7 +55,7 @@ export const ExpenseActions: FC<ExpenseActionsProps> = ({
     setDeleteOpen(false);
   };
 
-  if (!allowed || archived) return null;
+  if (!allowed || !account || account.archivedAt) return null;
   return (
     <>
       <Menu.Root>
@@ -105,14 +103,6 @@ export const ExpenseActions: FC<ExpenseActionsProps> = ({
           </Menu.Positioner>
         </Menu.Portal>
       </Menu.Root>
-
-      <EditExpenseDialog
-        key={editSession}
-        expense={expense}
-        open={editOpen}
-        finalFocus={triggerRef}
-        onClose={() => setEditOpen(false)}
-      />
 
       <DeleteConfirmDialog
         open={deleteOpen}

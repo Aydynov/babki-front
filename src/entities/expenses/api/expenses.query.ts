@@ -7,8 +7,10 @@ import { useBudgetScope } from '@/entities/budgets/@x/expenses';
 import type { BudgetScope } from '@/shared/types';
 import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
 import { expensesApi } from './expenses.api';
+import { replaceExpenseInPaginatedResponse } from '../model/expense-list-cache';
 import type {
   CreateExpenseDto,
+  ExpensesPaginatedResponse,
   ListExpensesQuery,
   UpdateExpenseDto,
 } from '../model/schemas';
@@ -64,7 +66,13 @@ export const useUpdateExpenseMutation = () => {
       expenseId: string;
       payload: UpdateExpenseDto;
     }) => expensesApi.update(expenseId, payload, scope),
-    onSuccess: () => {
+    onSuccess: async (updated) => {
+      await client.cancelQueries({ queryKey: scopedKey(scope, expensesQueryKeys.all) });
+      client.setQueryData(scopedKey(scope, expensesQueryKeys.detail(updated._id)), updated);
+      client.setQueriesData<ExpensesPaginatedResponse>(
+        { queryKey: scopedKey(scope, expensesQueryKeys.listAll()) },
+        (data) => (data ? replaceExpenseInPaginatedResponse(data, updated) : data),
+      );
       invalidateBudget(client, scope).catch(() => undefined);
     },
   });

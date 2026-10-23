@@ -338,8 +338,18 @@
   },
   "expenses": {
     "title": "Расходы",
-    "expandItems": "Развернуть",
-    "collapseItems": "Свернуть",
+    "details": {
+      "title": "Детали расхода",
+      "close": "Закрыть детали расхода",
+      "open": "Открыть детали расхода: {{description}}",
+      "currency": "Валюта",
+      "participant": "Участник расхода",
+      "author": "Автор",
+      "unavailable": "Не указан",
+      "items": "Позиции расхода",
+      "retryCategory": "Загрузить категорию повторно",
+      "cancelLabel": "Отмена"
+    },
     "create": {
       "open": "Добавить расход",
       "title": "Добавить расход",

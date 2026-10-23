@@ -2,10 +2,11 @@ import { useBudgetScope } from '@/entities/budgets';
 import { spacesQueryOptions } from '@/entities/spaces';
 import { actorLabel } from '@/shared/lib/actor-label';
 import { ExpenseCategoryBadge } from '@/entities/expense-categories';
-import { useExpensesQueryOptions } from '@/entities/expenses';
+import { type Expense, useExpensesQueryOptions } from '@/entities/expenses';
 import {
   CreateExpenseButton,
   ExpenseActions,
+  ExpenseDetailsDialog,
 } from '@/features/manage-expense';
 import {
   useIsCurrentPeriod,
@@ -22,11 +23,10 @@ import {
   Body1,
   Body2,
 } from '@/shared/ui/typography';
-import { Accordion } from '@base-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { useState, type FC } from 'react';
+import { useRef, useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const mobileTableClassName = `
@@ -49,8 +49,14 @@ const getRowGridClassName = (withActions: boolean) => `
     : 'md:grid-cols-[repeat(4,minmax(0,170px))]'}
 `;
 
-export const Expenses: FC = () => {
+const ExpensesContent: FC = () => {
   const expensesQueryOptions = useExpensesQueryOptions();
+  const [selection, setSelection] = useState<{ expense: Expense; mode: 'view' | 'edit' } | null>(null);
+  const finalFocus = useRef<HTMLElement | null>(null);
+  const openDetails = (expense: Expense, mode: 'view' | 'edit', trigger: HTMLElement | null) => {
+    finalFocus.current = trigger;
+    setSelection({ expense, mode });
+  };
   const scope = useBudgetScope();
   const members = useQuery(spacesQueryOptions.allMembers(scope.userId, scope.spaceId));
   const [participantId, setParticipantId] = useState('');
@@ -65,7 +71,7 @@ export const Expenses: FC = () => {
   );
   const { t } = useTranslation();
 
-  if (expensesQuery.isLoading) {
+  if (expensesQuery.isLoading && !selection) {
     return (
       <Card.Base aria-busy="true" className="h-fit min-h-64 min-w-0">
         <span className="sr-only">Загрузка...</span>
@@ -125,7 +131,7 @@ export const Expenses: FC = () => {
     );
   }
 
-  if (expensesQuery.isError && expensesQuery.data === undefined) {
+  if (expensesQuery.isError && expensesQuery.data === undefined && !selection) {
     return (
       <Card.Base className="h-fit min-h-64 min-w-0">
         <QueryError onRetry={() => {
@@ -189,14 +195,21 @@ export const Expenses: FC = () => {
         />
         )}
         <Table.Base className={mobileTableClassName}>
-          <Accordion.Root render={<Table.Body className={mobileBodyClassName} />}>
+          <Table.Body className={mobileBodyClassName}>
             {expensesQuery.data?.items.map((expense) => {
               const {
-                _id: expenseId, amount, currency, transactionDate, merchant, category, description, items,
+                _id: expenseId, amount, currency, transactionDate, merchant, category, description,
               } = expense;
 
               return (
-                <Accordion.Item key={expenseId} render={<Table.Row className={mobileRowClassName} />}>
+                <Table.Row
+                  key={expenseId}
+                  className={`${mobileRowClassName} cursor-pointer`}
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest('button, a, [role="menuitem"]')) return;
+                    openDetails(expense, 'view', event.currentTarget.querySelector('button[data-expense-details]'));
+                  }}
+                >
                   <div className={rowGridClassName}>
                     <Table.Cell className="block min-w-0 p-0 md:table-cell md:p-5">
                       <ExpenseCategoryBadge color={category.color}>{category.name}</ExpenseCategoryBadge>
@@ -204,7 +217,10 @@ export const Expenses: FC = () => {
                         <Button.Base
                           variant="outline"
                           disabled={expensesQuery.isFetching}
-                          onClick={() => expensesQuery.refetch().catch(() => undefined)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            expensesQuery.refetch().catch(() => undefined);
+                          }}
                         >
                           Загрузить категорию повторно
                         </Button.Base>
@@ -214,7 +230,15 @@ export const Expenses: FC = () => {
                       className="col-span-2 block min-w-0 p-0 md:col-span-1 md:table-cell md:p-5"
                     >
                       <div className="flex min-w-0 flex-col items-start gap-1 break-words">
-                        {description}
+                        <button
+                          type="button"
+                          data-expense-details
+                          className="cursor-pointer text-left break-words focus-visible:outline-2"
+                          aria-label={t('expenses.details.open', { description: description || category.name })}
+                          onClick={(event) => openDetails(expense, 'view', event.currentTarget)}
+                        >
+                          {description || <Body1 className="text-muted-foreground">Нет описания</Body1>}
+                        </button>
                         {expense.createdByActor && (
                           <Body2 className="text-muted-foreground">
                             Добавил(а):
@@ -222,17 +246,6 @@ export const Expenses: FC = () => {
                             {actorLabel(expense.createdByActor)}
                           </Body2>
                         )}
-                        {!!items.length && (
-                        <Accordion.Trigger>
-                          <Body2 className="text-muted-foreground in-data-panel-open:hidden">
-                            {t('expenses.expandItems')}
-                          </Body2>
-                          <Body2 className="hidden text-muted-foreground in-data-panel-open:block">
-                            {t('expenses.collapseItems')}
-                          </Body2>
-                        </Accordion.Trigger>
-                        )}
-                        {!description && !items.length && <Body1 className="text-muted-foreground">Нет описания</Body1>}
                       </div>
                     </Table.Cell>
                     <Table.Cell
@@ -261,29 +274,14 @@ export const Expenses: FC = () => {
                       `}
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <ExpenseActions expense={expense} />
+                      <ExpenseActions
+                        expense={expense}
+                        onEdit={(trigger) => openDetails(expense, 'edit', trigger)}
+                      />
                     </Table.Cell>
                     )}
                   </div>
-                  <Accordion.Panel render={<Table.Base className="border-t px-3 py-2 md:px-5" />}>
-                    <Table.Header>
-                      <Table.Row>
-                        <Table.Head>{t('expenses.itemFields.name')}</Table.Head>
-                        <Table.Head>{t('expenses.itemFields.quantity')}</Table.Head>
-                        <Table.Head>{t('expenses.itemFields.price')}</Table.Head>
-                      </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                      {items.map(({ name, quantity, price }) => (
-                        <Table.Row key={name}>
-                          <Table.Cell>{name}</Table.Cell>
-                          <Table.Cell>{quantity}</Table.Cell>
-                          <Table.Cell>{formatMoney(price, currency)}</Table.Cell>
-                        </Table.Row>
-                      ))}
-                    </Table.Body>
-                  </Accordion.Panel>
-                </Accordion.Item>
+                </Table.Row>
               );
             })}
             {!expensesQuery.data?.items.length && (
@@ -291,7 +289,7 @@ export const Expenses: FC = () => {
               <Body1 className="text-muted-foreground">Данные отсутствуют</Body1>
             </div>
             )}
-          </Accordion.Root>
+          </Table.Body>
         </Table.Base>
         <CollectionPagination
           className="border-t-0 px-3 md:border-t md:px-5"
@@ -302,6 +300,24 @@ export const Expenses: FC = () => {
           onPageChange={setPage}
         />
       </Card.Content>
+      {selection && (
+        <ExpenseDetailsDialog
+          key={selection.expense._id}
+          expense={expensesQuery.data?.items.find(({ _id }) => _id === selection.expense._id) ?? selection.expense}
+          initialMode={selection.mode}
+          currentPeriod={isCurrentPeriod}
+          finalFocus={finalFocus}
+          onClose={() => setSelection(null)}
+          onRetryCategory={() => {
+            expensesQuery.refetch().catch(() => undefined);
+          }}
+        />
+      )}
     </Card.Base>
   );
+};
+
+export const Expenses: FC = () => {
+  const scope = useBudgetScope();
+  return <ExpensesContent key={`${scope.userId}:${scope.spaceId}`} />;
 };
