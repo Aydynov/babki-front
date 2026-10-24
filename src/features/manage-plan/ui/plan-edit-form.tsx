@@ -3,11 +3,11 @@ import { CategorySelect, useExpenseCategoriesQueryOptions } from '@/entities/exp
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
-import { LucideCheck } from 'lucide-react';
+import { LucideArrowLeft, LucideCheck } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { editPlanFormSchema, getEditPlanFormValues } from '../model/edit-plan-form';
@@ -17,6 +17,7 @@ interface PlanEditFormProps {
   plan: Plan;
   mutation: ReturnType<typeof useUpdatePlanMutation>;
   onCancel: () => void;
+  onClose: () => void;
   onSuccess: (updated: Plan | null) => void;
 }
 
@@ -24,6 +25,7 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
   plan,
   mutation,
   onCancel,
+  onClose,
   onSuccess,
 }) => {
   const { t } = useTranslation();
@@ -38,18 +40,20 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
     validators: { onSubmit: editPlanFormSchema },
     onSubmit: async ({ value }) => {
       if (!hasValidMoneyPrecision(Number(value.amount), plan.currency)) return;
-      const updated = await mutation.mutateAsync({
-        planId: plan._id,
-        payload: {
-          description: value.description.trim(),
-          categoryId: value.categoryId,
-          amount: Number(value.amount),
-          targetDate: value.targetDate,
-        },
-      });
+      try {
+        const updated = await mutation.mutateAsync({
+          planId: plan._id,
+          payload: {
+            description: value.description.trim(),
+            categoryId: value.categoryId,
+            amount: Number(value.amount),
+            targetDate: value.targetDate,
+          },
+        });
 
-      mutation.reset();
-      onSuccess(updated);
+        mutation.reset();
+        onSuccess(updated);
+      } catch { /* Mutation errors are shown without discarding the draft. */ }
     },
   });
 
@@ -59,43 +63,46 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
 
   return (
     <form
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={async (event) => {
         event.preventDefault();
         event.stopPropagation();
         await form.handleSubmit();
       }}
     >
-      <Dialog.Header>
-        <Dialog.Title>{t('plans.edit.title')}</Dialog.Title>
-        <div className="flex gap-2.5">
-          <Button.Base type="submit" disabled={mutation.isPending}>
-            <LucideCheck />
-            {mutation.isPending ? t('plans.edit.saving') : t('plans.edit.save')}
-          </Button.Base>
-          <Button.Base
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={mutation.isPending}
-          >
-            {t('plans.edit.cancel')}
-          </Button.Base>
-        </div>
-      </Dialog.Header>
-
-      <Dialog.Body>
-        <Typography.Caption1 className="text-muted-foreground">
-          Валюта плана:
-          {' '}
-          {plan.currency}
-        </Typography.Caption1>
+      <ScrollDialog.Layout
+        title={t('plans.edit.title')}
+        closeLabel={t('plans.edit.close')}
+        onClose={onClose}
+        closeDisabled={mutation.isPending}
+        actions={(
+          <div className="flex gap-2.5">
+            <Button.Icon
+              type="button"
+              onClick={onCancel}
+              disabled={mutation.isPending}
+              aria-label={t('plans.details.backToView')}
+              title={t('plans.details.backToView')}
+            >
+              <LucideArrowLeft />
+            </Button.Icon>
+            <Button.Base type="submit" disabled={mutation.isPending}>
+              <LucideCheck />
+              {mutation.isPending ? t('plans.edit.saving') : t('plans.edit.save')}
+            </Button.Base>
+          </div>
+        )}
+      >
         <form.Field name="description">
           {(field) => {
             const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
             return (
               <div>
+                <Input.Label htmlFor={`edit-plan-${field.name}`}>
+                  {t('plans.edit.fields.description')}
+                </Input.Label>
                 <Input.Base
-                  id={field.name}
+                  id={`edit-plan-${field.name}`}
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -120,7 +127,9 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
 
             return (
               <div>
+                <Input.Label htmlFor="edit-plan-category">{t('plans.edit.fields.category')}</Input.Label>
                 <CategorySelect
+                  id="edit-plan-category"
                   options={categories}
                   value={field.state.value}
                   onValueChange={(value) => {
@@ -149,8 +158,11 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
 
             return (
               <div>
+                <Input.Label htmlFor={`edit-plan-${field.name}`}>
+                  {t('plans.edit.fields.amountLabel', { currency: plan.currency })}
+                </Input.Label>
                 <Input.Base
-                  id={field.name}
+                  id={`edit-plan-${field.name}`}
                   name={field.name}
                   type="number"
                   inputMode="decimal"
@@ -178,8 +190,10 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
 
             return (
               <div>
+                <Input.Label htmlFor="edit-plan-date">{t('plans.edit.fields.targetDate')}</Input.Label>
                 <Input.Base
                   id="edit-plan-date"
+                  placeholder={t('plans.edit.fields.targetDate')}
                   name={field.name}
                   type="date"
                   value={field.state.value}
@@ -200,7 +214,7 @@ export const PlanEditForm: FC<PlanEditFormProps> = ({
         {mutationError && (
           <Typography.Caption1 className="text-destructive">{mutationError}</Typography.Caption1>
         )}
-      </Dialog.Body>
+      </ScrollDialog.Layout>
     </form>
   );
 };

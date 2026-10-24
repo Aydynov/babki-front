@@ -14,6 +14,8 @@ import { useTranslation } from 'react-i18next';
 
 function PlansList({ expanded = false }: { expanded?: boolean }) {
   const archiveId = useId();
+  const planTrigger = useRef<HTMLElement | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const { i18n } = useTranslation();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('active');
@@ -81,7 +83,12 @@ function PlansList({ expanded = false }: { expanded?: boolean }) {
           </label>
         </CollectionFilters>
       )}
-      <div className={expanded ? '-mx-4 min-h-0 flex-1 overflow-y-auto sm:-mx-5' : undefined}>
+      <div
+        ref={listRef}
+        tabIndex={-1}
+        aria-label="Список планов"
+        className={expanded ? '-mx-4 min-h-0 flex-1 overflow-y-auto sm:-mx-5' : undefined}
+      >
         <CollectionList
           compact={!expanded}
           rows={(plansQuery.data?.items ?? []).map((plan) => ({
@@ -99,7 +106,10 @@ function PlansList({ expanded = false }: { expanded?: boolean }) {
           onRetry={() => {
             plansQuery.refetch().catch(() => undefined);
           }}
-          onSelect={(id) => setSelectedPlan(plansQuery.data?.items.find((plan) => plan._id === id) ?? null)}
+          onSelect={(id, trigger) => {
+            planTrigger.current = trigger;
+            setSelectedPlan(plansQuery.data?.items.find((plan) => plan._id === id) ?? null);
+          }}
         />
       </div>
       {expanded && (
@@ -111,7 +121,15 @@ function PlansList({ expanded = false }: { expanded?: boolean }) {
           onPageChange={setPage}
         />
       )}
-      <PlanDetailsDialog plan={selectedPlan} onClose={() => setSelectedPlan(null)} />
+      {selectedPlan && (
+        <PlanDetailsDialog
+          key={selectedPlan._id}
+          plan={selectedPlan}
+          finalFocus={planTrigger}
+          fallbackFocus={listRef}
+          onClose={() => setSelectedPlan(null)}
+        />
+      )}
     </>
   );
 }

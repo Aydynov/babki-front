@@ -11,6 +11,7 @@ export interface CategorySelectOption {
 }
 
 interface CategorySelectProps {
+  id?: string;
   options: CategorySelectOption[];
   value: string;
   onValueChange: (value: string) => void;
@@ -22,6 +23,7 @@ interface CategorySelectProps {
 }
 
 export const CategorySelect: FC<CategorySelectProps> = ({
+  id,
   options,
   value,
   onValueChange,
@@ -42,6 +44,7 @@ export const CategorySelect: FC<CategorySelectProps> = ({
       disabled={disabled}
     >
       <Select.Trigger
+        id={id}
         size="form"
         onBlur={onBlur}
         className={cn(

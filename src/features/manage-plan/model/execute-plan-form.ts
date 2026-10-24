@@ -22,16 +22,9 @@ export type ExecutePlanFormValues = z.infer<typeof executePlanFormSchema>;
 
 export const todayDateInputValue = () => new Date().toISOString().slice(0, 10);
 
-export const getExecutePlanFormValues = (plan: Plan): ExecutePlanFormValues => ({
-  accountId: '',
-  participantId: '',
-  closingDate: todayDateInputValue(),
-  amount: String(plan.amount),
-  description: plan.description,
-});
-
 interface PlanAccount {
   _id: string;
+  type: 'balance' | 'saving';
   currency: Plan['currency'];
   archivedAt: string | null;
 }
@@ -39,3 +32,14 @@ interface PlanAccount {
 export const getEligiblePlanAccounts = <T extends PlanAccount>(accounts: T[], currency: Plan['currency']) => (
   accounts.filter((account) => account.archivedAt === null && account.currency === currency)
 );
+
+export const getExecutePlanFormValues = (plan: Plan, accounts: PlanAccount[] = []): ExecutePlanFormValues => {
+  const eligible = getEligiblePlanAccounts(accounts, plan.currency);
+  return {
+    accountId: (eligible.find((account) => account.type === 'balance') ?? eligible[0])?._id ?? '',
+    participantId: '',
+    closingDate: todayDateInputValue(),
+    amount: String(plan.amount),
+    description: plan.description,
+  };
+};

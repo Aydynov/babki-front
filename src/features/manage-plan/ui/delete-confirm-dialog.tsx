@@ -2,7 +2,7 @@ import { type useRemovePlanMutation } from '@/entities/plans';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Typography } from '@/shared/ui/typography';
-import type { FC } from 'react';
+import type { FC, RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getMutationErrorMessage } from '../model/errors';
 
@@ -10,6 +10,7 @@ interface DeleteConfirmDialogProps {
   open: boolean;
   planId: string;
   mutation: ReturnType<typeof useRemovePlanMutation>;
+  finalFocus: RefObject<HTMLButtonElement | null>;
   onCancel: () => void;
   onConfirmed: () => void;
 }
@@ -18,6 +19,7 @@ export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
   open,
   planId,
   mutation,
+  finalFocus,
   onCancel,
   onConfirmed,
 }) => {
@@ -33,14 +35,16 @@ export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
   };
 
   const handleConfirm = async () => {
-    await mutation.mutateAsync(planId);
-    mutation.reset();
-    onConfirmed();
+    try {
+      await mutation.mutateAsync(planId);
+      mutation.reset();
+      onConfirmed();
+    } catch { /* The confirmation exposes the mutation error for retry. */ }
   };
 
   return (
     <Dialog.Base open={open} onOpenChange={handleOpenChange}>
-      <Dialog.Content className="max-w-sm">
+      <Dialog.Content className="max-w-sm" finalFocus={finalFocus}>
         <Dialog.Header>
           <Dialog.Title>{t('plans.delete.title')}</Dialog.Title>
         </Dialog.Header>

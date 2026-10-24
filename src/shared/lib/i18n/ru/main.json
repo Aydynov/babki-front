@@ -697,12 +697,23 @@
         "description": "Описание",
         "category": "Категория",
         "amount": "Сумма",
-        "targetDate": "Дата"
+        "targetDate": "Дата",
+        "status": "Статус",
+        "author": "Автор"
       },
       "actions": {
         "edit": "Редактировать",
         "delete": "Удалить",
-        "execute": "Выполнить"
+        "execute": "Выполнить",
+        "menu": "Действия плана",
+        "archive": "Архивировать",
+        "expense": "Связанный расход"
+      },
+      "backToView": "К просмотру",
+      "status": {
+        "active": "Активен",
+        "closed": "Исполнен",
+        "archived": "Архив · Только чтение"
       }
     },
     "edit": {
@@ -714,7 +725,9 @@
       "fields": {
         "description": "Описание",
         "category": "Категория",
-        "amount": "00.00"
+        "amount": "00.00",
+        "amountLabel": "Сумма ({{currency}})",
+        "targetDate": "Дата"
       }
     },
     "delete": {
@@ -735,8 +748,24 @@
       "fields": {
         "closingDate": "Дата",
         "amount": "00.00",
-        "description": "Описание"
+        "description": "Описание",
+        "amountLabel": "Сумма ({{currency}})",
+        "participant": "Участник расхода",
+        "participantPlaceholder": "Выберите участника",
+        "account": "Счёт в {{currency}}",
+        "accountPlaceholder": "Выберите счёт"
+      },
+      "participantDefault": "Вы (по умолчанию)",
+      "participantFallback": "Участник",
+      "errors": {
+        "members": "Не удалось загрузить участников",
+        "accounts": "Не удалось загрузить счета",
+        "noAccounts": "Нет активного счёта в {{currency}}"
       }
+    },
+    "archive": {
+      "title": "Архивировать план?",
+      "description": "Изменение, исполнение и отмена станут недоступны. Восстановления нет."
     }
   },
   "validation": {

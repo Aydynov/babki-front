@@ -91,7 +91,7 @@ export function CollectionList({
   error: boolean;
   empty: string;
   onRetry: () => void;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, trigger: HTMLElement) => void;
   compact?: boolean;
 }) {
   return (
@@ -119,11 +119,11 @@ export function CollectionList({
                   cursor-pointer outline-none focus-visible:bg-muted
                   focus-visible:ring-2 focus-visible:ring-inset
                 `}
-                onClick={() => onSelect(row.id)}
+                onClick={(event) => onSelect(row.id, event.currentTarget)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    onSelect(row.id);
+                    onSelect(row.id, event.currentTarget);
                   }
                 }}
               >
