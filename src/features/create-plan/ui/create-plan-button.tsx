@@ -1,20 +1,20 @@
 import { CategorySelect, useExpenseCategoriesQueryOptions } from '@/entities/expense-categories';
 import { useCreatePlanMutation } from '@/entities/plans';
 import { Dialog as DialogPrimitive } from '@base-ui/react';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
 import { getFirstFieldError, getMutationErrorMessage } from '@/shared/lib/form-errors';
 import { currencyCodes, getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { cn } from '@/shared/lib/shadcn-utils';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
+import { Select } from '@/shared/ui/select';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import i18next from 'i18next';
 import {
   LucideCheck,
   LucidePlus,
-  LucideX,
 } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -73,6 +73,8 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
     },
   });
 
+  const selectedCurrency = useStore(form.store, (state) => state.values.currency);
+
   const resetForm = () => {
     form.reset();
     createPlanMutation.reset();
@@ -89,7 +91,13 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
   };
 
   return (
-    <Dialog.Base open={open} onOpenChange={handleOpenChange}>
+    <ScrollDialog.Base
+      open={open}
+      onOpenChange={(next, details) => {
+        if (createPlanMutation.isPending) details.cancel();
+        else handleOpenChange(next);
+      }}
+    >
       <DialogPrimitive.Trigger
         className={cn(
           `
@@ -103,52 +111,55 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
         <LucidePlus className="size-5" />
       </DialogPrimitive.Trigger>
 
-      <Dialog.Content>
+      <ScrollDialog.Content>
         <form
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={async (event) => {
             event.preventDefault();
             event.stopPropagation();
             await form.handleSubmit();
           }}
         >
-          <Dialog.Header>
-            <Dialog.Title>{t('plans.create.title')}</Dialog.Title>
-            <div className="flex gap-2.5">
+          <ScrollDialog.Layout
+            title={t('plans.create.title')}
+            closeLabel={t('plans.create.close')}
+            onClose={() => handleOpenChange(false)}
+            closeDisabled={createPlanMutation.isPending}
+            actions={(
               <Button.Base type="submit" disabled={createPlanMutation.isPending}>
                 <LucideCheck />
                 {createPlanMutation.isPending ? t('plans.create.saving') : t('plans.create.save')}
               </Button.Base>
-              <button
-                type="button"
-                className={cn(
-                  `
-                    inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground
-                    transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50
-                  `,
-                )}
-                onClick={() => handleOpenChange(false)}
-                aria-label={t('plans.create.close')}
-                disabled={createPlanMutation.isPending}
-              >
-                <LucideX className="size-4" />
-              </button>
-            </div>
-          </Dialog.Header>
-
-          <Dialog.Body>
+            )}
+          >
             <form.Field name="currency">
               {(field) => (
                 <div>
-                  <Input.Label htmlFor="create-plan-currency">Валюта</Input.Label>
-                  <select
-                    id="create-plan-currency"
-                    className="h-11 w-full rounded-lg border bg-background px-3"
+                  <Input.Label htmlFor="create-plan-currency">{t('plans.create.fields.currency')}</Input.Label>
+                  <Select.Root
+                    items={currencyCodes.map((currency) => ({ value: currency, label: currency }))}
                     value={field.state.value}
                     disabled={createPlanMutation.isPending}
-                    onChange={(event) => field.handleChange(event.target.value)}
+                    onValueChange={(value) => {
+                      if (value !== null) {
+                        clearMutationError();
+                        field.handleChange(value);
+                      }
+                    }}
                   >
-                    {currencyCodes.map((currency) => <option key={currency}>{currency}</option>)}
-                  </select>
+                    <Select.Trigger
+                      id="create-plan-currency"
+                      size="form"
+                      onBlur={field.handleBlur}
+                    >
+                      <Select.Value placeholder={t('plans.create.fields.currency')} />
+                    </Select.Trigger>
+                    <Select.Content>
+                      {currencyCodes.map((currency) => (
+                        <Select.Item key={currency} value={currency}>{currency}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
                 </div>
               )}
             </form.Field>
@@ -159,8 +170,11 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
 
                 return (
                   <div>
+                    <Input.Label htmlFor={`create-plan-${field.name}`}>
+                      {t('plans.create.fields.description')}
+                    </Input.Label>
                     <Input.Base
-                      id={field.name}
+                      id={`create-plan-${field.name}`}
                       name={field.name}
                       value={field.state.value}
                       onBlur={field.handleBlur}
@@ -185,7 +199,9 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
 
                 return (
                   <div>
+                    <Input.Label htmlFor="create-plan-category">{t('plans.create.fields.category')}</Input.Label>
                     <CategorySelect
+                      id="create-plan-category"
                       options={categories}
                       value={field.state.value}
                       onValueChange={(value) => {
@@ -206,7 +222,7 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
             <form.Field name="amount">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
-                const currency = form.getFieldValue('currency');
+                const currency = selectedCurrency;
                 const precisionError = field.state.value
                   && !hasValidPlanAmountPrecision(field.state.value, currency)
                   ? `Сумма не соответствует точности валюты ${currency}`
@@ -215,8 +231,11 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
 
                 return (
                   <div>
+                    <Input.Label htmlFor={`create-plan-${field.name}`}>
+                      {t('plans.create.fields.amountLabel')}
+                    </Input.Label>
                     <Input.Base
-                      id={field.name}
+                      id={`create-plan-${field.name}`}
                       name={field.name}
                       type="number"
                       inputMode="decimal"
@@ -243,7 +262,8 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
 
                 return (
-                  <>
+                  <div>
+                    <Input.Label htmlFor="create-plan-date">{t('plans.create.fields.targetDate')}</Input.Label>
                     <Input.Base
                       id="create-plan-date"
                       name={field.name}
@@ -258,7 +278,7 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
                       disabled={createPlanMutation.isPending}
                     />
                     {fieldError && <Input.Error>{fieldError}</Input.Error>}
-                  </>
+                  </div>
                 );
               }}
             </form.Field>
@@ -268,9 +288,9 @@ export const CreatePlanButton: FC<CreatePlanButtonProps> = ({ className }) => {
                 {mutationError}
               </Typography.Caption1>
             )}
-          </Dialog.Body>
+          </ScrollDialog.Layout>
         </form>
-      </Dialog.Content>
-    </Dialog.Base>
+      </ScrollDialog.Content>
+    </ScrollDialog.Base>
   );
 };

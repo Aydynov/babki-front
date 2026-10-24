@@ -687,6 +687,9 @@
       "fields": {
         "description": "Описание",
         "category": "Категория",
+        "currency": "Валюта",
+        "targetDate": "Дата",
+        "amountLabel": "Сумма",
         "amount": "00.00"
       }
     },
