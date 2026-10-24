@@ -260,7 +260,7 @@
       "editTitle": "Редактировать перевод",
       "close": "Закрыть",
       "immutableContext": "Счета и дата перевода неизменяемы",
-      "sourceAccount": "Списать с текущего счета",
+      "sourceAccount": "Текущий счет",
       "sourcePlaceholder": "Выберите счёт",
       "sourceEmpty": "Нет активных счетов для перевода",
       "destinationAccount": "Зачислить на счёт",
@@ -269,6 +269,8 @@
       "sourceAmount": "Сумма списания",
       "destinationAmount": "Сумма зачисления",
       "date": "Дата",
+      "datePlaceholder": "дд.мм.гггг",
+      "descriptionPlaceholder": "Описание перевода (необязательно)",
       "description": "Описание",
       "saving": "Сохранение...",
       "save": "Сохранить перевод"

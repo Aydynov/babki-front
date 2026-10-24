@@ -9,12 +9,12 @@ import {
 import { formatMoney, getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
 import {
-  LucideArrowRightLeft, LucidePencil, LucidePlus, LucideTrash2, LucideX,
+  LucideArrowRightLeft, LucidePencil, LucidePlus, LucideTrash2,
 } from 'lucide-react';
 import { type FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -87,26 +87,30 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
   };
 
   return (
-    <Dialog.Base open={open} onOpenChange={(next) => !next && !pending && onClose()}>
-      <Dialog.Content className="max-w-xl">
-        <form onSubmit={(event) => {
-          event.preventDefault();
-        }}
+    <ScrollDialog.Base open={open} onOpenChange={(next) => !next && !pending && onClose()}>
+      <ScrollDialog.Content className="max-w-xl">
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={(event) => {
+            event.preventDefault();
+          }}
         >
-          <Dialog.Header>
-            <Dialog.Title>
-              {transfer ? t('transfers.form.editTitle') : t('transfers.form.createTitle')}
-            </Dialog.Title>
-            <Button.Icon
-              type="button"
-              aria-label={t('transfers.form.close')}
-              disabled={pending}
-              onClick={onClose}
-            >
-              <LucideX />
-            </Button.Icon>
-          </Dialog.Header>
-          <Dialog.Body>
+          <ScrollDialog.Layout
+            title={transfer ? t('transfers.form.editTitle') : t('transfers.form.createTitle')}
+            closeLabel={t('transfers.form.close')}
+            onClose={onClose}
+            closeDisabled={pending}
+            actions={(
+              <Button.Base
+                type="button"
+                disabled={pending || !schemaValid || Boolean(issue)}
+                onClick={submit}
+              >
+                <LucideArrowRightLeft />
+                {pending ? t('transfers.form.saving') : t('transfers.form.save')}
+              </Button.Base>
+            )}
+          >
             {transfer ? (
               <div className="rounded-lg border bg-muted/40 p-3 text-body-2">
                 <div>
@@ -163,6 +167,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
                 <Input.Label htmlFor="transfer-source-amount">{t('transfers.form.sourceAmount')}</Input.Label>
                 <Input.Base
                   id="transfer-source-amount"
+                  placeholder="0.00"
                   type="number"
                   min={source ? 1 / (10 ** getCurrencyMinorUnits(source.currency)) : 0.01}
                   step={source ? 1 / (10 ** getCurrencyMinorUnits(source.currency)) : 0.01}
@@ -188,6 +193,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
                 </Input.Label>
                 <Input.Base
                   id="transfer-destination-amount"
+                  placeholder="0.00"
                   type="number"
                   min={destination ? 1 / (10 ** getCurrencyMinorUnits(destination.currency)) : 0.01}
                   step={destination ? 1 / (10 ** getCurrencyMinorUnits(destination.currency)) : 0.01}
@@ -203,6 +209,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
               <Input.Label htmlFor="transfer-date">{t('transfers.form.date')}</Input.Label>
               <Input.Base
                 id="transfer-date"
+                placeholder={t('transfers.form.datePlaceholder')}
                 type="date"
                 value={values.transactionDate}
                 disabled={pending}
@@ -214,6 +221,7 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
               <Input.Label htmlFor="transfer-description">{t('transfers.form.description')}</Input.Label>
               <Input.Base
                 id="transfer-description"
+                placeholder={t('transfers.form.descriptionPlaceholder')}
                 value={values.description}
                 maxLength={1000}
                 disabled={pending}
@@ -245,18 +253,10 @@ const TransferFormDialog: FC<TransferFormDialogProps> = ({
             {error && !insufficientFundsError && (
             <Typography.Caption1 className="text-destructive" role="alert">{error}</Typography.Caption1>
             )}
-            <Button.Base
-              type="button"
-              disabled={pending || !schemaValid || Boolean(issue)}
-              onClick={submit}
-            >
-              <LucideArrowRightLeft />
-              {pending ? t('transfers.form.saving') : t('transfers.form.save')}
-            </Button.Base>
-          </Dialog.Body>
+          </ScrollDialog.Layout>
         </form>
-      </Dialog.Content>
-    </Dialog.Base>
+      </ScrollDialog.Content>
+    </ScrollDialog.Base>
   );
 };
 
