@@ -42,7 +42,6 @@ export const ExpenseView: FC<ExpenseViewProps> = ({
       : [participant?.firstName, participant?.lastName].filter(Boolean).join(' ') || t('expenses.details.unavailable')],
     [t('expenses.details.author'), actorLabel(expense.createdByActor)],
     [t('expenses.create.fields.merchant'), expense.merchant || '—'],
-    [t('expenses.create.fields.description'), expense.description || '—'],
   ];
 
   return (
@@ -52,7 +51,11 @@ export const ExpenseView: FC<ExpenseViewProps> = ({
       closeRef={actionRef}
       onClose={onClose}
       actions={canEdit ? (
-        <Button.Base variant="ghost" onClick={onEdit}>
+        <Button.Base
+          className="mr-auto"
+          variant="ghost"
+          onClick={onEdit}
+        >
           <LucidePencil />
           {t('expenses.actions.editLabel')}
         </Button.Base>
@@ -61,16 +64,20 @@ export const ExpenseView: FC<ExpenseViewProps> = ({
       {account?.archivedAt && (
       <Typography.Caption1>{t('expenses.edit.accountArchived')}</Typography.Caption1>
       )}
-      <div className="flex flex-col items-start gap-1">
-        <Typography.Caption1 className="text-muted-foreground">
-          {t('expenses.create.fields.category')}
-        </Typography.Caption1>
-        <ExpenseCategoryBadge color={expense.category.color}>{expense.category.name}</ExpenseCategoryBadge>
-        {expense.categoryUnavailable && (
-        <Button.Base variant="outline" onClick={onRetryCategory}>{t('expenses.details.retryCategory')}</Button.Base>
-        )}
-      </div>
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="min-w-0">
+          <dt className="text-caption-1 text-muted-foreground">{t('expenses.create.fields.category')}</dt>
+          <dd className="flex flex-col items-start gap-1">
+            <ExpenseCategoryBadge color={expense.category.color}>{expense.category.name}</ExpenseCategoryBadge>
+            {expense.categoryUnavailable && (
+            <Button.Base variant="outline" onClick={onRetryCategory}>{t('expenses.details.retryCategory')}</Button.Base>
+            )}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-caption-1 text-muted-foreground">{t('expenses.create.fields.description')}</dt>
+          <dd className="whitespace-pre-wrap text-body-2">{expense.description || '—'}</dd>
+        </div>
         {fields.map(([label, value]) => (
           <div key={label} className="min-w-0">
             <dt className="text-caption-1 text-muted-foreground">{label}</dt>
