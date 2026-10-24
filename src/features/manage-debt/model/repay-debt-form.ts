@@ -26,16 +26,9 @@ export type RepayDebtFormValues = z.infer<ReturnType<typeof getRepayDebtFormSche
 
 export const todayDateInputValue = () => new Date().toISOString().slice(0, 10);
 
-export const getRepayDebtFormValues = (debt: Debt): RepayDebtFormValues => ({
-  accountId: '',
-  repaymentDate: todayDateInputValue(),
-  amount: String(debt.remainingAmount),
-  description: '',
-  isIncome: true,
-});
-
 interface DebtRepaymentAccount {
   _id: string;
+  type: 'balance' | 'saving';
   currency: Debt['currency'];
   archivedAt: string | null;
 }
@@ -44,3 +37,14 @@ export const getEligibleDebtRepaymentAccounts = <T extends DebtRepaymentAccount>
   accounts: T[],
   currency: Debt['currency'],
 ) => accounts.filter((account) => account.archivedAt === null && account.currency === currency);
+
+export const getRepayDebtFormValues = (debt: Debt, accounts: DebtRepaymentAccount[] = []): RepayDebtFormValues => {
+  const eligible = getEligibleDebtRepaymentAccounts(accounts, debt.currency);
+  return {
+    accountId: (eligible.find((account) => account.type === 'balance') ?? eligible[0])?._id ?? '',
+    repaymentDate: todayDateInputValue(),
+    amount: String(debt.remainingAmount),
+    description: '',
+    isIncome: true,
+  };
+};

@@ -1,18 +1,18 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useCreateDebtMutation } from '@/entities/debts';
 import { currencyCodes, getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { getFirstFieldError, getMutationErrorMessage } from '@/shared/lib/form-errors';
-import { cn } from '@/shared/lib/shadcn-utils';
+import { clsx } from 'clsx';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Input } from '@/shared/ui/input';
+import { Select } from '@/shared/ui/select';
 import { Typography } from '@/shared/ui/typography';
 import i18next from 'i18next';
 import {
   LucideCheck,
   LucidePlus,
-  LucideX,
 } from 'lucide-react';
 import {
   type FC,
@@ -63,20 +63,24 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
       if (!hasValidDebtAmountPrecision(value.amount, value.currency)) return;
       const principalAmount = Number(value.amount);
 
-      await createDebtMutation.mutateAsync({
-        payload: {
-          debtor: value.debtor.trim(),
-          currency: value.currency,
-          principalAmount,
-          dueDate: normalizeDueDate(value) || undefined,
-        },
-      });
+      try {
+        await createDebtMutation.mutateAsync({
+          payload: {
+            debtor: value.debtor.trim(),
+            currency: value.currency,
+            principalAmount,
+            dueDate: normalizeDueDate(value) || undefined,
+          },
+        });
 
-      setOpen(false);
-      formApi.reset();
-      createDebtMutation.reset();
+        setOpen(false);
+        formApi.reset();
+        createDebtMutation.reset();
+      } catch { /* Keep the draft and show the mutation error. */ }
     },
   });
+
+  const selectedCurrency = useStore(form.store, (state) => state.values.currency);
 
   const resetForm = () => {
     form.reset();
@@ -102,9 +106,9 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
   };
 
   return (
-    <Dialog.Base open={open} onOpenChange={handleOpenChange}>
+    <ScrollDialog.Base open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Trigger
-        className={cn(
+        className={clsx(
           `
             group/button inline-flex size-7 shrink-0 items-center justify-center rounded-[min(var(--radius-md),12px)]
             transition-colors hover:bg-muted
@@ -116,53 +120,55 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
         <LucidePlus className="size-5" />
       </DialogPrimitive.Trigger>
 
-      <Dialog.Content>
+      <ScrollDialog.Content>
         <form
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={async (event) => {
             event.preventDefault();
             event.stopPropagation();
             await form.handleSubmit();
           }}
         >
-          <Dialog.Header>
-            <Dialog.Title>{t('debts.create.title')}</Dialog.Title>
-
-            <div className="flex gap-2.5">
+          <ScrollDialog.Layout
+            title={t('debts.create.title')}
+            closeLabel={t('debts.create.close')}
+            onClose={() => handleOpenChange(false)}
+            closeDisabled={createDebtMutation.isPending}
+            actions={(
               <Button.Base type="submit" disabled={createDebtMutation.isPending}>
                 <LucideCheck />
                 {createDebtMutation.isPending ? t('debts.create.saving') : t('debts.create.save')}
               </Button.Base>
-              <button
-                type="button"
-                className={cn(
-                  `
-                  inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground
-                  transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50
-                `,
-                )}
-                onClick={() => handleOpenChange(false)}
-                aria-label={t('debts.create.close')}
-                disabled={createDebtMutation.isPending}
-              >
-                <LucideX className="size-4" />
-              </button>
-            </div>
-          </Dialog.Header>
-
-          <Dialog.Body>
+            )}
+          >
             <form.Field name="currency">
               {(field) => (
                 <div>
-                  <Input.Label htmlFor="create-debt-currency">Валюта</Input.Label>
-                  <select
-                    id="create-debt-currency"
-                    className="h-11 w-full rounded-lg border bg-background px-3"
+                  <Input.Label htmlFor="create-debt-currency">{t('debts.create.fields.currency')}</Input.Label>
+                  <Select.Root
+                    items={currencyCodes.map((currency) => ({ value: currency, label: currency }))}
                     value={field.state.value}
                     disabled={createDebtMutation.isPending}
-                    onChange={(event) => field.handleChange(event.target.value)}
+                    onValueChange={(value) => {
+                      if (value !== null) {
+                        clearMutationError();
+                        field.handleChange(value);
+                      }
+                    }}
                   >
-                    {currencyCodes.map((currency) => <option key={currency}>{currency}</option>)}
-                  </select>
+                    <Select.Trigger
+                      id="create-debt-currency"
+                      size="form"
+                      onBlur={field.handleBlur}
+                    >
+                      <Select.Value placeholder={t('debts.create.fields.currencyPlaceholder')} />
+                    </Select.Trigger>
+                    <Select.Content>
+                      {currencyCodes.map((currency) => (
+                        <Select.Item key={currency} value={currency}>{currency}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
                 </div>
               )}
             </form.Field>
@@ -173,6 +179,7 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
 
                 return (
                   <div>
+                    <Input.Label htmlFor={field.name}>{t('debts.create.fields.name')}</Input.Label>
                     <Input.Base
                       id={field.name}
                       name={field.name}
@@ -182,7 +189,7 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
                         clearMutationError();
                         field.handleChange(event.target.value);
                       }}
-                      placeholder={t('debts.create.fields.name')}
+                      placeholder={t('debts.create.fields.namePlaceholder')}
                       hasError={Boolean(fieldError)}
                       disabled={createDebtMutation.isPending}
                       maxLength={150}
@@ -196,7 +203,7 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
             <form.Field name="amount">
               {(field) => {
                 const fieldError = mapErrorMessage(getFirstFieldError(field.state.meta.errors));
-                const currency = form.getFieldValue('currency');
+                const currency = selectedCurrency;
                 const precisionError = field.state.value
                   && !hasValidDebtAmountPrecision(field.state.value, currency)
                   ? `Сумма не соответствует точности валюты ${currency}`
@@ -205,6 +212,7 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
 
                 return (
                   <div>
+                    <Input.Label htmlFor={field.name}>{t('debts.create.fields.amountLabel')}</Input.Label>
                     <Input.Base
                       id={field.name}
                       name={field.name}
@@ -231,22 +239,30 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
             <form.Subscribe selector={(state) => state.values.dateMode}>
               {(dateMode) => (
                 <div>
+                  <Typography.Body2 id="create-debt-date-mode" className="mb-2">
+                    {t('debts.create.fields.dateMode')}
+                  </Typography.Body2>
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 rounded-lg bg-muted p-1">
+                    <div
+                      role="group"
+                      aria-labelledby="create-debt-date-mode"
+                      className="flex items-center gap-2 rounded-lg bg-muted p-1"
+                    >
                       <form.Field name="dateMode">
                         {(field) => (
                           <>
                             <button
                               type="button"
-                              className={cn(
+                              className={clsx(
                                 `
-                                  rounded-md px-3 py-1 text-caption-1 transition-colors
+                                  rounded-md px-3 py-1 text-caption-1 font-medium leading-normal transition-colors
                                   hover:text-foreground
                                 `,
                                 dateMode === 'day'
                                   ? 'bg-card text-foreground shadow-xs'
                                   : 'text-muted-foreground',
                               )}
+                              aria-pressed={dateMode === 'day'}
                               onClick={() => {
                                 clearMutationError();
                                 field.handleChange('day');
@@ -257,15 +273,16 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
                             </button>
                             <button
                               type="button"
-                              className={cn(
+                              className={clsx(
                                 `
-                                  rounded-md px-3 py-1 text-caption-1 transition-colors
+                                  rounded-md px-3 py-1 text-caption-1 font-medium leading-normal transition-colors
                                   hover:text-foreground
                                 `,
                                 dateMode === 'month'
                                   ? 'bg-card text-foreground shadow-xs'
                                   : 'text-muted-foreground',
                               )}
+                              aria-pressed={dateMode === 'month'}
                               onClick={() => {
                                 clearMutationError();
                                 field.handleChange('month');
@@ -286,7 +303,11 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
 
                       return (
                         <>
+                          <Input.Label htmlFor="create-debt-date">
+                            {t(dateMode === 'day' ? 'debts.create.fields.dueDate' : 'debts.create.fields.monthDate')}
+                          </Input.Label>
                           <Input.Base
+                            placeholder={t('debts.create.fields.dueDate')}
                             id="create-debt-date"
                             name={field.name}
                             type={dateMode === 'day' ? 'date' : 'month'}
@@ -318,9 +339,9 @@ export const CreateDebtButton: FC<CreateDebtButtonProps> = ({
                 {mutationError}
               </Typography.Caption1>
             )}
-          </Dialog.Body>
+          </ScrollDialog.Layout>
         </form>
-      </Dialog.Content>
-    </Dialog.Base>
+      </ScrollDialog.Content>
+    </ScrollDialog.Base>
   );
 };

@@ -3,14 +3,15 @@ import { type Debt, type useRepayDebtMutation } from '@/entities/debts';
 import { AccountSelect, useAccountsQueryOptions } from '@/entities/accounts';
 import { getCurrencyMinorUnits, hasValidMoneyPrecision } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Dialog } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { Typography } from '@/shared/ui/typography';
 import { useForm } from '@tanstack/react-form';
 import { useQuery } from '@tanstack/react-query';
-import { LucideCheck } from 'lucide-react';
-import { type FC } from 'react';
+import { LucideArrowLeft, LucideCheck, LucideUndo2 } from 'lucide-react';
+import { type FC, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFirstFieldError, getMutationErrorMessage, mapErrorMessage } from '../model/errors';
 import {
@@ -23,6 +24,7 @@ interface DebtRepayFormProps {
   debt: Debt;
   mutation: ReturnType<typeof useRepayDebtMutation>;
   onCancel: () => void;
+  onClose: () => void;
   onSuccess: (updated: Debt | null) => void;
 }
 
@@ -30,6 +32,7 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
   debt,
   mutation,
   onCancel,
+  onClose,
   onSuccess,
 }) => {
   const { t } = useTranslation();
@@ -38,28 +41,42 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
   const accountsQuery = useQuery(useAccountsQueryOptions().findAll());
   const eligibleAccounts = getEligibleDebtRepaymentAccounts(accountsQuery.data ?? [], debt.currency);
 
+  const accountsUnavailable = !accountsQuery.isSuccess || eligibleAccounts.length === 0;
+  const defaultAccountId = getRepayDebtFormValues(debt, accountsQuery.data).accountId;
+
   const form = useForm({
-    defaultValues: getRepayDebtFormValues(debt),
+    defaultValues: getRepayDebtFormValues(debt, accountsQuery.isSuccess ? accountsQuery.data : []),
     validators: { onSubmit: getRepayDebtFormSchema(debt.remainingAmount) },
     onSubmit: async ({ value }) => {
       if (!hasValidMoneyPrecision(Number(value.amount), debt.currency)) return;
-      if (value.isIncome && !eligibleAccounts.some((account) => account._id === value.accountId)) return;
+      if (value.isIncome && (accountsUnavailable
+        || !eligibleAccounts.some((account) => account._id === value.accountId))) return;
       const description = value.description.trim();
-      const updated = await mutation.mutateAsync({
-        debtId: debt._id,
-        payload: {
-          ...(value.isIncome ? { accountId: value.accountId } : {}),
-          repaymentDate: value.repaymentDate,
-          amount: Number(value.amount),
-          description: description || undefined,
-          isIncome: value.isIncome,
-        },
-      });
+      try {
+        const updated = await mutation.mutateAsync({
+          debtId: debt._id,
+          payload: {
+            ...(value.isIncome ? { accountId: value.accountId } : {}),
+            repaymentDate: value.repaymentDate,
+            amount: Number(value.amount),
+            description: description || undefined,
+            isIncome: value.isIncome,
+          },
+        });
 
-      mutation.reset();
-      onSuccess(updated);
+        mutation.reset();
+        onSuccess(updated);
+      } catch { /* Keep the draft and show the mutation error. */ }
     },
   });
+
+  useEffect(() => {
+    if (!accountsQuery.isSuccess || mutation.isPending) return;
+    const selectedId = form.getFieldValue('accountId');
+    if (!eligibleAccounts.some((account) => account._id === selectedId) && selectedId !== defaultAccountId) {
+      form.setFieldValue('accountId', defaultAccountId);
+    }
+  }, [accountsQuery.isSuccess, eligibleAccounts, defaultAccountId, form, mutation.isPending]);
 
   const clearMutationError = () => {
     if (mutation.isError) mutation.reset();
@@ -67,43 +84,55 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
 
   const handleReset = () => {
     clearMutationError();
-    form.reset(getRepayDebtFormValues(debt));
+    form.reset(getRepayDebtFormValues(debt, accountsQuery.isSuccess ? accountsQuery.data : []));
   };
 
   return (
     <form
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={async (event) => {
         event.preventDefault();
         event.stopPropagation();
         await form.handleSubmit();
       }}
     >
-      <Dialog.Header>
-        <Dialog.Title>{t('debts.repay.title')}</Dialog.Title>
-        <div className="flex gap-2.5">
-          <form.Subscribe selector={(state) => state.values.isIncome}>
-            {(isIncome) => (
-              <Button.Base
-                type="submit"
-                disabled={mutation.isPending || (isIncome && eligibleAccounts.length === 0)}
-              >
-                <LucideCheck />
-                {mutation.isPending ? t('debts.repay.repaying') : t('debts.repay.confirm')}
-              </Button.Base>
-            )}
-          </form.Subscribe>
-          <Button.Base
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={mutation.isPending}
-          >
-            {t('debts.repay.cancel')}
-          </Button.Base>
-        </div>
-      </Dialog.Header>
-
-      <Dialog.Body>
+      <ScrollDialog.Layout
+        title={t('debts.repay.title')}
+        closeLabel={t('debts.details.close')}
+        onClose={onClose}
+        closeDisabled={mutation.isPending}
+        actions={(
+          <div className="flex gap-2.5">
+            <Button.Icon
+              type="button"
+              onClick={onCancel}
+              disabled={mutation.isPending}
+              aria-label={t('debts.details.backToView')}
+              title={t('debts.details.backToView')}
+            >
+              <LucideArrowLeft />
+            </Button.Icon>
+            <Button.Icon
+              type="button"
+              variant="ghost"
+              onClick={handleReset}
+              disabled={mutation.isPending}
+              aria-label={t('debts.repay.reset')}
+              title={t('debts.repay.reset')}
+            >
+              <LucideUndo2 />
+            </Button.Icon>
+            <form.Subscribe selector={(state) => state.values.isIncome}>
+              {(isIncome) => (
+                <Button.Base type="submit" disabled={mutation.isPending || (isIncome && accountsUnavailable)}>
+                  <LucideCheck />
+                  {mutation.isPending ? t('debts.repay.repaying') : t('debts.repay.confirm')}
+                </Button.Base>
+              )}
+            </form.Subscribe>
+          </div>
+        )}
+      >
         <Dialog.Description>{t('debts.repay.description')}</Dialog.Description>
 
         <form.Field name="repaymentDate">
@@ -112,8 +141,12 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
 
             return (
               <div>
+                <Input.Label htmlFor="repay-debt-date">
+                  {t('debts.repay.fields.repaymentDate', { currency: debt.currency })}
+                </Input.Label>
                 <Input.Base
                   id="repay-debt-date"
+                  placeholder={t('debts.repay.fields.repaymentDate')}
                   name={field.name}
                   type="date"
                   value={field.state.value}
@@ -142,6 +175,9 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
 
             return (
               <div>
+                <Input.Label htmlFor="repay-debt-amount">
+                  {t('debts.repay.fields.amountLabel', { currency: debt.currency })}
+                </Input.Label>
                 <Input.Base
                   id="repay-debt-amount"
                   name={field.name}
@@ -201,8 +237,8 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
                   accounts={eligibleAccounts}
                   value={field.state.value}
                   onValueChange={field.handleChange}
-                  label={`Счёт зачисления в ${debt.currency}`}
-                  placeholder="Выберите счёт"
+                  label={t('debts.repay.fields.account', { currency: debt.currency })}
+                  placeholder={t('debts.repay.fields.accountPlaceholder')}
                   emptyMessage={`Нет активного счёта в ${debt.currency}`}
                   isLoading={accountsQuery.isLoading}
                   error={accountsQuery.isError
@@ -222,6 +258,9 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
 
             return (
               <div>
+                <Input.Label htmlFor="repay-debt-description">
+                  {t('debts.repay.fields.description', { currency: debt.currency })}
+                </Input.Label>
                 <Input.Base
                   id="repay-debt-description"
                   name={field.name}
@@ -231,7 +270,7 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
                     clearMutationError();
                     field.handleChange(event.target.value);
                   }}
-                  placeholder={t('debts.repay.fields.description')}
+                  placeholder={t('debts.repay.fields.descriptionPlaceholder')}
                   hasError={Boolean(fieldError)}
                   disabled={mutation.isPending}
                   maxLength={1000}
@@ -242,21 +281,10 @@ export const DebtRepayForm: FC<DebtRepayFormProps> = ({
           }}
         </form.Field>
 
-        <div className="flex justify-end">
-          <Button.Base
-            type="button"
-            variant="ghost"
-            onClick={handleReset}
-            disabled={mutation.isPending}
-          >
-            {t('debts.repay.reset')}
-          </Button.Base>
-        </div>
-
         {mutationError && (
           <Typography.Caption1 className="text-destructive">{mutationError}</Typography.Caption1>
         )}
-      </Dialog.Body>
+      </ScrollDialog.Layout>
     </form>
   );
 };

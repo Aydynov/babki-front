@@ -615,7 +615,14 @@
       "cancel": "Отмена",
       "fields": {
         "name": "Имя",
-        "amount": "00.00"
+        "amount": "00.00",
+        "currency": "Валюта",
+        "currencyPlaceholder": "Выберите валюту",
+        "amountLabel": "Сумма",
+        "dueDate": "Дата возврата",
+        "monthDate": "Месяц возврата",
+        "dateMode": "Срок возврата",
+        "namePlaceholder": "Введите имя должника"
       },
       "dateModes": {
         "day": "Дата",
@@ -634,7 +641,8 @@
         "principalAmount": "Сумма",
         "remainingAmount": "Осталось",
         "dueDate": "Дата возврата",
-        "status": "Статус"
+        "status": "Статус",
+        "author": "Автор"
       },
       "history": {
         "title": "История погашений",
@@ -644,8 +652,11 @@
       "actions": {
         "edit": "Редактировать",
         "delete": "Удалить",
-        "repay": "Погасить"
-      }
+        "repay": "Погасить",
+        "menu": "Действия долга",
+        "archive": "Архивировать"
+      },
+      "backToView": "К просмотру"
     },
     "edit": {
       "title": "Редактирование долга",
@@ -654,7 +665,12 @@
       "cancel": "Отмена",
       "fields": {
         "debtor": "Имя",
-        "description": "Описание"
+        "description": "Описание",
+        "principalAmount": "Первоначальная сумма ({{currency}})",
+        "amount": "00.00",
+        "dueDate": "Дата возврата",
+        "debtorPlaceholder": "Введите имя должника",
+        "descriptionPlaceholder": "Добавьте описание"
       }
     },
     "delete": {
@@ -674,8 +690,17 @@
       "fields": {
         "amount": "00.00",
         "isIncome": "Записать как доход",
-        "description": "Описание"
+        "description": "Описание",
+        "amountLabel": "Сумма ({{currency}})",
+        "repaymentDate": "Дата погашения",
+        "account": "Счёт зачисления в {{currency}}",
+        "accountPlaceholder": "Выберите счёт",
+        "descriptionPlaceholder": "Добавьте описание погашения"
       }
+    },
+    "archive": {
+      "title": "Архивировать долг?",
+      "description": "Изменение, погашение и отмена станут недоступны. Восстановления нет."
     }
   },
   "plans": {

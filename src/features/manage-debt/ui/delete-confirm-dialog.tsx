@@ -2,12 +2,13 @@ import { type useDeleteDebtMutation } from '@/entities/debts';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/dialog';
 import { Typography } from '@/shared/ui/typography';
-import type { FC } from 'react';
+import type { FC, RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getMutationErrorMessage } from '../model/errors';
 
 interface DeleteConfirmDialogProps {
   open: boolean;
+  finalFocus: RefObject<HTMLButtonElement | null>;
   debtId: string;
   mutation: ReturnType<typeof useDeleteDebtMutation>;
   onCancel: () => void;
@@ -16,6 +17,7 @@ interface DeleteConfirmDialogProps {
 
 export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
   open,
+  finalFocus,
   debtId,
   mutation,
   onCancel,
@@ -33,14 +35,16 @@ export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
   };
 
   const handleConfirm = async () => {
-    await mutation.mutateAsync({ debtId });
-    mutation.reset();
-    onConfirmed();
+    try {
+      await mutation.mutateAsync({ debtId });
+      mutation.reset();
+      onConfirmed();
+    } catch { /* Keep the confirmation and show the mutation error. */ }
   };
 
   return (
     <Dialog.Base open={open} onOpenChange={handleOpenChange}>
-      <Dialog.Content className="max-w-sm">
+      <Dialog.Content className="max-w-sm" finalFocus={finalFocus}>
         <Dialog.Header>
           <Dialog.Title>{t('debts.delete.title')}</Dialog.Title>
         </Dialog.Header>

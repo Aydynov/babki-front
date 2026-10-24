@@ -8,11 +8,14 @@ import { ConfirmActionButton } from './confirm-action-button';
 
 interface RepaymentCancelButtonProps {
   debtId: string;
+  disabled?: boolean;
   repayment: DebtTransaction;
   mutation: ReturnType<typeof useCancelDebtRepaymentMutation>;
 }
 
-export const RepaymentCancelButton = ({ debtId, repayment, mutation }: RepaymentCancelButtonProps) => {
+export const RepaymentCancelButton = ({
+  debtId, repayment, mutation, disabled,
+}: RepaymentCancelButtonProps) => {
   const income = useQuery({
     ...useIncomesQueryOptions().findOne(repayment.incomeId ?? ''),
     enabled: repayment.isIncome && Boolean(repayment.incomeId),
@@ -35,7 +38,7 @@ export const RepaymentCancelButton = ({ debtId, repayment, mutation }: Repayment
       <ConfirmActionButton
         description="Отменить погашение? Остаток долга будет восстановлен, поступление компенсировано."
         pending={mutation.isPending}
-        disabled={financialBlocked}
+        disabled={disabled || financialBlocked}
         onConfirm={() => mutation.mutateAsync({ debtId, repaymentId: repayment._id })}
       >
         Отменить

@@ -4,9 +4,10 @@ import { CreateDebtButton } from '@/features/create-debt';
 import { DebtDetailsDialog } from '@/features/manage-debt';
 import { currencyCodes, formatMoney } from '@/shared/lib/currency';
 import { Button } from '@/shared/ui/button';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Card } from '@/shared/ui/card';
 import {
-  CollectionDialog, CollectionFilters, CollectionList, CollectionPagination,
+  CollectionFilters, CollectionList, CollectionPagination,
 } from '@/shared/ui/collection';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LucideMaximize2 } from 'lucide-react';
@@ -17,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 
 function DebtsList({ expanded = false }: { expanded?: boolean }) {
   const archiveId = useId();
+  const selectedTrigger = useRef<HTMLElement | null>(null);
+  const fallbackFocus = useRef<HTMLDivElement | null>(null);
   const scope = useBudgetScope();
   const { i18n } = useTranslation();
   const [page, setPage] = useState(1);
@@ -59,7 +62,11 @@ function DebtsList({ expanded = false }: { expanded?: boolean }) {
   }, [client, expanded, scope]);
 
   return (
-    <>
+    <div
+      ref={fallbackFocus}
+      tabIndex={-1}
+      className="outline-none"
+    >
       {expanded && (
         <CollectionFilters filters={[
           {
@@ -107,7 +114,7 @@ function DebtsList({ expanded = false }: { expanded?: boolean }) {
           </label>
         </CollectionFilters>
       )}
-      <div className={expanded ? '-mx-4 min-h-0 flex-1 overflow-y-auto sm:-mx-5' : undefined}>
+      <div className={expanded ? '-mx-4 sm:-mx-5' : undefined}>
         <CollectionList
           compact={!expanded}
           rows={(debtsQuery.data?.items ?? []).map((debt) => ({
@@ -125,7 +132,10 @@ function DebtsList({ expanded = false }: { expanded?: boolean }) {
           onRetry={() => {
             debtsQuery.refetch().catch(() => undefined);
           }}
-          onSelect={(id) => setSelectedDebt(debtsQuery.data?.items.find((debt) => debt._id === id) ?? null)}
+          onSelect={(id, trigger) => {
+            selectedTrigger.current = trigger;
+            setSelectedDebt(debtsQuery.data?.items.find((debt) => debt._id === id) ?? null);
+          }}
         />
       </div>
       {expanded && (
@@ -140,8 +150,16 @@ function DebtsList({ expanded = false }: { expanded?: boolean }) {
       {debtOpenError && (
         <p role="alert" className="px-5 py-2 text-destructive">Связанный долг недоступен в этом бюджете.</p>
       )}
-      <DebtDetailsDialog debt={selectedDebt} onClose={() => setSelectedDebt(null)} />
-    </>
+      {selectedDebt && (
+        <DebtDetailsDialog
+          key={selectedDebt._id}
+          debt={selectedDebt}
+          finalFocus={selectedTrigger}
+          fallbackFocus={fallbackFocus}
+          onClose={() => setSelectedDebt(null)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -168,13 +186,17 @@ export function Debts() {
       </Card.Header>
       <Card.Content className="px-0"><DebtsList /></Card.Content>
       {expanded && (
-        <CollectionDialog
-          title="Все долги"
-          finalFocus={expandButton}
-          onClose={() => setExpanded(false)}
-        >
-          <DebtsList expanded />
-        </CollectionDialog>
+        <ScrollDialog.Base open onOpenChange={(open) => !open && setExpanded(false)}>
+          <ScrollDialog.Content className="max-w-3xl" finalFocus={expandButton}>
+            <ScrollDialog.Layout
+              title="Все долги"
+              closeLabel="Закрыть окно"
+              onClose={() => setExpanded(false)}
+            >
+              <DebtsList expanded />
+            </ScrollDialog.Layout>
+          </ScrollDialog.Content>
+        </ScrollDialog.Base>
       )}
     </Card.Base>
   );
