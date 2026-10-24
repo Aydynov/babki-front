@@ -98,7 +98,7 @@ export const ColorPicker: FC<ColorPickerProps> = ({
           >
             <Popover.Title className="sr-only">{label}</Popover.Title>
             <RadioGroup
-              value={value}
+              value={value.toUpperCase()}
               onValueChange={onValueChange}
               className="grid grid-cols-5 gap-2.5"
               aria-label={label}
@@ -113,12 +113,12 @@ export const ColorPicker: FC<ColorPickerProps> = ({
                     flex size-5 items-center justify-center rounded-full text-white outline-none
                     ring-offset-2 ring-offset-popover
                     focus-visible:ring-2 focus-visible:ring-ring
-                    data-checked:ring-2 data-checked:ring-ring
+                    data-checked:ring-2 data-checked:ring-foreground
                   "
                   style={{ backgroundColor: color.value }}
                 >
                   <Radio.Indicator>
-                    <LucideCheck className="size-3.5 stroke-[3]" />
+                    <LucideCheck className="size-3.5 stroke-[3] drop-shadow-[0_1px_1px_#000]" />
                   </Radio.Indicator>
                 </Radio.Root>
               ))}

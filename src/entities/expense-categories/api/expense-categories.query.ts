@@ -1,14 +1,16 @@
 import {
+  type QueryClient,
   queryOptions,
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
 import { useBudgetScope } from '@/entities/budgets/@x/expense-categories';
 import type { BudgetScope } from '@/shared/types';
-import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
+import { scopedKey, invalidateBudget, isActiveBudgetIdentity } from '@/shared/lib/budget-api';
 import { queryClient } from '@/shared/lib/query-client';
 import { expenseCategoriesApi } from './expense-categories.api';
 import type {
+  ExpenseCategory,
   CreateExpenseCategoryDto,
   UpdateExpenseCategoryDto,
 } from '../model/schemas';
@@ -56,15 +58,26 @@ export const useExpenseCategoriesQueryOptions = () => {
   };
 };
 
+const cacheSavedCategory = async (client: QueryClient, scope: BudgetScope, category: ExpenseCategory) => {
+  await client.cancelQueries({ queryKey: scopedKey(scope, expenseCategoriesQueryKeys.all) });
+  if (!isActiveBudgetIdentity(client, scope)) return;
+  client.setQueryData(expenseCategoriesQueryOptions.findAll(scope).queryKey, (current) => {
+    if (!current) return current;
+    return current.some(({ _id }) => _id === category._id)
+      ? current.map((row) => (row._id === category._id ? category : row))
+      : [...current, category];
+  });
+  client.setQueryData(expenseCategoriesQueryOptions.findOne(category._id, scope).queryKey, category);
+  invalidateBudget(client, scope).catch(() => undefined);
+};
+
 export const useCreateExpenseCategoryMutation = () => {
   const scope = useBudgetScope();
   const client = useQueryClient();
   return useMutation({
     retry: false,
     mutationFn: ({ payload }: { payload: CreateExpenseCategoryDto }) => expenseCategoriesApi.create(payload, scope),
-    onSuccess: () => {
-      invalidateBudget(client, scope).catch(() => undefined);
-    },
+    onSuccess: (category) => cacheSavedCategory(client, scope, category),
   });
 };
 
@@ -80,9 +93,7 @@ export const useUpdateExpenseCategoryMutation = () => {
       categoryId: string;
       payload: UpdateExpenseCategoryDto;
     }) => expenseCategoriesApi.update(categoryId, payload, scope),
-    onSuccess: () => {
-      invalidateBudget(client, scope).catch(() => undefined);
-    },
+    onSuccess: (category) => cacheSavedCategory(client, scope, category),
   });
 };
 
@@ -92,7 +103,13 @@ export const useDeleteExpenseCategoryMutation = () => {
   return useMutation({
     retry: false,
     mutationFn: ({ categoryId }: { categoryId: string }) => expenseCategoriesApi.remove(categoryId, scope),
-    onSuccess: () => {
+    onSuccess: async (_, { categoryId }) => {
+      await client.cancelQueries({ queryKey: scopedKey(scope, expenseCategoriesQueryKeys.all) });
+      if (!isActiveBudgetIdentity(client, scope)) return;
+      client.setQueryData(expenseCategoriesQueryOptions.findAll(scope).queryKey, (current) => (
+        current?.filter(({ _id }) => _id !== categoryId)
+      ));
+      client.removeQueries({ queryKey: expenseCategoriesQueryOptions.findOne(categoryId, scope).queryKey });
       invalidateBudget(client, scope).catch(() => undefined);
     },
   });

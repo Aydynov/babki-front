@@ -56,3 +56,28 @@ test('preserves configured order for equal totals and recalculates for a differe
   assert.deepEqual(categoryIds(secondRows), ['home', 'food', 'travel', 'other', 'health']);
   assert.deepEqual(secondRows.map(({ total }) => total), [100, 20, 20, 0, 0]);
 });
+
+test('separates archived categories without changing currency totals or tie order', async () => {
+  const { getSortedMonthlyExpenseCategoryRows } = await modelPromise;
+  const mixed = [
+    { _id: 'active', isArchived: false },
+    { _id: 'archived', isArchived: true },
+    { _id: 'zero', isArchived: false },
+    { _id: 'tie', isArchived: false },
+  ];
+  const bucket = {
+    expenses: 100,
+    expensesByCategory: [
+      { categoryId: 'active', total: 30 },
+      { categoryId: 'tie', total: 30 },
+      { categoryId: 'archived', total: 40 },
+    ],
+  };
+  assert.deepEqual(
+    categoryIds(getSortedMonthlyExpenseCategoryRows(mixed, bucket, 'active')),
+    ['active', 'tie', 'zero'],
+  );
+  assert.deepEqual(categoryIds(getSortedMonthlyExpenseCategoryRows(mixed, bucket, 'archived')), ['archived']);
+  assert.equal(bucket.expenses, 100);
+  assert.equal(getSortedMonthlyExpenseCategoryRows(mixed, bucket, 'archived')[0].total, 40);
+});

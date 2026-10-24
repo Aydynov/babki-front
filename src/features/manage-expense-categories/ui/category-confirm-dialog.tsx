@@ -1,10 +1,12 @@
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
-import type { FC } from 'react';
+import type { FC, RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
-interface DeleteConfirmDialogProps {
+interface CategoryConfirmDialogProps {
+  action: 'archive' | 'delete';
+  finalFocus: RefObject<HTMLButtonElement | null>;
   open: boolean;
   pending: boolean;
   error?: string;
@@ -12,7 +14,9 @@ interface DeleteConfirmDialogProps {
   onConfirm: () => Promise<void>;
 }
 
-export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
+export const CategoryConfirmDialog: FC<CategoryConfirmDialogProps> = ({
+  action,
+  finalFocus,
   open,
   pending,
   error,
@@ -36,13 +40,19 @@ export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
 
   return (
     <AlertDialog.Base open={open} onOpenChange={handleOpenChange}>
-      <AlertDialog.Content className="max-w-sm">
+      <AlertDialog.Content className="max-w-sm" finalFocus={finalFocus}>
         <AlertDialog.Header>
-          <AlertDialog.Title>{t('expenseCategories.management.delete.title')}</AlertDialog.Title>
+          <AlertDialog.Title>
+            {t(action === 'archive'
+              ? 'expenseCategories.management.archiveConfirmation.title'
+              : 'expenseCategories.management.delete.title')}
+          </AlertDialog.Title>
         </AlertDialog.Header>
         <AlertDialog.Body>
           <AlertDialog.Description>
-            {t('expenseCategories.management.delete.description')}
+            {t(action === 'archive'
+              ? 'expenseCategories.management.archiveConfirmation.description'
+              : 'expenseCategories.management.delete.description')}
           </AlertDialog.Description>
           {error && (
             <Typography.Caption1 className="text-destructive" role="alert">
@@ -69,8 +79,11 @@ export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
             disabled={pending}
           >
             {pending
-              ? t('expenseCategories.management.delete.deleting')
-              : t('expenseCategories.management.delete.confirm')}
+              ? t(action === 'archive'
+                ? 'expenseCategories.management.archiveConfirmation.pending'
+                : 'expenseCategories.management.delete.deleting')
+              : t(action === 'archive'
+                ? 'expenseCategories.management.archive' : 'expenseCategories.management.delete.confirm')}
           </Button.Base>
         </AlertDialog.Footer>
       </AlertDialog.Content>

@@ -29,7 +29,6 @@ export const CATEGORY_COLORS = [
 export type CategoryColor = (typeof CATEGORY_COLORS)[number]['value'];
 
 export const CATEGORY_COLOR_VALUES = CATEGORY_COLORS.map(({ value }) => value);
-export const NEW_CATEGORY_ROW_KEY = 'new-category';
 
 export const isCategoryColor = (value: string): value is CategoryColor => (
   CATEGORY_COLOR_VALUES.some((color) => color === value)

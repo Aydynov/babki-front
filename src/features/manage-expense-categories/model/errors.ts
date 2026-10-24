@@ -26,6 +26,8 @@ export const mapCategoryFieldError = (error: CategoryDraftFieldError | undefined
       return i18next.t('validation.required');
     case 'tooLong':
       return i18next.t('expenseCategories.management.validation.nameTooLong');
+    case 'descriptionTooLong':
+      return i18next.t('expenseCategories.management.validation.descriptionTooLong');
     case 'duplicate':
       return i18next.t('expenseCategories.management.validation.duplicateName');
     case 'invalidColor':
