@@ -76,12 +76,12 @@ export const createExpenseLimitDrafts = (
   limits: ExpenseLimit[],
 ): ExpenseLimitDraft[] => limits.map(createExpenseLimitDraft);
 
-export const createEmptyExpenseLimitDraft = (): ExpenseLimitDraft => ({
+export const createEmptyExpenseLimitDraft = (currency: CurrencyCode): ExpenseLimitDraft => ({
   key: NEW_EXPENSE_LIMIT_ROW_KEY,
   baselineTotal: null,
   values: {
     categoryId: '',
-    currency: 'RUB',
+    currency,
     total: '',
   },
 });

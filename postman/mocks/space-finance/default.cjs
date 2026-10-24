@@ -404,6 +404,23 @@ http
       }
       return send({ debt: record, repayment: row }, 201);
     }
+    const limitResponse = (row) => ({
+      ...row,
+      rest: row.total - list(state, spaceId, 'transactions')
+        .filter((entry) => entry.type === 'expense' && entry.category === row.category
+          && entry.currency === row.currency
+          && entry.transactionDate.slice(0, 10) >= row.startDate.slice(0, 10)
+          && entry.transactionDate.slice(0, 10) <= row.endDate.slice(0, 10))
+        .reduce((total, entry) => total + entry.amount, 0),
+    });
+    if (collection === 'expense-limits' && req.method === 'GET') {
+      if (recordId) return send(limitResponse(record));
+      return send(items.filter((row) => (!q.get('currency') || row.currency === q.get('currency'))
+        && (!q.get('categoryId') || row.category === q.get('categoryId'))
+        && (!q.get('periodDate') || (row.startDate.slice(0, 10) <= q.get('periodDate').slice(0, 10)
+          && row.endDate.slice(0, 10) >= q.get('periodDate').slice(0, 10))))
+        .map(limitResponse));
+    }
     if (req.method === 'GET') {
       if (recordId) return send(record);
       let rows = ['incomes', 'expenses', 'transfers'].includes(collection)
@@ -427,6 +444,10 @@ http
       return send(null, 204);
     }
     if (req.method === 'PATCH') {
+      if (collection === 'expense-limits') {
+        record.total = body.total;
+        return send(limitResponse(record));
+      }
       if (record.origin?.type === 'debt') return fail(409, 'Cancel the repayment');
       Object.assign(record, body);
       if (collection === 'expenses') {
@@ -455,6 +476,12 @@ http
         archivedAt: null,
         timeline: [],
       });
+    } else if (collection === 'expense-limits') {
+      const category = list(state, spaceId, 'expense-categories').find((c) => c._id === body.categoryId);
+      if (!category || category.isArchived) return fail(404, 'Category unavailable');
+      if (items.some((r) => r.category === body.categoryId && r.currency === body.currency
+        && r.startDate <= body.endDate && r.endDate >= body.startDate)) return fail(409, 'Limit overlaps');
+      Object.assign(row, { category: body.categoryId, startDate: body.startDate, endDate: body.endDate });
     } else if (collection === 'expense-categories') row.isArchived = false;
     else if (collection === 'plans') Object.assign(row, { status: 'active', archivedAt: null });
     else if (collection === 'debts') {
@@ -501,6 +528,6 @@ http
       applyMoney(state, spaceId, row);
     } else return fail(501, 'Scenario does not model this mutation');
     items.push(row);
-    return send(row, 201);
+    return send(collection === 'expense-limits' ? limitResponse(row) : row, 201);
   })
   .listen(process.env.PORT);

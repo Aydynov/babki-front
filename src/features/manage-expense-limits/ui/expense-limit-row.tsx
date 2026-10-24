@@ -4,12 +4,13 @@ import {
   ExpenseCategoryBadge,
 } from '@/entities/expense-categories';
 import { Button } from '@/shared/ui/button';
-import { currencyCodes, getCurrencyMinorUnits } from '@/shared/lib/currency';
+import { getCurrencyMinorUnits } from '@/shared/lib/currency';
 import { Input } from '@/shared/ui/input';
 import { Typography } from '@/shared/ui/typography';
 import {
   LucideCheck,
   LucideLoaderCircle,
+  LucideUndo2,
   LucideX,
 } from 'lucide-react';
 import {
@@ -64,6 +65,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
   const totalErrorId = useId();
   const mutationErrorId = useId();
   const dirty = isExpenseLimitDraftDirty(draft);
+  const canRestore = dirty && draft.baselineTotal !== null;
   const unavailableCategoryError = !draft.limitId
     && !draft.writeConfirmed
     && draft.values.categoryId
@@ -97,8 +99,8 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
   return (
     <form
       className="
-        grid grid-cols-[minmax(0,1fr)_32px_32px] gap-x-1.5 gap-y-2
-        sm:grid-cols-[minmax(0,1.25fr)_5rem_minmax(5rem,0.75fr)_32px_32px] sm:gap-y-1
+        grid grid-cols-[32px_minmax(0,1fr)_32px] gap-x-1.5 gap-y-2
+        sm:grid-cols-[minmax(0,1.25fr)_32px_minmax(5rem,0.75fr)_32px] sm:gap-y-1
       "
       aria-describedby={genericMutationError ? mutationErrorId : undefined}
       onSubmit={handleSubmit}
@@ -126,55 +128,9 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
         )}
       </div>
 
-      {draft.limitId || draft.writeConfirmed ? (
-        <div className="flex h-11 items-center text-body-2">{draft.values.currency}</div>
-      ) : (
-        <select
-          className="h-11 rounded-lg border bg-background px-2"
-          value={draft.values.currency}
-          disabled={disabled}
-          aria-label="Валюта лимита"
-          onChange={(event) => onChange('currency', event.target.value)}
-          onBlur={() => onBlur('currency')}
-        >
-          {currencyCodes.map((currency) => <option key={currency}>{currency}</option>)}
-        </select>
-      )}
-
-      <Input.Base
-        type="number"
-        inputMode="decimal"
-        min={1 / (10 ** getCurrencyMinorUnits(draft.values.currency))}
-        step={1 / (10 ** getCurrencyMinorUnits(draft.values.currency))}
-        value={draft.values.total}
-        onChange={(event) => onChange('total', event.target.value)}
-        onBlur={() => onBlur('total')}
-        placeholder={t('expenseLimits.management.fields.amount')}
-        aria-label={t('expenseLimits.management.fields.amountLabel')}
-        aria-invalid={Boolean(totalError) || undefined}
-        aria-describedby={totalError ? totalErrorId : undefined}
-        hasError={Boolean(totalError)}
-        disabled={disabled}
-        className="col-start-1 row-start-2 h-11 min-w-0 px-2 sm:col-auto sm:row-auto"
-      />
-
-      <Button.Icon
-        type="button"
-        variant="ghost"
-        className="
-          col-start-2 row-start-2 mt-1.5 size-8 text-destructive
-          hover:bg-destructive/10 hover:text-destructive sm:col-auto sm:row-auto
-        "
-        aria-label={t('expenseLimits.management.actions.delete')}
-        onClick={onDelete}
-        disabled={disabled}
-      >
-        <LucideX />
-      </Button.Icon>
-
       <div
         className="
-          col-start-3 row-start-2 mt-1.5 flex size-8 items-center justify-center
+          col-start-1 row-start-2 mt-1.5 flex size-8 items-center justify-center
           sm:col-auto sm:row-auto
         "
       >
@@ -196,10 +152,46 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
         )}
       </div>
 
+      <Input.Base
+        id={`limit-total-${draft.key}`}
+        type="number"
+        inputMode="decimal"
+        min={1 / (10 ** getCurrencyMinorUnits(draft.values.currency))}
+        step={1 / (10 ** getCurrencyMinorUnits(draft.values.currency))}
+        value={draft.values.total}
+        onChange={(event) => onChange('total', event.target.value)}
+        onBlur={() => onBlur('total')}
+        placeholder={t('expenseLimits.management.fields.amount')}
+        aria-label={t('expenseLimits.management.fields.amountLabel')}
+        aria-invalid={Boolean(totalError) || undefined}
+        aria-describedby={totalError ? totalErrorId : undefined}
+        hasError={Boolean(totalError)}
+        disabled={disabled}
+        className="col-start-2 row-start-2 h-11 min-w-0 px-2 sm:col-auto sm:row-auto"
+      />
+
+      <Button.Icon
+        type="button"
+        variant="ghost"
+        className="
+          col-start-3 row-start-2 mt-1.5 size-8 sm:col-auto sm:row-auto
+        "
+        aria-label={t(canRestore
+          ? 'expenseLimits.management.actions.restore'
+          : 'expenseLimits.management.actions.delete')}
+        onClick={() => {
+          if (canRestore) onChange('total', String(draft.baselineTotal));
+          else onDelete();
+        }}
+        disabled={disabled}
+      >
+        {canRestore ? <LucideUndo2 /> : <LucideX className="text-destructive" />}
+      </Button.Icon>
+
       {categoryError && (
         <Typography.Caption1
           id={categoryErrorId}
-          className="col-span-3 text-destructive sm:col-span-5"
+          className="col-span-3 text-destructive sm:col-span-4"
           role="alert"
         >
           {categoryError}
@@ -209,7 +201,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
       {totalError && (
         <Typography.Caption1
           id={totalErrorId}
-          className="col-span-3 text-destructive sm:col-span-5"
+          className="col-span-3 text-destructive sm:col-span-4"
           role="alert"
         >
           {totalError}
@@ -219,7 +211,7 @@ export const ExpenseLimitRow: FC<ExpenseLimitRowProps> = ({
       {genericMutationError && (
         <Typography.Caption1
           id={mutationErrorId}
-          className="col-span-3 text-destructive sm:col-span-5"
+          className="col-span-3 text-destructive sm:col-span-4"
           role="alert"
         >
           {genericMutationError}

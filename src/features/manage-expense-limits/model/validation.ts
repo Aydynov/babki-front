@@ -18,7 +18,7 @@ export const getExpenseLimitDraftValuesSchema = () => z.object({
   categoryId: z.string().trim().min(1, 'required'),
   currency: currencyCodeSchema,
   total: z.string().trim().min(1, 'required')
-    .refine((v) => Number.isFinite(Number(v)) && Number(v) >= 0, 'min'),
+    .refine((v) => Number.isFinite(Number(v)) && Number(v) >= 0.01, 'min'),
 }).superRefine(({ currency, total }, context) => {
   if (!hasValidMoneyFormat(total, currency)) {
     context.addIssue({ code: 'custom', message: 'precision', path: ['total'] });

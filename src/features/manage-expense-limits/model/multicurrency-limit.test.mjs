@@ -3,7 +3,13 @@ import test from 'node:test';
 import { createServer } from 'vite';
 
 const load = async (path) => {
-  const server = await createServer({ appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } });
+  const server = await createServer({
+    configFile: false,
+    resolve: { alias: { '@': new URL('../../../', import.meta.url).pathname } },
+    cacheDir: 'node_modules/.vite-limit-form-test',
+    optimizeDeps: { noDiscovery: true },
+    server: { middlewareMode: true, ws: false },
+  });
   try {
     return await server.ssrLoadModule(path);
   } finally {
@@ -38,4 +44,20 @@ test('validates totals using each draft currency precision', async () => {
     ...draft('jpy', 'JPY').values,
     total: '100.5',
   }).success, false);
+});
+
+test('new drafts inherit currency, dates span the calendar month, and formatting alone is not dirty', async () => {
+  const model = await load('/src/features/manage-expense-limits/model/limit-draft.ts');
+  assert.equal(model.createEmptyExpenseLimitDraft('USD').values.currency, 'USD');
+  assert.deepEqual(model.getExpenseLimitMonthRange('2024-02-10'), { startDate: '2024-02-01', endDate: '2024-02-29' });
+  assert.equal(model.isExpenseLimitDraftDirty({
+    ...draft('existing', 'USD'),
+    baselineTotal: 100,
+    values: { ...draft('existing', 'USD').values, total: '100.00' },
+  }), false);
+  const { expenseLimitDraftValuesSchema: schema } = await load(
+    '/src/features/manage-expense-limits/model/validation.ts',
+  );
+  assert.equal(schema.safeParse({ ...draft('new', 'USD').values, total: '0' }).success, false);
+  assert.equal(schema.safeParse({ ...draft('new', 'USD').values, total: '0.01' }).success, true);
 });

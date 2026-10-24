@@ -1,13 +1,15 @@
 import {
+  type QueryClient,
   queryOptions,
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
 import { useBudgetScope } from '@/entities/budgets/@x/expense-limits';
 import type { BudgetScope } from '@/shared/types';
-import { scopedKey, invalidateBudget } from '@/shared/lib/budget-api';
+import { scopedKey, invalidateBudget, isActiveBudgetIdentity } from '@/shared/lib/budget-api';
 import { expenseLimitsApi } from './expense-limits.api';
 import type {
+  ExpenseLimit,
   CreateExpenseLimitDto,
   FindExpenseLimitQuery,
   UpdateExpenseLimitDto,
@@ -40,15 +42,38 @@ export const useExpenseLimitsQueryOptions = () => {
   };
 };
 
+const cacheLimit = async (client: QueryClient, scope: BudgetScope, limit: ExpenseLimit | string) => {
+  await client.cancelQueries({ queryKey: scopedKey(scope, expenseLimitsQueryKeys.all) });
+  if (!isActiveBudgetIdentity(client, scope)) return;
+  const id = typeof limit === 'string' ? limit : limit._id;
+  client.getQueriesData<ExpenseLimit[]>({ queryKey: scopedKey(scope, expenseLimitsQueryKeys.listAll()) })
+    .forEach(([key, rows]) => {
+      if (!rows) return;
+      const params = key.at(-1) as FindExpenseLimitQuery;
+      const matches = typeof limit !== 'string'
+        && (!params.currency || params.currency === limit.currency)
+        && (!params.categoryId || params.categoryId === limit.category._id)
+        && params.periodDate.slice(0, 10) >= limit.startDate.slice(0, 10)
+        && params.periodDate.slice(0, 10) <= limit.endDate.slice(0, 10);
+      const existing = rows.some((row) => row._id === id);
+      const next = matches
+        ? existing ? rows.map((row) => (row._id === id ? limit : row)) : [...rows, limit]
+        : rows.filter((row) => row._id !== id);
+      client.setQueryData(key, next);
+    });
+  const detailKey = expenseLimitsQueryOptions.findOne(id, scope).queryKey;
+  if (typeof limit === 'string') client.removeQueries({ queryKey: detailKey, exact: true });
+  else client.setQueryData(detailKey, limit);
+  invalidateBudget(client, scope).catch(() => undefined);
+};
+
 export const useCreateExpenseLimitMutation = () => {
   const scope = useBudgetScope();
   const client = useQueryClient();
   return useMutation({
     retry: false,
     mutationFn: ({ payload }: { payload: CreateExpenseLimitDto }) => expenseLimitsApi.create(payload, scope),
-    onSuccess: () => {
-      invalidateBudget(client, scope).catch(() => undefined);
-    },
+    onSuccess: (limit) => cacheLimit(client, scope, limit),
   });
 };
 
@@ -64,9 +89,7 @@ export const useUpdateExpenseLimitMutation = () => {
       limitId: string;
       payload: UpdateExpenseLimitDto;
     }) => expenseLimitsApi.update(limitId, payload, scope),
-    onSuccess: () => {
-      invalidateBudget(client, scope).catch(() => undefined);
-    },
+    onSuccess: (limit) => cacheLimit(client, scope, limit),
   });
 };
 
@@ -76,8 +99,6 @@ export const useDeleteExpenseLimitMutation = () => {
   return useMutation({
     retry: false,
     mutationFn: (limitId: string) => expenseLimitsApi.delete(limitId, scope),
-    onSuccess: () => {
-      invalidateBudget(client, scope).catch(() => undefined);
-    },
+    onSuccess: (_, limitId) => cacheLimit(client, scope, limitId),
   });
 };

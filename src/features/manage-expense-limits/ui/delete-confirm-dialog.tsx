@@ -1,10 +1,11 @@
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
 import { Typography } from '@/shared/ui/typography';
-import type { FC } from 'react';
+import type { ComponentProps, FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface DeleteConfirmDialogProps {
+  finalFocus?: ComponentProps<typeof AlertDialog.Content>['finalFocus'];
   open: boolean;
   pending: boolean;
   error?: string;
@@ -13,6 +14,7 @@ interface DeleteConfirmDialogProps {
 }
 
 export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
+  finalFocus,
   open,
   pending,
   error,
@@ -36,7 +38,7 @@ export const DeleteConfirmDialog: FC<DeleteConfirmDialogProps> = ({
 
   return (
     <AlertDialog.Base open={open} onOpenChange={handleOpenChange}>
-      <AlertDialog.Content className="max-w-sm">
+      <AlertDialog.Content className="max-w-sm" finalFocus={finalFocus}>
         <AlertDialog.Header>
           <AlertDialog.Title>{t('expenseLimits.management.delete.title')}</AlertDialog.Title>
         </AlertDialog.Header>

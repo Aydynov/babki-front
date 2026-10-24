@@ -39,3 +39,8 @@ read its macOS keychain session. No workspace was rebound or published. This
 fixture is maintained locally alongside the migration evidence.
 
 Expense-entry edge cases and responsive browser checks: [expense-entry.md](expense-entry.md).
+
+The local fixture also supports monthly expense-limit list/detail/create/update/delete,
+filters by period/currency/category, and derives the remainder from synthetic expenses.
+Limit-widget UI evidence and focused cache/model commands:
+[verification.md](../../openspec/changes/improve-expense-limits-widget/verification.md).

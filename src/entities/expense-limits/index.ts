@@ -19,3 +19,4 @@ export type {
 } from './model/schemas';
 
 export { useExpenseLimitsQueryOptions } from './api/expense-limits.query';
+export { getExpenseLimitsForCurrency, getExpenseLimitTotal, getExpenseLimitProgress } from './model/presentation';
