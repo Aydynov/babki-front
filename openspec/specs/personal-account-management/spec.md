@@ -54,7 +54,7 @@ The system SHALL allow an account name to change while treating its type, curren
 
 #### Scenario: Immutable account attributes
 - **WHEN** the user opens account editing
-- **THEN** type, currency, initial amount, and opening date are presented as read-only context rather than editable fields
+- **THEN** the form presents only a labeled account-name input and a save action; type, currency, balance, initial amount, opening date, and status are absent from the form and remain available in account details
 
 ### Requirement: Account archive and deletion lifecycle
 The system MUST distinguish archiving an account with history from permanently deleting an unused account. Management SHALL operate only on the account opened from its list. An archived account SHALL NOT offer repeated archival or creation of new financial operations. Existing confirmation, pending, error handling and dependent refresh rules SHALL remain in effect.
@@ -77,7 +77,7 @@ The system MUST distinguish archiving an account with history from permanently d
 
 #### Scenario: Archived account management
 - **WHEN** the user opens management from the details of an archived account
-- **THEN** only that account is managed, with its archived status and existing immutable attributes visible
+- **THEN** only that account is managed through a menu offering editing and deletion; its status and immutable attributes remain visible in the underlying details, outside the editing form
 - **THEN** renaming and deletion retain existing API restrictions and confirmations
 - **THEN** repeated archival, default selection and creation of new operations are unavailable
 
