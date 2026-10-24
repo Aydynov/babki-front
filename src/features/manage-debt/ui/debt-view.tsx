@@ -127,47 +127,32 @@ export const DebtView: FC<DebtViewProps> = ({
         Действие не подтверждено. Проверьте историю. Финансовая отмена недоступна для архивного счёта.
       </Typography.Caption1>
       )}
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-1">
           <Typography.Caption1 className="text-muted-foreground">
             {t('debts.details.fields.debtor')}
           </Typography.Caption1>
           <Typography.Body2 className="break-words">{debt.debtor}</Typography.Body2>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <Typography.Caption1 className="text-muted-foreground">
             {t('debts.details.fields.status')}
           </Typography.Caption1>
           <Typography.Body2>{t(`debts.status.${debt.status}`)}</Typography.Body2>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <Typography.Caption1 className="text-muted-foreground">
-          {t('debts.details.fields.description')}
-        </Typography.Caption1>
-        <Typography.Body2 className={!debt.description ? 'text-muted-foreground' : undefined}>
-          {debt.description || '—'}
-        </Typography.Body2>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <Typography.Caption1 className="text-muted-foreground">
             {t('debts.details.fields.principalAmount')}
           </Typography.Caption1>
           <Typography.Body2>{formatMoney(debt.principalAmount, debt.currency)}</Typography.Body2>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <Typography.Caption1 className="text-muted-foreground">
             {t('debts.details.fields.remainingAmount')}
           </Typography.Caption1>
           <Typography.Body2>{formatMoney(debt.remainingAmount, debt.currency)}</Typography.Body2>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <Typography.Caption1 className="text-muted-foreground">
             {t('debts.details.fields.dueDate')}
           </Typography.Caption1>
@@ -175,11 +160,19 @@ export const DebtView: FC<DebtViewProps> = ({
             {debt.dueDate ? formatDate.format(new Date(debt.dueDate)) : '—'}
           </Typography.Body2>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <Typography.Caption1 className="text-muted-foreground">
             {t('debts.details.fields.author')}
           </Typography.Caption1>
           <Typography.Body2>{debt.createdByActor ? actorLabel(debt.createdByActor) : '—'}</Typography.Body2>
+        </div>
+        <div className="flex min-w-0 flex-col gap-1 sm:col-span-2">
+          <Typography.Caption1 className="text-muted-foreground">
+            {t('debts.details.fields.description')}
+          </Typography.Caption1>
+          <Typography.Body2 className={!debt.description ? 'text-muted-foreground' : undefined}>
+            {debt.description || '—'}
+          </Typography.Body2>
         </div>
       </div>
 
