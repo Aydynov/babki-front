@@ -7,95 +7,71 @@ TBD: Define the expected behavior for managing expense categories.
 ## Requirements
 
 ### Requirement: Category management entry point
-The system SHALL provide an expense-category management action in the header of the monthly expenses-by-categories widget.
+The system SHALL replace the monthly widget's gear action with a `+` action labelled «Добавить категорию» that opens a single-category creation dialog. Creation SHALL be available only with `manageCategories` in active mode, including loading, empty and error states.
 
 #### Scenario: Entry point in every widget state
-- **WHEN** the monthly widget is loading, empty, or populated
-- **THEN** its header displays a gear action with an accessible management label
+- **WHEN** the active widget is loading, empty, populated or showing a request error
+- **THEN** users with `manageCategories` see the accessible `+` creation action
 
 #### Scenario: Open management dialog
-- **WHEN** the user activates the gear action
-- **THEN** the system opens a dialog titled "Категории" with an accessible close action
+- **WHEN** an authorized user activates `+`
+- **THEN** the system opens «Добавить категорию» with an empty single-category form and an accessible close action
+- **THEN** the former all-category management dialog does not open
+
+#### Scenario: Archive or insufficient permissions
+- **WHEN** the widget is in archive mode or the user lacks `manageCategories`
+- **THEN** the creation action is hidden
 
 #### Scenario: Annual widget remains unchanged
 - **WHEN** the annual expenses-by-categories widget is displayed
-- **THEN** the category management action is not added to that widget
-
-### Requirement: Category list presentation
-The system SHALL present persisted categories as editable rows ordered from oldest to newest and SHALL keep category creation available below the list.
-
-#### Scenario: Populated category list
-- **WHEN** persisted categories are loaded
-- **THEN** each row displays the category name, selected color, delete action, and a reserved save-action column
-
-#### Scenario: Empty category list
-- **WHEN** no categories exist and no temporary row is present
-- **THEN** the dialog displays "Пока пусто" above the "Добавить категорию" action
-
-#### Scenario: Long category list
-- **WHEN** the category rows exceed the available dialog height
-- **THEN** only the list region scrolls while the title and add action remain available
-
-### Requirement: Independent category drafts
-The system SHALL keep editable category values in dialog-local row drafts and SHALL persist only the row whose save action is activated.
-
-#### Scenario: Dirty persisted row
-- **WHEN** the user changes the name or color of a persisted category
-- **THEN** that row displays its save action without shifting the name, color, or delete columns
-
-#### Scenario: Reverted persisted row
-- **WHEN** the user restores both fields to their baseline values
-- **THEN** the row is no longer dirty and its save action is hidden while the reserved column remains
-
-#### Scenario: Save one of several dirty rows
-- **WHEN** multiple persisted rows are dirty and one valid row is saved successfully
-- **THEN** only the saved row receives a new baseline and all other unsaved drafts remain unchanged
-
-#### Scenario: Discard dialog drafts
-- **WHEN** the user closes the idle dialog through the close action, backdrop, or Escape key
-- **THEN** all unsaved category changes are discarded without changing query data
+- **THEN** this change adds no category management action to that widget
 
 ### Requirement: Category draft validation
-The system MUST prevent saving a category row unless its normalized name and selected color are valid.
+The system MUST prevent saving unless the trimmed name and selected palette color are valid. An optional description SHALL contain at most 500 characters. Name uniqueness SHALL be checked against all loaded active and archived categories, excluding the category being edited.
 
 #### Scenario: Required name
 - **WHEN** a touched category name is empty after trimming
-- **THEN** the row displays a required-field error and its save action is disabled
+- **THEN** a required-field error is displayed and saving is disabled
 
 #### Scenario: Maximum name length
 - **WHEN** a touched category name exceeds 100 characters
-- **THEN** the row displays a length error and its save action is disabled
+- **THEN** a length error is displayed and saving is disabled
 
 #### Scenario: Case-insensitive duplicate
-- **WHEN** a draft name matches another loaded or locally edited category after trimming and case folding
-- **THEN** the row displays a uniqueness error and its save action is disabled
+- **WHEN** the draft name matches another category after trimming and case folding
+- **THEN** a uniqueness error is displayed and saving is disabled
 
 #### Scenario: Required color
-- **WHEN** a dirty row has no selected palette color
-- **THEN** its save action is disabled and a color validation error is available after interaction
+- **WHEN** the draft has no selected palette color
+- **THEN** saving is disabled and a color error is available after interaction
 
 #### Scenario: Reused color
 - **WHEN** the user chooses a color already used by another category
 - **THEN** the color remains valid
 
 #### Scenario: Normalized request name
-- **WHEN** a valid row is submitted
-- **THEN** the system sends the name without leading or trailing whitespace
+- **WHEN** a valid draft is submitted
+- **THEN** the request name has no leading or trailing whitespace
+
+#### Scenario: Description length
+- **WHEN** a touched description exceeds 500 characters
+- **THEN** a length error is displayed and saving is disabled
 
 ### Requirement: Fixed category color palette
-The system SHALL restrict category color selection to a fixed palette of 25 HEX colors displayed as a compact accessible grid.
+The system SHALL restrict category color selection to a fixed palette of 25 HEX colors displayed as a compact accessible grid. The selected option SHALL have a visible contrasting ring and check indicator when the palette opens and after selection, independently of keyboard focus.
 
 #### Scenario: Open color selector
-- **WHEN** the user activates a row's color control
+- **WHEN** the user activates a category's color control
 - **THEN** a 5-by-5 grid of 20-by-20-pixel circular color options with 10-pixel gaps is displayed
 
 #### Scenario: Selected color indication
-- **WHEN** a palette color is selected
-- **THEN** the option is identified by a ring and check indicator in addition to its color
+- **WHEN** a palette color is selected and the palette is reopened
+- **THEN** exactly that option displays a ring and check indicator in addition to its color
+- **THEN** selecting a different option moves both indicators to the new value
 
 #### Scenario: Accessible color selection
 - **WHEN** the user navigates the color selector with a keyboard or assistive technology
-- **THEN** each color is focusable and exposes a localized accessible name
+- **THEN** each color exposes a localized accessible name and the selected state is announced
 
 #### Scenario: Radio-group keyboard navigation
 - **WHEN** focus is within the color selector
@@ -105,113 +81,183 @@ The system SHALL restrict category color selection to a fixed palette of 25 HEX 
 - **WHEN** the color selector would overflow the viewport
 - **THEN** it repositions to remain visible
 
-### Requirement: Create one category at a time
-The system SHALL allow at most one temporary category row and SHALL keep that row at the bottom before and after successful creation.
-
-#### Scenario: Add temporary row
-- **WHEN** the user activates "Добавить категорию"
-- **THEN** one row with an empty name and no selected color appears at the bottom of the list
-
-#### Scenario: Prevent a second temporary row
-- **WHEN** a temporary row exists
-- **THEN** "Добавить категорию" remains visible but disabled
-
-#### Scenario: Remove temporary row
-- **WHEN** the user activates delete on a temporary row
-- **THEN** the row is removed immediately without a confirmation or API request and the add action becomes enabled
-
-#### Scenario: Create category successfully
-- **WHEN** the user saves a valid temporary row and the create request succeeds
-- **THEN** the returned persisted category replaces the temporary row at the bottom and the add action becomes enabled
-
-#### Scenario: Create category fails
-- **WHEN** the create request fails
-- **THEN** the temporary row and entered values remain available with a row-specific error
-
 ### Requirement: Update a persisted category
-The system SHALL update a valid dirty persisted row independently and SHALL preserve its draft when the request fails.
+The system SHALL update a valid dirty category from its individual editing form and SHALL preserve the draft when a request fails.
 
 #### Scenario: Update succeeds
-- **WHEN** the user activates save on a valid dirty persisted row and the update request succeeds
-- **THEN** the returned category becomes that row's baseline and the save action disappears
+- **WHEN** saving succeeds
+- **THEN** the category's details show the saved name, color and description
 
 #### Scenario: Duplicate conflict from API
-- **WHEN** the update or create API rejects a duplicate name
-- **THEN** the system associates the conflict with the name field and preserves the draft
+- **WHEN** create or update rejects a duplicate name
+- **THEN** the name field displays the conflict and the draft remains available
 
 #### Scenario: Generic save failure
-- **WHEN** a create or update request fails for another reason
-- **THEN** the system displays an error for the affected row and preserves its draft for correction or retry
+- **WHEN** create or update fails for another reason
+- **THEN** the form displays an error and preserves entered values for correction or retry
 
 #### Scenario: Pending save
-- **WHEN** a create or update request is pending
-- **THEN** the management dialog fields and actions are disabled and the dialog cannot be closed
+- **WHEN** create or update is pending
+- **THEN** form fields and mutation actions are disabled and the form cannot be closed
 
 ### Requirement: Confirm deletion of persisted categories
-The system MUST require confirmation before requesting deletion of a persisted category.
+The system MUST require confirmation before deleting the category selected in its details.
 
 #### Scenario: Request persisted deletion
-- **WHEN** the user activates delete on a persisted row
-- **THEN** the system opens a confirmation dialog instead of immediately sending a delete request
+- **WHEN** the user activates delete in category details
+- **THEN** a confirmation opens without sending a delete request, and its description does not include the category name
 
 #### Scenario: Cancel persisted deletion
-- **WHEN** the user cancels the confirmation
-- **THEN** no delete request is sent and the category row remains unchanged
+- **WHEN** the user cancels
+- **THEN** no request is sent and the selected category's details remain available
 
 #### Scenario: Confirm persisted deletion
-- **WHEN** the user confirms deletion and the request succeeds
-- **THEN** the confirmation closes and the category is removed from the local list
+- **WHEN** the user confirms and deletion succeeds
+- **THEN** confirmation and category details close and the category disappears from the widget
+- **THEN** focus returns to a surviving widget control
 
 #### Scenario: Category is linked to expenses
-- **WHEN** the delete API rejects the request because the category is linked to expenses
-- **THEN** the confirmation remains open and explains that the category cannot be deleted while expenses reference it
+- **WHEN** deletion is rejected because expenses reference the category
+- **THEN** confirmation stays open and explains why deletion is unavailable
 
 #### Scenario: Generic deletion failure
-- **WHEN** the delete request fails for another reason
-- **THEN** the confirmation remains open, displays the error, and keeps the category row
+- **WHEN** deletion fails for another reason
+- **THEN** confirmation stays open with an error and the category remains available
 
 #### Scenario: Pending deletion
-- **WHEN** the delete request is pending
-- **THEN** the confirmation controls are disabled and the confirmation cannot be closed
+- **WHEN** deletion is pending
+- **THEN** confirmation controls are disabled and confirmation cannot be closed
 
 ### Requirement: Category cache consistency
-The system SHALL refresh category-dependent data after successful category mutations without overwriting open dialog drafts.
+The system SHALL refresh category-dependent data after successful creation, editing, archiving, restoration or deletion without overwriting unsaved form drafts.
 
 #### Scenario: Refresh category consumers
-- **WHEN** a category is created, updated, or deleted successfully
-- **THEN** category query data is invalidated so widgets, selectors, and category lookups can refresh
+- **WHEN** any category mutation succeeds
+- **THEN** category lists and details are refreshed in the current budget scope
 
 #### Scenario: Refresh embedded category data
-- **WHEN** a category name or color is updated successfully
-- **THEN** expense and expense-limit list query data containing embedded category objects is invalidated
+- **WHEN** category name, color, description or archive status changes
+- **THEN** dependent expense and expense-limit data can refresh
 
 #### Scenario: Refresh limits after category deletion
-- **WHEN** a category is deleted successfully
-- **THEN** expense-limit list data containing embedded category objects is invalidated
+- **WHEN** a category is deleted
+- **THEN** dependent expense-limit data can refresh
 
 #### Scenario: Preserve open drafts during refetch
-- **WHEN** invalidated category data refetches while other dialog rows are dirty
-- **THEN** the refetch does not replace the open dialog's local drafts
+- **WHEN** invalidated data refetches during editing
+- **THEN** it does not replace the form's unsaved draft
 
 #### Scenario: Preserve monthly progress styling
 - **WHEN** a category color changes
-- **THEN** the monthly expenses-by-categories widget retains its existing red progress-bar styling
+- **THEN** monthly widget progress bars retain their existing red styling
 
 ### Requirement: Responsive and accessible management controls
-The system SHALL keep category management usable at narrow viewport widths and expose accessible names and states for all icon-only controls.
+The system SHALL keep category details and forms usable at approximately 320 pixels viewport width without horizontal clipping. All icon-only controls SHALL have descriptive accessible labels; disabled, selected, error and pending states SHALL be conveyed programmatically and visually.
 
 #### Scenario: Narrow viewport
-- **WHEN** the dialog is displayed at approximately 320 pixels viewport width
-- **THEN** the row retains name, color, delete, and reserved save columns without horizontal clipping
+- **WHEN** a category dialog opens on a narrow screen with long text
+- **THEN** fields and actions remain reachable and content scrolls vertically without clipping
 
 #### Scenario: Icon-only controls
-- **WHEN** assistive technology inspects the gear, close, color, delete, or save control
-- **THEN** each control exposes a descriptive accessible label
+- **WHEN** assistive technology inspects add, archive, back, close, color, delete or save controls
+- **THEN** every control has a descriptive accessible label
 
 #### Scenario: Validation and pending state
-- **WHEN** a row is invalid or a request is pending
-- **THEN** disabled and error states are conveyed programmatically as well as visually
+- **WHEN** a form is invalid or a mutation is pending
+- **THEN** error and disabled states are exposed programmatically and visually
 
 #### Scenario: Submit a row from the keyboard
-- **WHEN** focus is in a dirty valid category name and the user presses Enter
-- **THEN** only that category row is submitted
+- **WHEN** focus is in a valid dirty name field and the user presses Enter
+- **THEN** only that category is submitted
+
+### Requirement: Individual category drafts
+The system SHALL keep one category draft local to its creation or editing dialog, separate from persisted query data. Background refetches SHALL preserve an unsaved draft.
+
+#### Scenario: Change and revert
+- **WHEN** the user changes and then restores the category fields to their persisted values
+- **THEN** the form is no longer dirty and saving an unchanged category is disabled
+
+#### Scenario: Save category
+- **WHEN** the user saves a valid draft
+- **THEN** only the selected category is created or updated
+
+#### Scenario: Discard dialog draft
+- **WHEN** the user closes an idle form through the close action, backdrop or Escape
+- **THEN** unsaved changes are discarded without changing persisted category data
+- **THEN** during editing Escape returns to details, while the close action and backdrop close the entire dialog
+
+#### Scenario: Preserve draft during refetch
+- **WHEN** query data refreshes while a form is dirty
+- **THEN** entered values remain unchanged
+
+### Requirement: Single-category creation
+The system SHALL create one category from a dialog containing name, palette color and optional description. Cancel SHALL discard the draft without a request. Successful creation SHALL close the form and refresh the active widget list using the existing expense-total ordering.
+
+#### Scenario: Successful creation
+- **WHEN** a valid new category is saved successfully
+- **THEN** the form closes and the returned category becomes available in active categories
+
+#### Scenario: Cancel creation
+- **WHEN** the user cancels the idle creation form
+- **THEN** no category is created and focus returns to `+`
+
+### Requirement: Individual category details
+The system SHALL open a category's details when its widget row is activated by mouse or keyboard. Details SHALL show name, color, optional description, active / archived status and the selected month's total in the widget currency, without an expense list. Viewing SHALL remain available without `manageCategories`; mutation actions SHALL require that permission.
+
+#### Scenario: Open and close details
+- **WHEN** a category row is activated and its details are then closed
+- **THEN** the selected category's facts were shown and focus returns to that row
+- **THEN** widget mode, month and currency remain unchanged
+
+#### Scenario: No matching expenses
+- **WHEN** the category has no expenses in the selected month and currency
+- **THEN** details show a zero amount in that currency
+
+#### Scenario: Read-only access
+- **WHEN** the user lacks `manageCategories`
+- **THEN** details remain available while edit, archive, restore and delete are hidden
+
+### Requirement: Category archive lifecycle
+The system SHALL provide archive for an active category and restore for an archived category through its details menu, only with `manageCategories`. Archiving SHALL require confirmation before sending a request; restoration SHALL remain a direct action. Successful mutation SHALL move the category to the opposite widget list, close its details and retain the current widget mode, month and currency.
+
+#### Scenario: Archive or restore succeeds
+- **WHEN** the selected category is successfully archived or restored
+- **THEN** its status changes and it disappears from the current list
+- **THEN** details close and focus moves to the archive / back control
+
+#### Scenario: Archive or restore fails
+- **WHEN** a status mutation fails
+- **THEN** the category retains its previous status
+- **THEN** archive errors appear in the open confirmation and restore errors appear in details
+
+#### Scenario: Pending status change
+- **WHEN** archive or restore is pending
+- **THEN** conflicting actions and closing are disabled
+
+#### Scenario: Archive confirmation
+- **WHEN** the user selects archive from the category menu
+- **THEN** a confirmation opens without sending a mutation
+- **THEN** cancel keeps the category active, while confirm sends the archive request
+
+### Requirement: Consistent category dialog scrolling
+The system SHALL keep the title, close control and form actions reachable while long category content scrolls using the common scrolling dialog presentation. This SHALL apply to details, creation and editing; confirmation dialogs SHALL keep their existing presentation.
+
+#### Scenario: Long content
+- **WHEN** category details or a form exceed the viewport height
+- **THEN** content scrolls while title, close control and applicable form actions remain reachable
+
+#### Scenario: Confirmation
+- **WHEN** a destructive confirmation opens
+- **THEN** it uses the existing confirmation presentation rather than the scrolling form layout
+
+### Requirement: Category details presentation and actions
+The system SHALL use caption-sized muted labels and body-sized values in an unframed responsive facts grid, consistent with expense details. Management actions SHALL be in a header dropdown like account details, labelled «Редактировать», «Архивировать» or «Восстановить», and «Удалить». Form submission SHALL be labelled «Сохранить».
+
+#### Scenario: Details menu
+- **WHEN** an authorized user opens category details
+- **THEN** actions are accessible through the header dropdown rather than a row of buttons in the body
+
+#### Scenario: Edit cancellation
+- **WHEN** a user activates the arrow button labelled «Отмена» while editing
+- **THEN** unsaved changes are discarded and the category details are shown
+- **THEN** the close icon still closes the entire dialog
