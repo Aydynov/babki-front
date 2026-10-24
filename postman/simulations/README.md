@@ -43,4 +43,4 @@ Expense-entry edge cases and responsive browser checks: [expense-entry.md](expen
 The local fixture also supports monthly expense-limit list/detail/create/update/delete,
 filters by period/currency/category, and derives the remainder from synthetic expenses.
 Limit-widget UI evidence and focused cache/model commands:
-[verification.md](../../openspec/changes/improve-expense-limits-widget/verification.md).
+[verification.md](../../openspec/changes/archive/2026-10-24-improve-expense-limits-widget/verification.md).
