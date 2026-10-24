@@ -49,6 +49,7 @@ export function AccountDetailsDialog({
     [t('accounts.details.balance'), formatMoney(account.amount, account.currency, i18n.language)],
     [t('accounts.status.openedAt'), formatDate(account.openedAt)],
     [t('accounts.status.initialAmount'), formatMoney(account.initialAmount, account.currency, i18n.language)],
+    [t('accounts.details.status'), t(account.archivedAt ? 'accounts.status.archived' : 'accounts.status.active')],
   ];
 
   return (

@@ -46,7 +46,7 @@ test('account details reuses account management scoped to the selected account',
     read('../../features/manage-accounts/ui/manage-accounts-button.tsx'),
   ]);
   assert.match(details, /<ManageAccountsButton accountId=\{account\._id\}/);
-  assert.match(management, /accounts\.filter\(\(account\) => account\._id === accountId\)/);
+  assert.match(management, /accounts\.find\(\(item\) => item\._id === accountId\)/);
   assert.doesNotMatch(management, /submitCreate|subscribeAccountManagementRequests/);
   assert.match(management, /accountId: string/);
   assert.match(management, /onUnavailable\?\.\(\)/);

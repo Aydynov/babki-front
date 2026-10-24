@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account actions UI verification</title>
+<div id="check-root"></div>
+<script>window.addEventListener("error", e => document.body.append(e.message));</script>
+<script type="module">
+import { BudgetProvider } from '/src/entities/budgets/model/context.ts';
+import { accountsApi } from '/src/entities/accounts/api/accounts.api.ts';
+import { accountsQueryOptions } from '/src/entities/accounts/api/accounts.query.ts';
+import { transactionsQueryOptions } from '/src/entities/transactions/api/transactions.query.ts';
+import { transfersQueryOptions } from '/src/entities/transfers/api/transfers.query.ts';
+import { AccountDetailsDialog } from '/src/widgets/accounts/ui/account-details-dialog.tsx';
+import '/src/app/index.css';
+import '/src/shared/lib/i18n/index.ts';
+// Use the same dependency URLs as Vite's transformed source to share React contexts.
+const source = await (await fetch('/src/entities/accounts/api/accounts.query.ts')).text();
+const url = source.match(/"([^\"]+@tanstack_react-query.js[^\"]*)"/)[1];
+const importModule = new Function('url', 'return import(url)');
+const query = await importModule(url);
+const version = new URL(url, location.href).search;
+const React = (await importModule('/node_modules/.vite/deps/react.js' + version)).default;
+const ReactDOM = (await importModule('/node_modules/.vite/deps/react-dom_client.js' + version)).default;
+const c = window.check = {
+  account: {
+    _id: 'bbbbbbbbbbbbbbbbbbbbbbbb', spaceId: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+    name: 'Проверочный счет', currency: 'RUB', type: 'balance', amount: 1234,
+    initialAmount: 100, openedAt: '2025-01-01T00:00:00Z', archivedAt: null, timeline: [],
+  },
+  scope: {userId: 'ui-check', spaceId: 'aaaaaaaaaaaaaaaaaaaaaaaa'},
+  period: {fromDate: '2025-05-01', toDate: '2025-05-31'},
+  calls: [], closed: 0, allowed: true, error: false, pending: false,
+  pause: () => new Promise(resolve => setTimeout(resolve, 300)),
+  click: text => [...document.querySelectorAll('[role=menuitem],button')].find(e => e.textContent === text)?.click(),
+  menu: () => document.querySelector('[aria-label="Действия со счетом"]').click(),
+  input: value => {
+    const element = document.querySelector('[role=dialog] input');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(element, value);
+    element.dispatchEvent(new Event('input', {bubbles: true}));
+  },
+};
+c.seed = () => {
+  c.client = new query.QueryClient({defaultOptions: {queries: {retry: false, staleTime: Infinity}}});
+  c.client.setQueryData(['users', 'me'], {_id: c.scope.userId});
+  c.client.setQueryData(accountsQueryOptions.findAll({}, c.scope).queryKey, [c.account]);
+  const filters = {...c.period, accountId: c.account._id};
+  c.tx = transactionsQueryOptions.accountHistory(filters, c.scope).queryKey;
+  c.tr = transfersQueryOptions.accountHistory(filters, c.scope).queryKey;
+  c.client.setQueryData(c.tx, []);
+  c.client.setQueryData(c.tr, []);
+  c.client.invalidateQueries = async () => {};
+};
+c.seed();
+accountsApi.rename = async (id, payload) => {
+  c.calls.push({kind: 'rename', id, payload});
+  if (c.pending) await new Promise(resolve => c.release = resolve);
+  if (c.error) throw Error('UI check');
+  c.account = {...c.account, name: payload.name};
+  c.client.setQueryData(accountsQueryOptions.findAll({}, c.scope).queryKey, [c.account]);
+  c.render();
+  return c.account;
+};
+accountsApi.archive = async id => {
+  c.calls.push({kind: 'archive', id});
+  if (c.pending) await new Promise(resolve => c.release = resolve);
+  if (c.error) throw Error('UI check');
+};
+accountsApi.remove = async id => {
+  c.calls.push({kind: 'delete', id});
+  if (c.pending) await new Promise(resolve => c.release = resolve);
+  if (c.error) throw {response: {status: 409}};
+};
+const root = ReactDOM.createRoot(document.getElementById('check-root'));
+c.root = root;
+c.render = () => root.render(React.createElement(query.QueryClientProvider, {client: c.client},
+  React.createElement(BudgetProvider, {value: {
+    scope: c.scope, title: 'UI check', space: {id: c.scope.spaceId, name: 'UI check', role: 'owner',
+      permissions: {manageAccounts: c.allowed, manageTransactions: false}},
+  }}, React.createElement(AccountDetailsDialog, {
+    account: c.account, accountNames: new Map(), period: c.period, finalFocus: {current: null},
+    onClose: () => {}, onUnavailable: () => {c.closed++; root.render(null);},
+  }))));
+c.render();
+</script>
+</html>

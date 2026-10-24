@@ -1,26 +1,21 @@
 import { useBudgetPermission } from '@/entities/budgets';
-import { Dialog as DialogPrimitive } from '@base-ui/react';
+import { Menu } from '@base-ui/react';
 import {
   useAccountsQueryOptions,
   useArchiveAccountMutation,
   useDeleteAccountMutation,
   useRenameAccountMutation,
 } from '@/entities/accounts';
-import { formatMoney } from '@/shared/lib/currency';
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { Button } from '@/shared/ui/button';
-import { Dialog } from '@/shared/ui/dialog';
+import { Icon } from '@/shared/ui/icon';
 import { Input } from '@/shared/ui/input';
+import { ScrollDialog } from '@/shared/ui/scroll-dialog';
 import { Typography } from '@/shared/ui/typography';
 import { useQuery } from '@tanstack/react-query';
-import { LucideSettings, LucideX } from 'lucide-react';
-import {
-  useState,
-} from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  getAccountMutationErrorKey,
-} from '../model/account-form';
+import { getAccountMutationErrorKey } from '../model/account-form';
 
 interface LifecycleAction { accountId: string; kind: 'archive' | 'delete' }
 
@@ -37,168 +32,158 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
   const renameMutation = useRenameAccountMutation();
   const archiveMutation = useArchiveAccountMutation();
   const deleteMutation = useDeleteAccountMutation();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [draftNames, setDraftNames] = useState<Record<string, string>>({});
+  const [name, setName] = useState('');
   const [action, setAction] = useState<LifecycleAction>();
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [error, setError] = useState<string>();
-  const beginLifecycle = (nextAction: LifecycleAction) => {
+  const beginLifecycle = (kind: LifecycleAction['kind']) => {
     setError(undefined);
-    setAction(nextAction);
+    setAction({ accountId, kind });
     setConfirmationOpen(true);
   };
   const accounts = accountsQuery.data ?? [];
-  const visibleAccounts = accounts.filter((account) => account._id === accountId);
+  const account = accounts.find((item) => item._id === accountId);
+  const nextName = name.trim();
+  const valid = nextName.length > 0 && nextName.length <= 100;
+  const isPending = renameMutation.isPending || archiveMutation.isPending || deleteMutation.isPending;
+  const closeEdit = () => {
+    if (!isPending) setOpen(false);
+  };
 
-  const isPending = renameMutation.isPending || archiveMutation.isPending
-    || deleteMutation.isPending;
-
-  const rename = async (targetAccountId: string, currentName: string) => {
-    const nextName = draftNames[targetAccountId]?.trim();
-    if (!nextName || nextName === currentName) return;
+  const rename = async () => {
+    if (!account || !valid || isPending) return;
     setError(undefined);
     try {
-      await renameMutation.mutateAsync({ accountId: targetAccountId, payload: { name: nextName } });
-      setDraftNames((current) => ({ ...current, [targetAccountId]: nextName }));
+      if (nextName !== account.name) {
+        await renameMutation.mutateAsync({ accountId, payload: { name: nextName } });
+      }
+      setOpen(false);
     } catch (mutationError) {
       setError(getAccountMutationErrorKey(mutationError));
     }
   };
 
   const confirmLifecycle = async () => {
-    if (!action || !confirmationOpen) return;
+    if (!action || !confirmationOpen || isPending) return;
     setError(undefined);
     try {
       if (action.kind === 'archive') await archiveMutation.mutateAsync(action.accountId);
       else await deleteMutation.mutateAsync(action.accountId);
       setConfirmationOpen(false);
-      setOpen(false);
       onUnavailable?.();
     } catch (mutationError) {
       setError(getAccountMutationErrorKey(mutationError));
     }
   };
 
+  const menuItemClass = `
+    flex h-8 cursor-default items-center rounded-md px-2 text-sm outline-none
+    data-highlighted:bg-accent data-disabled:opacity-50
+  `;
+
   if (!allowed) return null;
   return (
     <>
-      <Dialog.Base
-        open={open}
-        onOpenChange={(next) => {
-          if (isPending) return;
-          if (next) {
-            setError(undefined);
-          }
-          setOpen(next);
-        }}
-      >
-        <DialogPrimitive.Trigger
-          render={(
-            <Button.Icon
-              aria-label={t('accounts.management.current')}
-            />
-)}
+      <Menu.Root>
+        <Menu.Trigger
+          ref={triggerRef}
+          aria-label={t('accounts.management.actions')}
+          disabled={isPending || !account}
+          render={<Button.Icon type="button" />}
         >
-          <LucideSettings />
-        </DialogPrimitive.Trigger>
-        <Dialog.Content className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden">
-          <Dialog.Header>
-            <Dialog.Title>{t('accounts.management.current')}</Dialog.Title>
-            <Button.Icon
-              aria-label={t('accounts.management.close')}
-              onClick={() => setOpen(false)}
-              disabled={isPending}
+          <Icon icon="IcDots20" />
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner
+            align="end"
+            sideOffset={4}
+            className="z-50 outline-none"
+          >
+            <Menu.Popup className="rounded-lg border bg-popover p-1 shadow-md outline-none">
+              <Menu.Item
+                label={t('accounts.management.edit')}
+                className={menuItemClass}
+                onClick={() => {
+                  if (!account) return;
+                  setName(account.name);
+                  setError(undefined);
+                  setOpen(true);
+                }}
+              >
+                {t('accounts.management.edit')}
+              </Menu.Item>
+              {account?.archivedAt === null && (
+                <Menu.Item
+                  label={t('accounts.management.archive')}
+                  className={menuItemClass}
+                  onClick={() => beginLifecycle('archive')}
+                >
+                  {t('accounts.management.archive')}
+                </Menu.Item>
+              )}
+              <Menu.Item
+                label={t('accounts.management.delete')}
+                className={`${menuItemClass} text-destructive data-highlighted:bg-destructive/10`}
+                onClick={() => beginLifecycle('delete')}
+              >
+                {t('accounts.management.delete')}
+              </Menu.Item>
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+
+      <ScrollDialog.Base open={open} onOpenChange={(next) => !next && closeEdit()}>
+        <ScrollDialog.Content finalFocus={triggerRef}>
+          <form
+            className="flex min-h-0 flex-1 flex-col"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              await rename();
+            }}
+          >
+            <ScrollDialog.Layout
+              title={t('accounts.management.editTitle')}
+              closeLabel={t('accounts.management.close')}
+              onClose={closeEdit}
+              closeDisabled={isPending}
+              actions={(
+                <Button.Base type="submit" disabled={isPending || !valid || !account}>
+                  {t('accounts.management.save')}
+                </Button.Base>
+              )}
             >
-              <LucideX />
-            </Button.Icon>
-          </Dialog.Header>
-          <Dialog.Body className="min-h-0 overflow-y-auto">
-            {(accountsQuery.isLoading) && (
-              <p aria-live="polite">{t('accounts.loading')}</p>
-            )}
-            {(accountsQuery.isError) && (
-              <p role="alert">{t('accounts.errors.load')}</p>
-            )}
-            {visibleAccounts.map((account) => (
-              <div key={account._id} className="flex flex-col gap-2 rounded-lg border p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <Typography.Body1>{formatMoney(account.amount, account.currency)}</Typography.Body1>
-                    <Typography.Caption1>
-                      {account.type === 'balance' ? t('accounts.types.balance') : t('accounts.types.saving')}
-                      {' · '}
-                      {account.archivedAt ? t('accounts.status.archived') : t('accounts.status.active')}
-                    </Typography.Caption1>
-                    <Typography.Caption1 className="block text-muted-foreground">
-                      {t('accounts.status.initialAmount')}
-                      {': '}
-                      {formatMoney(account.initialAmount, account.currency)}
-                      {' · '}
-                      {t('accounts.status.openedAt')}
-                      {': '}
-                      {new Date(account.openedAt).toLocaleDateString('ru-RU')}
-                    </Typography.Caption1>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {account.archivedAt === null && (
-                      <Button.Base
-                        type="button"
-                        variant="outline"
-                        disabled={isPending}
-                        onClick={() => beginLifecycle({ accountId: account._id, kind: 'archive' })}
-                      >
-                        {t('accounts.management.archive')}
-                      </Button.Base>
-                    )}
-                    <Button.Base
-                      type="button"
-                      variant="destructive"
-                      disabled={isPending}
-                      onClick={() => beginLifecycle({ accountId: account._id, kind: 'delete' })}
-                    >
-                      {t('accounts.management.delete')}
-                    </Button.Base>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Input.Base
-                    aria-label={t('accounts.management.name')}
-                    value={draftNames[account._id] ?? account.name}
-                    disabled={isPending}
-                    maxLength={100}
-                    onChange={(event) => setDraftNames((current) => ({
-                      ...current,
-                      [account._id]: event.target.value,
-                    }))}
-                  />
-                  <Button.Base
-                    type="button"
-                    variant="outline"
-                    disabled={isPending}
-                    onClick={() => rename(account._id, account.name)}
-                  >
-                    {t('accounts.management.save')}
-                  </Button.Base>
-                </div>
+              <div>
+                <Input.Label htmlFor={`account-name-${accountId}`}>
+                  {t('accounts.management.name')}
+                </Input.Label>
+                <Input.Base
+                  id={`account-name-${accountId}`}
+                  value={name}
+                  disabled={isPending}
+                  maxLength={100}
+                  required
+                  onChange={(event) => setName(event.target.value)}
+                />
               </div>
-            ))}
-            {!accountsQuery.isLoading && !visibleAccounts.length && <p>{t('accounts.empty')}</p>}
-            {error && (
-              <p role="alert">
-                {error === 'restricted'
-                  ? t('accounts.errors.restricted')
-                  : t('accounts.errors.action')}
-              </p>
-            )}
-          </Dialog.Body>
-        </Dialog.Content>
-      </Dialog.Base>
+              {error && (
+                <Typography.Caption1 className="text-destructive" role="alert">
+                  {error === 'restricted' ? t('accounts.errors.restricted') : t('accounts.errors.action')}
+                </Typography.Caption1>
+              )}
+            </ScrollDialog.Layout>
+          </form>
+        </ScrollDialog.Content>
+      </ScrollDialog.Base>
 
       <AlertDialog.Base
         open={confirmationOpen}
         onOpenChange={(next) => !next && !isPending && setConfirmationOpen(false)}
       >
-        <AlertDialog.Content>
+        <AlertDialog.Content finalFocus={triggerRef}>
           <AlertDialog.Header>
             <AlertDialog.Title>
               {action?.kind === 'delete'
@@ -226,7 +211,7 @@ export function ManageAccountsButton({ accountId, onUnavailable }: ManageAccount
               {t('accounts.management.cancel')}
             </Button.Base>
             {error === 'restricted' && action?.kind === 'delete'
-              && accounts.find((account) => account._id === action.accountId)?.archivedAt === null && (
+              && account?.archivedAt === null && (
               <Button.Base
                 type="button"
                 variant="outline"
