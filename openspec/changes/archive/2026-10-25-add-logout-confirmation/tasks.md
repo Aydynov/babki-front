@@ -8,5 +8,7 @@
 
 ## 2. Integration verification
 
-- [ ] 2.1 Verify every existing logout entry point under ordinary authentication, including the space-selection page, and record results: repeated open/cancel, confirmed logout, browser Back protection, preserved last-budget preference, cleared pending invitation, and automatic expired-session handling without confirmation. Verify local-token mode still hides logout. Where relevant, check the affected route with loading, empty and error data states; keep secrets out of captured evidence.
+- [x] 2.1 Verify every existing logout entry point under ordinary authentication, including the space-selection page, and record results: repeated open/cancel, confirmed logout, browser Back protection, preserved last-budget preference, cleared pending invitation, and automatic expired-session handling without confirmation. Verify local-token mode still hides logout. Where relevant, check the affected route with loading, empty and error data states; keep secrets out of captured evidence.
 - [x] 2.2 Run `npm run lint`, `npm run lint:architecture` and `npm run build`; record results and browser verification evidence in a change-local `verification.md`, including desktop/mobile screenshots of the dialog without sensitive information. Explicitly report that no configured general test runner or automated UI coverage exists, and document any blocked checks rather than marking them passed.
+
+Task 2.1 was closed at the user's explicit request on 2026-10-25 without additional authenticated integration checks; see `verification.md` for the remaining verification limits.

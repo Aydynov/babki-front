@@ -33,8 +33,8 @@ Screenshots show the isolated component, not an authenticated dashboard:
 - [Desktop, 1280 × 720](screenshots/desktop.png)
 - [Mobile, 375 × 812](screenshots/mobile.png)
 
-## Pending authenticated integration (task 2.1)
+## Authenticated integration limitations (task 2.1 closed by user)
 
 Not verified end to end: both real page entry points under ordinary authentication; browser Back after actual-route logout; active budget clearing and per-user preference restoration; actual expired-session handling; page loading/empty/error states with an authenticated backend. The harness verifies the component and its cleanup dependencies but does not replace these route checks. The existing real application was confirmed to redirect an unauthenticated visit to `/login`.
 
-Task 2.1 remains unchecked until an ordinary authenticated test session and suitable data are available. Session termination, route guards and their underlying modules were not modified. No configured general test runner exists, no `npm test` or bare `node --test` run is claimed, and no persistent automated UI coverage was added.
+Task 2.1 was marked complete at the user's explicit request on 2026-10-25. No additional authenticated integration checks were performed; the verification limits above remain applicable. Session termination, route guards and their underlying modules were not modified. No configured general test runner exists, no `npm test` or bare `node --test` run is claimed, and no persistent automated UI coverage was added.
