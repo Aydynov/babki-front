@@ -7,7 +7,7 @@ Provide a secure, accessible frontend experience for enrolling, inspecting, reco
 ## Requirements
 
 ### Requirement: Authenticated two-factor management
-The system SHALL expose localized two-factor management from the authenticated main-page header and SHALL present the backend-reported status and unused recovery-code count.
+The system SHALL expose localized two-factor management from the account menu in the shared header on every authenticated page, subject to existing local-token restrictions, and SHALL present the backend-reported status and unused recovery-code count.
 
 #### Scenario: Two-factor authentication is disabled
 - **WHEN** an authenticated user opens two-factor management and the status response is `disabled`
@@ -20,6 +20,10 @@ The system SHALL expose localized two-factor management from the authenticated m
 #### Scenario: Status cannot be loaded
 - **WHEN** the two-factor status request fails or returns an invalid payload
 - **THEN** the system displays an accessible retryable error without assuming that TOTP is disabled
+
+#### Scenario: Open outside the dashboard
+- **WHEN** an authenticated user outside local-token mode opens the account menu from the spaces directory, creation, settings or invitation page
+- **THEN** the same two-factor management flow is available without navigating to the dashboard
 
 ### Requirement: Secure TOTP enrollment start
 The system SHALL require the current password before starting or replacing a pending enrollment and SHALL retain provisioning values only for the active management flow.
