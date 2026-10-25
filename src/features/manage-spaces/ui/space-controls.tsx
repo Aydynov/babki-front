@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
-  LucideCheck, LucideChevronDown, LucideChevronLeft, LucideChevronRight, LucideHome,
-  LucidePlus, LucideSettings2, LucideShieldCheck, LucideUsers, LucideWallet,
+  LucideCheck, LucideChevronLeft, LucideChevronRight,
+  LucideShieldCheck, LucideHome, LucidePlus,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -48,127 +48,6 @@ export function SpacePagination({ page, total, onPage }: {
         <LucideChevronRight aria-hidden="true" />
       </Button.Base>
     </nav>
-  );
-}
-export function BudgetSelector({
-  userId, currentSpaceId, onSelect, onCreate, disabled = false,
-}: {
-  userId: string; currentSpaceId?: string; onSelect: (id: string) => void; onCreate?: () => void; disabled?: boolean;
-}) {
-  const [page, setPage] = useState(1);
-  const spaces = useQuery(spacesQueryOptions.list(userId, { page, limit: 20 }));
-  useEffect(() => {
-    if (page > 1 && spaces.data && spaces.data.total > 0 && spaces.data.items.length === 0) setPage(1);
-  }, [page, spaces.data]);
-  const selected = useQuery({
-    ...spacesQueryOptions.detail(userId, currentSpaceId ?? ''),
-    enabled: Boolean(userId && currentSpaceId),
-  });
-  return (
-    <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3 sm:px-4">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span className="hidden size-10 shrink-0 items-center justify-center rounded-lg bg-muted sm:flex">
-          {currentSpaceId
-            ? <LucideHome className="size-5" aria-hidden="true" />
-            : <LucideWallet className="size-5" aria-hidden="true" />}
-        </span>
-        <div className="min-w-0 flex-1 sm:max-w-80">
-          <span
-            id="budget-selector-label"
-            className="block px-2 text-xs text-muted-foreground"
-          >
-            Текущий бюджет
-          </span>
-          <div className="relative">
-            <select
-              id="budget-selector"
-              aria-labelledby="budget-selector-label"
-              value={currentSpaceId ?? ''}
-              disabled={disabled}
-              className="h-9 w-full min-w-0 appearance-none truncate rounded-md bg-card pr-8 pl-2 text-sm font-semibold
-                outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring
-                disabled:cursor-wait disabled:opacity-50"
-              onChange={(event) => onSelect(event.target.value)}
-            >
-              <option value="" disabled>Выберите пространство</option>
-              {currentSpaceId && !spaces.data?.items.some((space) => space.id === currentSpaceId) && (
-                <option value={currentSpaceId}>{selected.data?.name ?? 'Выбранная пространство'}</option>
-              )}
-              {spaces.data?.items.map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}
-            </select>
-            <LucideChevronDown
-              aria-hidden="true"
-              className="pointer-events-none absolute top-2.5 right-2 size-4
-              text-muted-foreground"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-1">
-        {currentSpaceId && (
-          <Button.Base
-            nativeButton={false}
-            variant="ghost"
-            render={<Link to="/spaces/$spaceId" params={{ spaceId: currentSpaceId }} />}
-          >
-            <LucideSettings2 aria-hidden="true" />
-            {' '}
-            <span className="hidden sm:inline">Настройки</span>
-            <span className="sr-only sm:hidden">Настройки пространства</span>
-          </Button.Base>
-        )}
-        <Button.Base
-          nativeButton={false}
-          variant="ghost"
-          render={<Link to="/spaces" />}
-        >
-          <LucideUsers aria-hidden="true" />
-          {' '}
-          Мои пространства
-        </Button.Base>
-        {onCreate ? (
-          <Button.Base variant="outline" onClick={onCreate}>
-            <LucidePlus aria-hidden="true" />
-            {' '}
-            Создать пространство
-          </Button.Base>
-        ) : (
-          <Button.Base
-            nativeButton={false}
-            variant="outline"
-            render={<Link to="/spaces/new" />}
-          >
-            <LucidePlus aria-hidden="true" />
-            {' '}
-            Создать пространство
-          </Button.Base>
-        )}
-      </div>
-      {spaces.data?.total === 0 && (
-        <p className="w-full text-sm text-muted-foreground">
-          У вас пока нет пространств. Создайте первое или откройте ссылку приглашения.
-        </p>
-      )}
-      {spaces.isPending && <span role="status" className="text-xs text-muted-foreground">Загрузка пространств…</span>}
-      {spaces.isError && (
-        <div className="w-full border-t pt-3">
-          <QueryError
-            compact
-            message="Не удалось загрузить пространства"
-            onRetry={() => spaces.refetch()}
-          />
-        </div>
-      )}
-      {spaces.data && spaces.data.total > 20 && (
-        <div className="w-full border-t pt-3">
-          <SpacePagination
-            page={page}
-            total={spaces.data.total}
-            onPage={setPage}
-          />
-        </div>
-      )}
-    </div>
   );
 }
 export function CreateSpaceForm({ userId }: { userId: string }) {

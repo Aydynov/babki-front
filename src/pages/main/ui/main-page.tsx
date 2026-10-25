@@ -13,11 +13,6 @@ import { YearExpenses } from '@/widgets/year-expenses';
 import { YearIncomes } from '@/widgets/year-incomes';
 import { YearSavings } from '@/widgets/year-savings';
 import { MonthSwitcher, YearSwitcher } from '@/features/select-period';
-import {
-  LogoutButton,
-  TwoFactorManagementDialog,
-} from '@/features/auth';
-import { Header } from '@/shared/ui/header';
 import { HorizontalScroller } from '@/shared/ui/horizontal-scroller';
 import { useMediaQuery } from '@/shared/lib/react';
 import { useTranslation } from 'react-i18next';
@@ -63,16 +58,7 @@ export function MainPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5 px-(--app-inline-padding)">
-      <Header
-        title={t('header.title')}
-        subtitle={t('header.subtitle')}
-        actions={(
-          <>
-            <TwoFactorManagementDialog />
-            <LogoutButton />
-          </>
-        )}
-      />
+      <h1 className="pt-6 pb-3 text-lg font-semibold tracking-tight">{t('header.title')}</h1>
 
       <div className="flex min-w-0 flex-col gap-5">
         <div className="grid min-w-0 gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">

@@ -14,28 +14,32 @@ import { Card } from '@/shared/ui/card';
 import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 
-function SpacesLayout({ children }: { children: ReactNode }) {
+function SpacesLayout({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-7 px-4 py-5 sm:px-8 sm:py-8">
-      <nav aria-label="Навигация по бюджетам" className="flex flex-wrap items-center gap-2 text-sm">
-        <Button.Base
-          nativeButton={false}
-          variant="ghost"
-          render={<Link to="/main" />}
-        >
-          <LucideArrowLeft aria-hidden="true" />
-          {' '}
-          К бюджету
-        </Button.Base>
-        <span aria-hidden="true" className="text-border">/</span>
-        <Link
-          to="/spaces"
-          className="rounded-md px-2 py-2 text-muted-foreground hover:text-foreground
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <nav aria-label="Навигация по бюджетам" className="flex min-w-0 items-center gap-2 text-sm">
+          <Button.Base
+            nativeButton={false}
+            variant="ghost"
+            aria-label="К бюджету"
+            render={<Link to="/main" />}
+          >
+            <LucideArrowLeft aria-hidden="true" />
+            {' '}
+            <span className={actions ? 'hidden sm:inline' : undefined}>К бюджету</span>
+          </Button.Base>
+          <span aria-hidden="true" className="text-border">/</span>
+          <Link
+            to="/spaces"
+            className="min-w-0 truncate rounded-md px-2 py-2 text-muted-foreground hover:text-foreground
           focus-visible:outline-2 focus-visible:outline-ring"
-        >
-          Мои пространства
-        </Link>
-      </nav>
+          >
+            Мои пространства
+          </Link>
+        </nav>
+        {actions}
+      </div>
       {children}
     </main>
   );
@@ -56,15 +60,6 @@ export function MySpacesPage() {
             Общие финансы, планы и цели — в одном бюджете с близкими.
           </p>
         </div>
-        <Button.Base
-          nativeButton={false}
-          size="lg"
-          render={<Link to="/spaces/new" />}
-        >
-          <LucidePlus aria-hidden="true" />
-          {' '}
-          Создать пространство
-        </Button.Base>
       </header>
       {spaces.isPending && (
         <div
@@ -195,7 +190,18 @@ export function SpaceSettingsPage({ spaceId, invitationPanel }: { spaceId: strin
   const user = useQuery(usersQueryOptions.me());
   const space = useQuery(spacesQueryOptions.detail(user.data?._id ?? '', spaceId));
   return (
-    <SpacesLayout>
+    <SpacesLayout actions={space.isSuccess ? (
+      <Button.Base
+        nativeButton={false}
+        variant="outline"
+        className="h-11 shrink-0"
+        render={<Link to="/main" search={{ spaceId }} />}
+      >
+        Открыть бюджет
+        <LucideArrowUpRight aria-hidden="true" />
+      </Button.Base>
+    ) : undefined}
+    >
       <header className="flex min-w-0 flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 space-y-2">
           <p className="text-xs font-medium text-muted-foreground">Настройки общего бюджета</p>
@@ -203,18 +209,6 @@ export function SpaceSettingsPage({ spaceId, invitationPanel }: { spaceId: strin
             {space.data?.name ?? 'Настройки пространства'}
           </h1>
         </div>
-        {space.data && (
-          <Button.Base
-            nativeButton={false}
-            variant="outline"
-            size="lg"
-            render={<Link to="/main" search={{ spaceId }} />}
-          >
-            Открыть бюджет
-            {' '}
-            <LucideArrowUpRight aria-hidden="true" />
-          </Button.Base>
-        )}
       </header>
       {space.isPending && (
       <div role="status" aria-label="Загрузка настроек"><Skeleton className="h-64 rounded-xl" /></div>
@@ -230,8 +224,11 @@ export function SpaceSettingsPage({ spaceId, invitationPanel }: { spaceId: strin
           key={spaceId}
           userId={user.data._id}
           space={space.data}
-          invitationPanel={space.data.role === 'owner' ? (invitationPanel ?? <SpaceInvitations spaceId={spaceId} />)
-            : undefined}
+          invitationPanel={space.data.role === 'owner' ? (
+            <div id="space-invitations" className="scroll-mt-6">
+              {invitationPanel ?? <SpaceInvitations spaceId={spaceId} />}
+            </div>
+          ) : undefined}
         />
       )}
     </SpacesLayout>

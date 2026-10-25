@@ -6,6 +6,17 @@ import {
 import { usersQueryOptions } from '@/entities/users';
 import { confirmSession } from '@/features/auth';
 import { getAccessToken } from '@/shared/api';
+import { AppNavigation } from '../layouts/app-navigation';
+import { NavigationError } from '../layouts/navigation-error';
+
+function AuthenticatedLayout() {
+  return (
+    <>
+      <AppNavigation />
+      <Outlet />
+    </>
+  );
+}
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -23,5 +34,6 @@ export const Route = createFileRoute('/_authenticated')({
       });
     }
   },
-  component: Outlet,
+  component: AuthenticatedLayout,
+  errorComponent: NavigationError,
 });

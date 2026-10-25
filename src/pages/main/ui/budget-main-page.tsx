@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LucideArrowRight, LucideUserPlus, LucideX } from 'lucide-react';
+import { LucideArrowRight } from 'lucide-react';
 import {
   Link, useBlocker, useNavigate, useSearch,
 } from '@tanstack/react-router';
@@ -8,54 +8,32 @@ import axios from 'axios';
 import { BudgetProvider } from '@/entities/budgets';
 import { spacesQueryOptions } from '@/entities/spaces';
 import { usersQueryOptions } from '@/entities/users';
-import { BudgetSelector } from '@/features/manage-spaces';
 import { requestAccountManagement, accountsQueryOptions } from '@/entities/accounts';
-import { SpaceInvitations } from '@/features/space-invitations';
 import { readBudgetPreference, resolveBudgetChoice, saveBudgetPreference } from '@/shared/lib/budget-scope';
 import { QueryError } from '@/shared/ui/query-error';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Button } from '@/shared/ui/button';
 import type { BudgetScope } from '@/shared/types';
-import { LogoutButton, TwoFactorManagementDialog } from '@/features/auth';
 import { MainPage } from './main-page';
 
-function SpaceSetup({ spaceId, scope }: { spaceId: string; scope: BudgetScope }) {
+function FirstAccountSetup({ spaceId, scope }: { spaceId: string; scope: BudgetScope }) {
   const accounts = useQuery(accountsQueryOptions.findAll({}, scope));
   const space = useQuery(spacesQueryOptions.detail(scope.userId, spaceId));
-  const [invite, setInvite] = useState(false);
-  if (space.data?.role !== 'owner' || !accounts.isSuccess) return null;
+  if (space.data?.role !== 'owner' || !accounts.isSuccess || accounts.data.length > 0) return null;
   return (
     <div className="mx-(--app-inline-padding) mt-3 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed px-4 py-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-sm font-medium">
-            {accounts.data.length === 0 ? 'Начните учёт' : 'Ведите бюджет вместе'}
-          </p>
+          <p className="text-sm font-medium">Начните учёт</p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {accounts.data.length === 0
-              ? 'Добавьте первый счёт с начальным остатком, затем пригласите близких.'
-              : 'Пригласите близких и настройте совместное управление финансами.'}
+            Добавьте первый счёт с начальным остатком.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {accounts.data.length === 0 && (
-            <Button.Base onClick={requestAccountManagement}>
-              Добавить счёт
-              <LucideArrowRight aria-hidden="true" />
-            </Button.Base>
-          )}
-          <Button.Base
-            variant="outline"
-            aria-expanded={invite}
-            aria-controls="space-invitations"
-            onClick={() => setInvite(!invite)}
-          >
-            {invite ? <LucideX aria-hidden="true" /> : <LucideUserPlus aria-hidden="true" />}
-            {invite ? 'Скрыть приглашения' : 'Пригласить участников'}
-          </Button.Base>
-        </div>
+        <Button.Base onClick={requestAccountManagement}>
+          Добавить счёт
+          <LucideArrowRight aria-hidden="true" />
+        </Button.Base>
       </div>
-      {invite && <div id="space-invitations" className="mt-3 max-w-xl"><SpaceInvitations spaceId={spaceId} /></div>}
     </div>
   );
 }
@@ -161,26 +139,16 @@ export function BudgetMainPage() {
   if (!spaceId || !space.data) {
     return (
       <main className="mx-auto flex max-w-5xl flex-col gap-5 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">{user.data.firstName}</h1>
-            <p>{user.data.email}</p>
-          </div>
-          <div className="flex gap-2">
-            <TwoFactorManagementDialog />
-            <LogoutButton />
-          </div>
-        </div>
         {notice && <p role="status">{notice}</p>}
-        <h2 className="text-lg font-semibold">Выберите пространство</h2>
+        <h1 className="text-xl font-semibold tracking-tight">Выберите пространство</h1>
         <p>Откройте пространство или создайте новое. Для вступления откройте ссылку приглашения.</p>
-        <BudgetSelector
-          userId={userId}
-          disabled={mutations > 0}
-          onSelect={(id) => {
-            navigate({ to: '/main', search: { spaceId: id } }).catch(() => undefined);
-          }}
-        />
+        <Button.Base
+          nativeButton={false}
+          render={<Link to="/spaces" />}
+          className="self-start"
+        >
+          Мои пространства
+        </Button.Base>
         <Link to="/join" className="underline">Присоединиться по приглашению</Link>
       </main>
     );
@@ -191,17 +159,9 @@ export function BudgetMainPage() {
     <BudgetProvider value={{ scope, space: space.data, title }}>
       <div className="px-(--app-inline-padding) pt-4">
         {notice && <p role="status" className="mb-3 rounded-lg border p-3">{notice}</p>}
-        <BudgetSelector
-          userId={userId}
-          currentSpaceId={spaceId || undefined}
-          disabled={mutations > 0}
-          onSelect={(id) => {
-            navigate({ to: '/main', search: { spaceId: id } }).catch(() => undefined);
-          }}
-        />
       </div>
       <div key={`${userId}:${spaceId}`}>
-        {spaceId && <SpaceSetup spaceId={spaceId} scope={scope} />}
+        {spaceId && <FirstAccountSetup spaceId={spaceId} scope={scope} />}
         <MainPage />
       </div>
     </BudgetProvider>

@@ -52,3 +52,4 @@ export type {
   TwoFactorSetupResponse,
   TwoFactorStatus,
 } from './model/schemas';
+export { AccountMenu } from './ui/account-menu';

@@ -4,10 +4,17 @@ import { confirmSession } from '@/features/auth';
 import { JoinPage } from '@/pages/join';
 import { getAccessToken } from '@/shared/api';
 import { captureInvitationFragment, pendingInvitation } from '@/shared/lib/pending-invitation';
+import { AppNavigation } from '../layouts/app-navigation';
+import { NavigationError } from '../layouts/navigation-error';
 
 function JoinRoute() {
   const { userId, invitationVersion } = useLoaderData({ from: '/join' });
-  return <JoinPage userId={userId} invitationVersion={invitationVersion} />;
+  return (
+    <>
+      {userId && <AppNavigation />}
+      <JoinPage userId={userId} invitationVersion={invitationVersion} />
+    </>
+  );
 }
 
 export const Route = createFileRoute('/join')({
@@ -25,4 +32,5 @@ export const Route = createFileRoute('/join')({
     return { userId: user?._id ?? null, invitationVersion: pendingInvitation.read()?.createdAt ?? 0 };
   },
   component: JoinRoute,
+  errorComponent: NavigationError,
 });

@@ -3,7 +3,7 @@ import {
   LucideShieldCheck,
   LucideX,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { env } from '@/shared/lib/env';
 import { Button } from '@/shared/ui/button';
@@ -35,9 +35,13 @@ import { TwoFactorRegenerateForm } from './two-factor-regenerate-form';
 import { TwoFactorSetupForm } from './two-factor-setup-form';
 import { useRetryAfter } from './use-retry-after';
 
-export function TwoFactorManagementDialog() {
+export function TwoFactorManagementDialog({ open: controlledOpen, onOpenChange, finalFocus }: {
+  open?: boolean; onOpenChange?: (open: boolean) => void; finalFocus?: RefObject<HTMLButtonElement | null>;
+} = {}) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [recoveryAcknowledged, setRecoveryAcknowledged] = useState(false);
   const [state, setState] = useState<TwoFactorManagementState>(
     createTwoFactorManagementState,
@@ -129,6 +133,7 @@ export function TwoFactorManagementDialog() {
       }}
       onOpenChangeComplete={handleOpenChangeComplete}
     >
+      {controlledOpen === undefined && (
       <DialogPrimitive.Trigger
         render={(
           <Button.Base
@@ -141,7 +146,11 @@ export function TwoFactorManagementDialog() {
         <LucideShieldCheck />
         <span className="hidden sm:inline">{t('auth.twoFactor.management.open')}</span>
       </DialogPrimitive.Trigger>
-      <Dialog.Content className="max-h-[calc(100dvh-2rem)] max-w-lg overflow-y-auto">
+      )}
+      <Dialog.Content
+        className="max-h-[calc(100dvh-2rem)] max-w-lg overflow-y-auto"
+        finalFocus={finalFocus}
+      >
         <Dialog.Header>
           <Dialog.Title>{t(titleKey)}</Dialog.Title>
           <Button.Icon

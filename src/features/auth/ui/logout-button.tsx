@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { LucideLogOut } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clearAccessToken } from '@/shared/api';
 import { pendingInvitation } from '@/shared/lib/pending-invitation';
@@ -10,11 +10,15 @@ import { Button } from '@/shared/ui/button';
 import { AlertDialog } from '@/shared/ui/alert-dialog';
 import { endSession } from '../model/session';
 
-export function LogoutButton() {
+export function LogoutButton({ open: controlledOpen, onOpenChange, finalFocus }: {
+  open?: boolean; onOpenChange?: (open: boolean) => void; finalFocus?: RefObject<HTMLButtonElement | null>;
+} = {}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -24,6 +28,7 @@ export function LogoutButton() {
 
   return (
     <>
+      {controlledOpen === undefined && (
       <Button.Base
         ref={triggerRef}
         type="button"
@@ -33,11 +38,12 @@ export function LogoutButton() {
         <LucideLogOut />
         {t('auth.logout')}
       </Button.Base>
+      )}
       <AlertDialog.Base open={open} onOpenChange={setOpen}>
         <AlertDialog.Content
           className="max-w-sm"
           initialFocus={cancelRef}
-          finalFocus={triggerRef}
+          finalFocus={finalFocus ?? triggerRef}
           onBackdropClick={() => setOpen(false)}
         >
           <AlertDialog.Header>
